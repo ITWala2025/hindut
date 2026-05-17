@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+
+@layer base {
+  * {
+    @apply border-border
+  }
+}
+
+:root {
+  /* === Option 1 — Soft Saffron & Sandalwood ============================
+     Muted saffron primary on warm ivory, deep maroon secondary (classic
+     temple cloth tones) and soft turmeric accent. Chroma intentionally
+     kept low (≤0.13) so the palette feels soothing rather than bold. */
+  --background: oklch(0.97 0.012 85);          /* warm ivory / sandstone */
+  --foreground: oklch(0.25 0.03 40);           /* deep sepia */
+
+  --card: oklch(0.99 0.005 85);
+  --card-foreground: oklch(0.25 0.03 40);
+
+  --popover: oklch(0.99 0.005 85);
+  --popover-foreground: oklch(0.25 0.03 40);
+
+  --primary: oklch(0.62 0.12 55);              /* muted saffron */
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.38 0.10 25);            /* deep temple maroon */
+  --secondary-foreground: oklch(0.97 0.012 85);
+
+  --muted: oklch(0.93 0.012 80);
+  --muted-foreground: oklch(0.48 0.025 40);
+
+  --accent: oklch(0.82 0.10 90);               /* soft turmeric */
+  --accent-foreground: oklch(0.28 0.05 40);
+
+  --destructive: oklch(0.55 0.18 25);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.89 0.018 75);
+  --input: oklch(0.89 0.018 75);
+  --ring: oklch(0.62 0.12 55);
+
+  --radius: 0.5rem;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 3);
+  --radius-full: 9999px;
+
+  --font-heading: 'Crimson Pro', serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* === Soften the built-in orange / amber palettes ======================
+     The codebase uses many `text-orange-*`, `bg-orange-*`, `from-amber-*`
+     etc. utility classes. Re-tinting the Tailwind v4 palette tokens here
+     globally softens every one of those usages without touching markup.
+     Chroma is intentionally low; orange-700+ leans into temple maroon. */
+  --color-orange-50:  oklch(0.97 0.012 80);
+  --color-orange-100: oklch(0.94 0.024 70);
+  --color-orange-200: oklch(0.89 0.045 62);
+  --color-orange-300: oklch(0.82 0.070 58);
+  --color-orange-400: oklch(0.74 0.095 55);
+  --color-orange-500: oklch(0.66 0.115 52);
+  --color-orange-600: oklch(0.58 0.120 48);
+  --color-orange-700: oklch(0.46 0.105 32);   /* shifts toward maroon */
+  --color-orange-800: oklch(0.38 0.095 24);   /* deep maroon — for headings */
+  --color-orange-900: oklch(0.30 0.075 22);
+  --color-orange-950: oklch(0.22 0.055 22);
+
+  --color-amber-50:  oklch(0.97 0.018 92);
+  --color-amber-100: oklch(0.94 0.035 90);
+  --color-amber-200: oklch(0.89 0.060 90);
+  --color-amber-300: oklch(0.83 0.085 88);
+  --color-amber-400: oklch(0.76 0.105 85);
+  --color-amber-500: oklch(0.70 0.115 82);
+  --color-amber-600: oklch(0.60 0.105 70);
+  --color-amber-700: oklch(0.50 0.095 55);
+  --color-amber-800: oklch(0.40 0.075 45);
+  --color-amber-900: oklch(0.32 0.060 40);
+  --color-amber-950: oklch(0.22 0.045 35);
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
