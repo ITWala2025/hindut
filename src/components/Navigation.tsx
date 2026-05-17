@@ -34,7 +34,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
   }
 
   return (
-    <nav className="fixed top-4 md:top-8 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-7xl rounded-2xl border border-orange-200/40 bg-gradient-to-r from-orange-50/95 via-amber-50/95 to-orange-50/95 backdrop-blur-xl shadow-2xl shadow-orange-900/20 glow-saffron">
+    <nav className="fixed top-4 md:top-8 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-7xl rounded-full border border-orange-200/40 bg-gradient-to-r from-orange-50/95 via-amber-50/95 to-orange-50/95 backdrop-blur-xl shadow-2xl shadow-orange-900/20 glow-saffron">
       <div className="px-4 md:px-8 lg:px-12">
         <div className="flex h-16 md:h-20 items-center justify-between">
           <Link
@@ -61,7 +61,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
             ))}
             <Button
               onClick={onDonateClick}
-              className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover:scale-105 transition-all hover-glow-saffron font-semibold"
+              className="rounded-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover:scale-105 transition-all hover-glow-saffron font-semibold"
             >
               <Heart className="mr-2" weight="fill" />
               Donate
@@ -84,7 +84,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
                     key={item.path}
                     onClick={() => handleMobileClick(item.path)}
                     className={cn(
-                      "text-left text-lg font-semibold transition-all py-2 rounded-lg px-3",
+                      "text-left text-lg font-semibold transition-all py-2 rounded-full px-4",
                       isActive(item.path)
                         ? "text-orange-700 bg-orange-100/70 shadow-sm"
                         : "text-orange-600/80 hover:text-orange-700 hover:bg-orange-50"
@@ -98,7 +98,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
                     onDonateClick()
                     setIsOpen(false)
                   }}
-                  className="mt-4 bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
+                  className="mt-4 rounded-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
                 >
                   <Heart className="mr-2" weight="fill" />
                   Donate
