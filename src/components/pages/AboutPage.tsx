@@ -214,7 +214,7 @@ export function AboutPage() {
         </div>
       </section>
 
-      <section className="py-16 md:py-24 bg-card">
+      <section className="py-8 md:py-12 bg-card">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold mb-8 text-center" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -239,7 +239,7 @@ export function AboutPage() {
       </section>
 
       {/* Our Team */}
-      <section id="team-section" className={cn('relative scroll-mt-32 py-20 md:py-28 bg-gradient-to-b from-white via-orange-50/30 to-white overflow-hidden transition-shadow', highlightedId === 'team' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
+      <section id="team-section" className={cn('relative scroll-mt-32 py-10 md:py-14 bg-gradient-to-b from-white via-orange-50/30 to-white overflow-hidden transition-shadow', highlightedId === 'team' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
         {/* subtle background pattern */}
         <div
           aria-hidden

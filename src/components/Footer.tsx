@@ -1,4 +1,4 @@
-import { MapPin, Phone, Envelope, Clock } from '@phosphor-icons/react'
+import { MapPin, Phone, Envelope, Clock, InstagramLogo, FacebookLogo, TwitterLogo } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
 
@@ -21,6 +21,38 @@ export function Footer() {
               establish a permanent Hindu Temple in Limerick to serve as a spiritual,
               cultural and community hub.
             </p>
+            <div className="flex items-center gap-3 mt-4">
+              <a
+                href="https://www.instagram.com/hindu_association_of_ireland/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:opacity-90"
+                style={{ background: 'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%)' }}
+              >
+                <InstagramLogo size={18} weight="bold" />
+              </a>
+              <a
+                href="https://www.facebook.com/HinduAssociation.Ireland/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:opacity-90"
+                style={{ backgroundColor: '#1877F2' }}
+              >
+                <FacebookLogo size={18} weight="bold" />
+              </a>
+              <a
+                href="https://x.com/HinduAssocIRL"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Twitter / X"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:opacity-90"
+                style={{ backgroundColor: '#1DA1F2' }}
+              >
+                <TwitterLogo size={18} weight="bold" />
+              </a>
+            </div>
           </div>
 
           <div>
@@ -71,7 +103,7 @@ export function Footer() {
             <ul className="space-y-3 text-sm text-orange-700/80">
               <li className="flex items-start gap-2">
                 <MapPin className="mt-0.5 flex-shrink-0 text-orange-600" size={16} />
-                <span>Ahane Hall, Limerick, Co. Limerick, Ireland</span>
+                <span>4 Denmark Street, Co. Limerick, Ireland</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="flex-shrink-0 text-orange-600" size={16} />
@@ -79,7 +111,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Envelope className="flex-shrink-0 text-orange-600" size={16} />
-                <span>hinduassociationireland@gmail.com</span>
+                <span>info@hindutemple.ie</span>
               </li>
             </ul>
           </div>
@@ -87,9 +119,26 @@ export function Footer() {
 
         <Separator className="my-8 bg-orange-300/50" />
 
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-orange-600/70 mb-6">
+          {[
+            { label: 'Privacy Policy', to: '/privacy-policy' },
+            { label: 'Cookies Policy', to: '/cookies-policy' },
+            { label: 'Terms & Conditions', to: '/terms-and-conditions' },
+            { label: 'Refund Policy', to: '/refund-policy' },
+          ].map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="hover:text-orange-600 transition-colors"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-orange-700/80">
           <p>© {new Date().getFullYear()} Hindu Association of Ireland. All rights reserved.</p>
-          <p className="text-center">Built with devotion and care for our community</p>
+          <p className="text-center">Built with devotion and care by <a href="https://it-wala.com" className="hover:text-orange-600 transition-colors">IT Wala</a></p>
         </div>
       </div>
     </footer>

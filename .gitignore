@@ -1,1 +1,5 @@
 node_modules
+
+# Auto-generated WebP gallery
+public/images/gallery-webp/
+src/data/galleryManifest.json

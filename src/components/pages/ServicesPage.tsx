@@ -191,7 +191,7 @@ export function ServicesPage() {
         </div>
       </HeroCarousel>
 
-      <section id="services-tabs" className="py-16 md:py-24 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50">
+      <section id="services-tabs" className="py-8 md:py-12 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-6xl mx-auto">
             <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-12 h-auto p-2 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200">
@@ -331,7 +331,7 @@ export function ServicesPage() {
         </div>
       </section>
 
-      <section className="py-16 md:py-24 bg-gradient-to-br from-orange-700 via-amber-600 to-orange-800 relative overflow-hidden">
+      <section className="py-8 md:py-12 bg-gradient-to-br from-orange-700 via-amber-600 to-orange-800 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,237,213,0.25),transparent_70%)]" />
         <div className="container mx-auto px-6 md:px-12 lg:px-24 text-center relative z-10">
           <div className="max-w-3xl mx-auto space-y-6">

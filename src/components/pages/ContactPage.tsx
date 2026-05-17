@@ -4,18 +4,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { MapPin, Phone, Envelope, Clock, ArrowDown } from '@phosphor-icons/react'
+import { MapPin, Phone, Envelope, ArrowDown, InstagramLogo, FacebookLogo, TwitterLogo } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 
-type ContactTarget = 'address' | 'phone' | 'email' | 'venues' | 'form'
+type ContactTarget = 'address' | 'phone' | 'email' | 'form'
 
 const CONTACT_PILLS: { id: ContactTarget; label: string }[] = [
   { id: 'address', label: 'Address' },
   { id: 'phone', label: 'Phone' },
   { id: 'email', label: 'Email' },
-  { id: 'venues', label: 'Venues' },
   { id: 'form', label: 'Send message' },
 ]
 
@@ -82,10 +81,45 @@ export function ContactPage() {
               </button>
             ))}
           </div>
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <p className="text-sm uppercase tracking-[0.2em] text-white/85">Follow Us</p>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://www.instagram.com/hindu_association_of_ireland/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:opacity-90 hover:shadow-lg"
+                style={{ background: 'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%)' }}
+              >
+                <InstagramLogo size={20} weight="bold" />
+              </a>
+              <a
+                href="https://www.facebook.com/HinduAssociation.Ireland/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:opacity-90 hover:shadow-lg"
+                style={{ backgroundColor: '#1877F2' }}
+              >
+                <FacebookLogo size={20} weight="bold" />
+              </a>
+              <a
+                href="https://x.com/HinduAssocIRL"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Twitter / X"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:scale-110 hover:opacity-90 hover:shadow-lg"
+                style={{ backgroundColor: '#1DA1F2' }}
+              >
+                <TwitterLogo size={20} weight="bold" />
+              </a>
+            </div>
+          </div>
         </div>
       </HeroCarousel>
 
-      <section className="py-16 md:py-24 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50">
+      <section className="py-8 md:py-12 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 max-w-7xl mx-auto">
             <div className="lg:col-span-2 space-y-6">
@@ -108,8 +142,8 @@ export function ContactPage() {
                       <div>
                         <h3 className="font-semibold text-lg mb-1 text-orange-800">Address</h3>
                         <p className="text-muted-foreground">
-                          Ahane Hall<br />
-                          Ahane, Co. Limerick<br />
+                          4 Upper Denmark Street<br />
+                          Co. Limerick<br />
                           Ireland
                         </p>
                       </div>
@@ -143,7 +177,7 @@ export function ContactPage() {
                       <div>
                         <h3 className="font-semibold text-lg mb-1 text-orange-800">Email</h3>
                         <p className="text-muted-foreground">
-                          General: hinduassociationireland@gmail.com<br />
+                          General: info@hindutemple.ie<br />
                           Membership: hinduassociationireland@gmail.com
                         </p>
                       </div>
@@ -151,23 +185,7 @@ export function ContactPage() {
                   </CardContent>
                 </Card>
 
-                <Card id="contact-venues" className={cn('scroll-mt-32 border-l-4 border-l-orange-500 hover-glow-saffron bg-white/80 backdrop-blur-sm hover:scale-[1.02] transition-all', highlightedId === 'venues' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="rounded-full bg-orange-100 p-3 glow-saffron">
-                        <Clock className="text-orange-600" size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-1 text-orange-800">Event Venues</h3>
-                        <div className="text-muted-foreground space-y-1">
-                          <p><span className="font-medium text-orange-800">Primary:</span> Ahane Hall, Co. Limerick</p>
-                          <p className="text-sm">Also at Pallaskenry Community Centre</p>
-                          <p className="text-sm">And Mungret Community Centre</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+
               </div>
             </div>
 
@@ -269,18 +287,23 @@ export function ContactPage() {
         </div>
       </section>
 
-      <section className="py-16 md:py-24 bg-card">
+      <section className="py-8 md:py-12 bg-card">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold mb-6 text-center" style={{ fontFamily: 'var(--font-heading)' }}>
               Find Us
             </h2>
-            <div className="bg-muted rounded-lg overflow-hidden aspect-video flex items-center justify-center">
-              <div className="text-center space-y-2">
-                <MapPin className="mx-auto text-muted-foreground" size={48} />
-                <p className="text-muted-foreground">Ahane Hall, Co. Limerick, Ireland</p>
-                <p className="text-sm text-muted-foreground">Our primary event venue</p>
-              </div>
+            <div className="rounded-xl overflow-hidden aspect-video shadow-md border border-orange-100">
+              <iframe
+                src="https://maps.google.com/maps?q=4+Upper+Denmark+Street,+Limerick,+Ireland&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Find Us — Hindu Association of Ireland"
+              />
             </div>
             <p className="text-center text-sm text-muted-foreground mt-4">
               Events also held at Pallaskenry Community Centre and Mungret — see the Events page for details.

@@ -10,6 +10,10 @@ import { ContactPage } from '@/components/pages/ContactPage'
 import { EventsPage } from '@/components/pages/EventsPage'
 import { MembershipPage } from '@/components/pages/MembershipPage'
 import { AdminPage } from '@/components/pages/AdminPage'
+import { PrivacyPolicyPage } from '@/components/pages/PrivacyPolicyPage'
+import { CookiesPolicyPage } from '@/components/pages/CookiesPolicyPage'
+import { TermsAndConditionsPage } from '@/components/pages/TermsAndConditionsPage'
+import { RefundPolicyPage } from '@/components/pages/RefundPolicyPage'
 import { Toaster } from '@/components/ui/sonner'
 
 function ScrollToTop() {
@@ -50,6 +54,10 @@ function AppShell() {
           <Route path="/events" element={<EventsPage />} />
           <Route path="/membership" element={<MembershipPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/cookies-policy" element={<CookiesPolicyPage />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
+          <Route path="/refund-policy" element={<RefundPolicyPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
