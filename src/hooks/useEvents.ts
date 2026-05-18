@@ -34,6 +34,7 @@ function toTempleEvent(row: EventRow): TempleEvent {
     image: row.image_url ?? undefined,
     stripeProductId: row.stripe_product_id ?? undefined,
     ticketTiers: row.ticket_tiers ?? undefined,
+    published: row.published,
   }
 }
 
@@ -101,7 +102,7 @@ export function useEvents() {
       if (patch.price !== undefined)         update.ticket_price_eur= patch.price
       if (patch.stripeProductId !== undefined) update.stripe_product_id = patch.stripeProductId
       if (patch.ticketTiers !== undefined)   update.ticket_tiers    = patch.ticketTiers
-      if (patch.image !== undefined)         update.image_url       = patch.image
+      if ('image' in patch)                  update.image_url       = patch.image ?? null
       const { error: err } = await supabase.from('events').update(update).eq('id', id)
       if (err) throw new Error(err.message)
       await fetchEvents()

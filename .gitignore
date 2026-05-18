@@ -9,3 +9,6 @@ dist/
 # Auto-generated WebP gallery
 public/images/gallery-webp/
 src/data/galleryManifest.json
+
+# Local Netlify folder
+.netlify

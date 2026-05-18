@@ -2,10 +2,18 @@
   command = "npm run build"
   publish = "dist"
 
+[functions]
+  directory       = "netlify/functions"
+  node_bundler    = "esbuild"
+  # Ensure nodemailer and @supabase/supabase-js are bundled into each function
+  included_files  = ["netlify/functions/lib/**"]
+
 [context.production.environment]
   NODE_VERSION = "18"
 
-# SPA fallback so client-side routes (react-router) work on refresh / deep links
+# SPA fallback so client-side routes (react-router) work on refresh / deep links.
+# Netlify evaluates function routes BEFORE redirect rules, so /.netlify/functions/*
+# is never intercepted by the wildcard below.
 [[redirects]]
   from = "/*"
   to = "/index.html"

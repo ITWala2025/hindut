@@ -42,6 +42,23 @@ export interface AttendeeRecord {
   purchasedAt: string
 }
 
+export interface RsvpRecord {
+  id: string
+  eventId: string
+  eventTitle: string
+  referenceNumber: string
+  firstName: string
+  lastName: string
+  phoneMasked: string
+  emailMasked: string
+  numAdults: number
+  numChildren: number
+  consentGdpr: boolean
+  status: 'confirmed' | 'cancelled'
+  confirmationSentAt: string | null
+  createdAt: string
+}
+
 export interface ServiceCategory {
   id: string
   name: string

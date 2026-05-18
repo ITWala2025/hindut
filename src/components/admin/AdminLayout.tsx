@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   House,
   CalendarBlank,
+  ClipboardText,
   Users,
   Receipt,
   Image as ImageIcon,
@@ -38,6 +39,7 @@ export type AdminSectionId =
   | 'membership'
   | 'receipts'
   | 'events'
+  | 'rsvps'
   | 'media'
   | 'services'
   | 'users'
@@ -79,6 +81,12 @@ const NAV_ITEMS: NavItem[] = [
     capability: 'manageMedia',
   },
   {
+    id: 'rsvps',
+    label: 'RSVPs',
+    icon: <ClipboardText size={20} weight="duotone" />,
+    capability: 'manageEvents',
+  },
+  {
     id: 'services',
     label: 'Services',
     icon: <Sparkle size={20} weight="duotone" />,
@@ -106,6 +114,7 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) {
   const { user, logout, can } = useAuth()
+  const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -248,7 +257,7 @@ export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) 
                   <div className="text-xs text-muted-foreground font-normal">{user.email}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleNavigate('settings')}>
+                <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
                   <Gear className="mr-2" size={16} /> Settings
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -282,12 +291,6 @@ function SidebarHeader({ collapsed }: { collapsed: boolean }) {
       ) : (
         <div className="flex items-center gap-2">
           <Logo size="sm" showText={false} />
-          <div>
-            <div className="text-sm font-bold text-orange-50 leading-tight">HAI Admin</div>
-            <div className="text-[10px] uppercase tracking-wider text-orange-300/80">
-              Phase 1 · v0.1
-            </div>
-          </div>
         </div>
       )}
     </div>
@@ -310,8 +313,9 @@ function SidebarNav({
       {items.map((item) => {
         const isActive = active === item.id
         return (
-          <button
+          <Link
             key={item.id}
+            to={`/admin/${item.id}`}
             onClick={() => onNavigate(item.id)}
             title={collapsed ? item.label : undefined}
             className={cn(
@@ -333,7 +337,7 @@ function SidebarNav({
                 )}
               </>
             )}
-          </button>
+          </Link>
         )
       })}
     </nav>

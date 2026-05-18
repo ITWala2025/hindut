@@ -23,6 +23,7 @@ export interface TempleEvent {
   image?: string
   stripeProductId?: string
   ticketTiers?: TicketTier[]
+  published: boolean
 }
 
 export interface TicketTier {

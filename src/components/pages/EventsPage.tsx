@@ -3,8 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CalendarBlank, MapPin, Clock, Ticket, Heart, ArrowDown } from '@phosphor-icons/react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
+import { CalendarBlank, MapPin, Clock, Ticket, Heart, ArrowDown, ClipboardText, Image as ImageIcon } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
+import { RsvpDialog } from '@/components/RsvpDialog'
 import { cn } from '@/lib/utils'
 import { useEvents, sortByDate, upcomingOnly } from '@/hooks/useEvents'
 import { CATEGORY_LABELS, type EventCategory, type TempleEvent } from '@/data/events'
@@ -37,9 +45,11 @@ export function EventsPage() {
   const { events } = useEvents()
   const [filter, setFilter] = useState<Filter>('all')
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
+  const [rsvpEvent, setRsvpEvent] = useState<TempleEvent | null>(null)
+  const [detailEvent, setDetailEvent] = useState<TempleEvent | null>(null)
 
   const visible = useMemo(() => {
-    const sorted = sortByDate(events)
+    const sorted = sortByDate(events.filter((e) => e.published))
     if (filter === 'free') return sorted.filter((e) => !e.isPaid)
     if (filter === 'paid') return sorted.filter((e) => e.isPaid)
     return sorted
@@ -148,11 +158,34 @@ export function EventsPage() {
                   key={event.id}
                   event={event}
                   onDonate={() => navigate('/membership')}
+                  onRsvp={() => setRsvpEvent(event)}
+                  onViewDetails={() => setDetailEvent(event)}
                   highlighted={highlightedId === event.id}
                 />
               ))}
             </div>
           )}
+
+          {rsvpEvent && (
+            <RsvpDialog
+              open={!!rsvpEvent}
+              onOpenChange={(v) => { if (!v) setRsvpEvent(null) }}
+              event={rsvpEvent}
+            />
+          )}
+
+          {/* Event detail sheet */}
+          <Sheet open={!!detailEvent} onOpenChange={(v) => { if (!v) setDetailEvent(null) }}>
+            <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0">
+              {detailEvent && (
+                <EventDetailPanel
+                  event={detailEvent}
+                  onRsvp={() => { setDetailEvent(null); setRsvpEvent(detailEvent) }}
+                  onDonate={() => { setDetailEvent(null); navigate('/membership') }}
+                />
+              )}
+            </SheetContent>
+          </Sheet>
 
           <div className="mt-12 rounded-2xl bg-secondary p-8 md:p-12 text-center text-secondary-foreground shadow-xl relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(232,196,140,0.15),transparent_70%)]" />
@@ -191,10 +224,14 @@ export function EventsPage() {
 function EventCard({
   event,
   onDonate,
+  onRsvp,
+  onViewDetails,
   highlighted = false,
 }: {
   event: TempleEvent
   onDonate: () => void
+  onRsvp: () => void
+  onViewDetails: () => void
   highlighted?: boolean
 }) {
   const { month, day, full } = formatEventDate(event.date)
@@ -207,6 +244,27 @@ function EventCard({
         highlighted && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron',
       )}
     >
+      {/* Clickable image / header area */}
+      <button
+        type="button"
+        onClick={onViewDetails}
+        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+        aria-label={`View details for ${event.title}`}
+      >
+        {event.image ? (
+          <div className="relative h-44 overflow-hidden">
+            <img
+              src={event.image}
+              alt={event.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          </div>
+        ) : (
+          <div className="h-2 bg-gradient-to-r from-orange-400 to-amber-400" />
+        )}
+      </button>
+
       <CardContent className="p-6 space-y-4">
         <div className="flex items-start gap-4">
           <div className="flex flex-col items-center justify-center bg-linear-to-br from-orange-100 to-amber-100 rounded-xl p-3 min-w-[72px] glow-saffron">
@@ -226,16 +284,22 @@ function EventCard({
                 <Badge className="bg-orange-600 text-white">Free</Badge>
               )}
             </div>
-            <h3
-              className="text-lg font-bold text-orange-800 leading-snug"
-              style={{ fontFamily: 'var(--font-heading)' }}
+            <button
+              type="button"
+              onClick={onViewDetails}
+              className="text-left focus:outline-none"
             >
-              {event.title}
-            </h3>
+              <h3
+                className="text-lg font-bold text-orange-800 leading-snug hover:underline"
+                style={{ fontFamily: 'var(--font-heading)' }}
+              >
+                {event.title}
+              </h3>
+            </button>
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground leading-relaxed">{event.description}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{event.description}</p>
 
         <ul className="space-y-1.5 text-sm text-orange-800">
           <li className="flex items-start gap-2">
@@ -254,24 +318,128 @@ function EventCard({
           </li>
         </ul>
 
-        {event.isPaid ? (
-          <Button
-            onClick={onDonate}
-            className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onViewDetails}
+            className="text-sm font-medium text-orange-700 hover:text-orange-900 hover:underline text-left"
           >
-            <Ticket className="mr-2" weight="fill" />
-            Book ticket
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            className="w-full border-orange-300 text-orange-700 hover:bg-orange-50 font-semibold"
-            onClick={onDonate}
-          >
-            Volunteer / RSVP
-          </Button>
-        )}
+            View full details →
+          </button>
+          {event.isPaid ? (
+            <Button
+              onClick={onDonate}
+              className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
+            >
+              <Ticket className="mr-2" weight="fill" />
+              Book ticket
+            </Button>
+          ) : (
+            <Button
+              className="w-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+              onClick={onRsvp}
+            >
+              <ClipboardText className="mr-2" weight="fill" />
+              RSVP
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
+  )
+}
+
+function EventDetailPanel({
+  event,
+  onRsvp,
+  onDonate,
+}: {
+  event: TempleEvent
+  onRsvp: () => void
+  onDonate: () => void
+}) {
+  const { full } = formatEventDate(event.date)
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Image */}
+      {event.image ? (
+        <div className="relative h-56 shrink-0 overflow-hidden">
+          <img
+            src={event.image}
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        </div>
+      ) : (
+        <div className="h-20 bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0">
+          <ImageIcon size={40} className="text-white/60" weight="duotone" />
+        </div>
+      )}
+
+      <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+        <SheetHeader>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <Badge variant="outline" className={CATEGORY_COLORS[event.category]}>
+              {CATEGORY_LABELS[event.category]}
+            </Badge>
+            {event.isPaid ? (
+              <Badge className="bg-amber-500 text-white">€{event.price ?? 0}</Badge>
+            ) : (
+              <Badge className="bg-orange-600 text-white">Free entry</Badge>
+            )}
+          </div>
+          <SheetTitle
+            className="text-2xl text-orange-800 leading-snug"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
+            {event.title}
+          </SheetTitle>
+          <SheetDescription asChild>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              {event.description}
+            </p>
+          </SheetDescription>
+        </SheetHeader>
+
+        <ul className="space-y-3 text-sm text-orange-800 border-t border-orange-100 pt-4">
+          <li className="flex items-start gap-3">
+            <CalendarBlank size={18} className="mt-0.5 text-orange-500 shrink-0" weight="duotone" />
+            <span>{full}</span>
+          </li>
+          {event.time && (
+            <li className="flex items-start gap-3">
+              <Clock size={18} className="mt-0.5 text-orange-500 shrink-0" weight="duotone" />
+              <span>{event.time}</span>
+            </li>
+          )}
+          <li className="flex items-start gap-3">
+            <MapPin size={18} className="mt-0.5 text-orange-500 shrink-0" weight="duotone" />
+            <span>{event.location}</span>
+          </li>
+        </ul>
+
+        <div className="pt-2">
+          {event.isPaid ? (
+            <Button
+              onClick={onDonate}
+              className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
+            >
+              <Ticket className="mr-2" weight="fill" />
+              Book ticket
+            </Button>
+          ) : (
+            <Button
+              className="w-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+              onClick={onRsvp}
+            >
+              <ClipboardText className="mr-2" weight="fill" />
+              RSVP for this event
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

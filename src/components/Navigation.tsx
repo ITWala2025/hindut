@@ -22,7 +22,6 @@ export function Navigation({ onDonateClick }: NavigationProps) {
     { path: '/events', label: 'Events' },
     { path: '/membership', label: 'Membership' },
     { path: '/contact', label: 'Contact' },
-    { path: '/admin', label: 'Admin' },
   ]
 
   const isActive = (path: string) =>

@@ -1,0 +1,131 @@
+/**
+ * netlify/functions/rsvp-export.ts
+ * Authenticated admin endpoint that decrypts RSVP data and returns a CSV download.
+ * Requires a valid Supabase JWT in the Authorization header with admin role.
+ *
+ * Required Netlify environment variables:
+ *   SUPABASE_URL              — Supabase project URL
+ *   SUPABASE_SERVICE_ROLE_KEY — Service role key (bypasses RLS for decryption)
+ *   RSVP_ENCRYPTION_KEY       — Same key used at insert time
+ */
+
+import type { Handler } from '@netlify/functions'
+import { createClient } from '@supabase/supabase-js'
+
+function escapeCSV(value: unknown): string {
+  if (value === null || value === undefined) return ''
+  const str = String(value)
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
+  return str
+}
+
+export const handler: Handler = async (event) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin':  '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  }
+  const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: corsHeaders, body: '' }
+  }
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers: jsonHeaders, body: JSON.stringify({ error: 'Method not allowed' }) }
+  }
+
+  const encKey      = process.env.RSVP_ENCRYPTION_KEY
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!encKey || encKey.length < 16 || !supabaseUrl || !serviceKey) {
+    console.error('Missing env vars in rsvp-export')
+    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Server configuration error' }) }
+  }
+
+  try {
+    // -- Verify caller's JWT and admin role
+    const token = (event.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
+    if (!token) {
+      return { statusCode: 401, headers: jsonHeaders, body: JSON.stringify({ error: 'Unauthorised' }) }
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceKey)
+
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
+    if (authErr || !user) {
+      return { statusCode: 401, headers: jsonHeaders, body: JSON.stringify({ error: 'Unauthorised' }) }
+    }
+
+    const { data: roleRow } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!roleRow || roleRow.role !== 'admin') {
+      return { statusCode: 403, headers: jsonHeaders, body: JSON.stringify({ error: 'Forbidden: admin role required' }) }
+    }
+
+    // -- Parse filter params
+    const body = JSON.parse(event.body ?? '{}') as {
+      eventId?: string; fromDate?: string; toDate?: string; status?: string
+    }
+
+    // -- Fetch decrypted data via the secure Postgres function
+    const { data: rows, error: dbErr } = await supabaseAdmin.rpc('export_rsvps_decrypted', {
+      p_enc_key:   encKey,
+      p_event_id:  body.eventId  ?? null,
+      p_from_date: body.fromDate ?? null,
+      p_to_date:   body.toDate   ?? null,
+      p_status:    body.status   ?? null,
+    })
+
+    if (dbErr) {
+      console.error('export_rsvps_decrypted error:', dbErr)
+      return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Failed to retrieve RSVP data' }) }
+    }
+
+    // -- Build CSV
+    const csvHeaders = [
+      'Reference', 'Event', 'First Name', 'Last Name',
+      'Phone', 'Email', 'Adults', 'Children',
+      'Status', 'Confirmation Sent', 'Submitted At',
+    ]
+
+    const csvRows = (rows ?? []).map((r: Record<string, unknown>) =>
+      [
+        r.reference_number,
+        r.event_title,
+        r.first_name,
+        r.last_name,
+        r.phone,
+        r.email,
+        r.num_adults,
+        r.num_children,
+        r.status,
+        r.confirmation_sent_at ? new Date(r.confirmation_sent_at as string).toISOString() : '',
+        new Date(r.created_at as string).toISOString(),
+      ]
+        .map(escapeCSV)
+        .join(','),
+    )
+
+    const csv      = [csvHeaders.join(','), ...csvRows].join('\r\n')
+    const filename = `rsvps-${new Date().toISOString().slice(0, 10)}.csv`
+
+    return {
+      statusCode: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type':        'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+      body: csv,
+    }
+  } catch (err) {
+    console.error('Unhandled error in rsvp-export:', err)
+    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'An unexpected error occurred' }) }
+  }
+}

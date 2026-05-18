@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { LoginScreen } from '@/components/admin/LoginScreen'
 import { AdminLayout, type AdminSectionId } from '@/components/admin/AdminLayout'
 import { DashboardSection } from '@/components/admin/sections/DashboardSection'
 import { EventsSection } from '@/components/admin/sections/EventsSection'
+import { RsvpsSection } from '@/components/admin/sections/RsvpsSection'
 import { MembersSection } from '@/components/admin/sections/MembersSection'
 import { ReceiptsSection } from '@/components/admin/sections/ReceiptsSection'
 import { MediaSection } from '@/components/admin/sections/MediaSection'
@@ -26,15 +27,21 @@ export function AdminPage() {
 
 function AdminPortal() {
   const { isAuthenticated } = useAuth()
-  const [section, setSection] = useState<AdminSectionId>('dashboard')
+  const navigate = useNavigate()
+  const { section = 'dashboard' } = useParams<{ section: string }>()
+  const activeSection = (section as AdminSectionId) || 'dashboard'
 
   if (!isAuthenticated) {
     return <LoginScreen />
   }
 
+  const handleNavigate = (id: AdminSectionId) => {
+    navigate(`/admin/${id}`)
+  }
+
   return (
-    <AdminLayout active={section} onNavigate={setSection}>
-      {renderSection(section, setSection)}
+    <AdminLayout active={activeSection} onNavigate={handleNavigate}>
+      {renderSection(activeSection, handleNavigate)}
     </AdminLayout>
   )
 }
@@ -52,6 +59,8 @@ function renderSection(
       return <ReceiptsSection />
     case 'events':
       return <EventsSection />
+    case 'rsvps':
+      return <RsvpsSection />
     case 'media':
       return <MediaSection />
     case 'services':

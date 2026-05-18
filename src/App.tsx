@@ -35,7 +35,8 @@ function AppShell() {
       <>
         <ScrollToTop />
         <Routes>
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/:section" element={<AdminPage />} />
         </Routes>
         <Toaster />
       </>

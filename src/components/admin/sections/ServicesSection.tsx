@@ -54,6 +54,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -582,18 +589,19 @@ export function ServicesSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Create / Edit dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) setDialogOpen(false) }}>
-        <DialogContent
-          className="sm:max-w-4xl w-full max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden"
+      {/* Create / Edit slide-over */}
+      <Sheet open={dialogOpen} onOpenChange={(open) => { if (!open) setDialogOpen(false) }}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-4xl p-0 gap-0 overflow-hidden flex flex-col"
           onFocusOutside={(e) => e.preventDefault()}
         >
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
-            <DialogTitle>{editingId ? 'Edit service' : 'New service'}</DialogTitle>
-            <DialogDescription>
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
+            <SheetTitle>{editingId ? 'Edit service' : 'New service'}</SheetTitle>
+            <SheetDescription>
               {editingId ? 'Update the service details below.' : 'Fill in the details for the new service.'}
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
             <TabsList className="mx-6 mt-4 shrink-0 grid grid-cols-3 bg-slate-100 rounded-lg p-1">
@@ -847,18 +855,18 @@ export function ServicesSection() {
             </TabsContent>
           </Tabs>
 
-          <DialogFooter className="px-6 py-4 border-t border-slate-100 shrink-0 bg-white">
+          <div className="px-6 py-4 border-t border-slate-100 shrink-0 bg-white flex items-center justify-between gap-3">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button
               disabled={saving || !form.title.trim()}
               onClick={handleSave}
-              className="bg-orange-600 text-white hover:bg-orange-700"
+              className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
             >
               {saving ? 'Saving...' : editingId ? 'Save changes' : 'Create service'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Delete service confirm */}
       <AlertDialog open={!!deleteItem} onOpenChange={(open) => { if (!open) setDeleteItem(null) }}>
