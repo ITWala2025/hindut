@@ -14,6 +14,7 @@ import {
   Bell,
   MagnifyingGlass,
   ArrowSquareOut,
+  Sparkle,
 } from '@phosphor-icons/react'
 import type { Capability } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
@@ -38,6 +39,7 @@ export type AdminSectionId =
   | 'receipts'
   | 'events'
   | 'media'
+  | 'services'
   | 'users'
   | 'settings'
 
@@ -75,6 +77,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Media Library',
     icon: <ImageIcon size={20} weight="duotone" />,
     capability: 'manageMedia',
+  },
+  {
+    id: 'services',
+    label: 'Services',
+    icon: <Sparkle size={20} weight="duotone" />,
+    capability: 'manageServices',
   },
   {
     id: 'users',

@@ -34,7 +34,7 @@ import {
   type ReceiptRecord,
   type ReceiptTemplate,
   type ReceiptType,
-} from '@/data/adminMock'
+} from '@/lib/types'
 import { useReceipts } from '@/hooks/useReceipts'
 import { useAuth } from '@/lib/auth'
 import {

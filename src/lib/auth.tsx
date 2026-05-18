@@ -43,6 +43,7 @@ export const ROLE_PERMISSIONS: Record<
     manageReceipts: boolean
     manageEvents: boolean
     manageMedia: boolean
+    manageServices: boolean
     manageSettings: boolean
   }
 > = {
@@ -52,6 +53,7 @@ export const ROLE_PERMISSIONS: Record<
     manageReceipts: true,
     manageEvents: true,
     manageMedia: true,
+    manageServices: true,
     manageSettings: true,
   },
   editor: {
@@ -60,6 +62,7 @@ export const ROLE_PERMISSIONS: Record<
     manageReceipts: false,
     manageEvents: true,
     manageMedia: true,
+    manageServices: true,
     manageSettings: false,
   },
 }

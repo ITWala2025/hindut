@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { MediaItem } from '@/data/adminMock'
+import type { MediaItem } from '@/lib/types'
 
 interface MediaRow {
   id: string
@@ -16,17 +16,21 @@ interface MediaRow {
 }
 
 function toMediaItem(row: MediaRow): MediaItem {
-  const { data } = supabase.storage.from(row.bucket).getPublicUrl(row.path)
+  const isExternal = row.bucket === 'external'
+  const url = isExternal
+    ? row.path
+    : supabase.storage.from(row.bucket).getPublicUrl(row.path).data.publicUrl
   return {
     id: row.id,
     filename: row.filename,
-    url: data.publicUrl,
+    url,
     folder: (row.folder as MediaItem['folder']) ?? 'general',
     sizeKb: row.size_kb ?? 0,
     uploadedBy: row.uploaded_by ?? '',
     uploadedAt: row.uploaded_at.slice(0, 10),
     title: row.title ?? row.filename,
     alt: row.alt_text ?? row.filename,
+    isExternal,
   }
 }
 
@@ -103,7 +107,9 @@ export function useMedia() {
 
     if (!row.error && row.data) {
       const { bucket, path } = row.data as { bucket: string; path: string }
-      await supabase.storage.from(bucket).remove([path])
+      if (bucket !== 'external') {
+        await supabase.storage.from(bucket).remove([path])
+      }
     }
 
     const { error: delErr } = await supabase.from('media').delete().eq('id', id)
@@ -136,5 +142,29 @@ export function useMedia() {
     [],
   )
 
-  return { media, loading, error, upload, update, remove, refetch: fetchMedia }
+  const addExternal = useCallback(
+    async (url: string, folder: MediaItem['folder'], altText?: string, title?: string): Promise<MediaItem> => {
+      const filename = url.split('/').pop()?.split('?')[0] ?? 'external-image'
+      const { data: row, error: insertErr } = await supabase
+        .from('media')
+        .insert({
+          filename,
+          bucket: 'external',
+          path: url,
+          folder,
+          size_kb: 0,
+          title: title ?? filename,
+          alt_text: altText ?? filename,
+        })
+        .select('*')
+        .single()
+      if (insertErr) throw new Error(insertErr.message)
+      const item = toMediaItem(row as MediaRow)
+      setMedia((prev) => [item, ...prev])
+      return item
+    },
+    [],
+  )
+
+  return { media, loading, error, upload, addExternal, update, remove, refetch: fetchMedia }
 }

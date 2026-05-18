@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import {
   Image as ImageIcon,
   UploadSimple,
@@ -8,6 +8,8 @@ import {
   Copy,
   PencilSimple,
   HardDrives,
+  LinkSimple,
+  ArrowSquareOut,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,7 +41,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { type MediaItem } from '@/data/adminMock'
+import { type MediaItem } from '@/lib/types'
 import { useMedia } from '@/hooks/useMedia'
 import { useAuth } from '@/lib/auth'
 import { KpiCard, SectionCard, EmptyState } from '@/components/admin/adminUi'
@@ -57,7 +59,7 @@ export function MediaSection() {
   const { can } = useAuth()
   const canWrite = can('manageMedia')
 
-  const { media, loading, error, upload, update, remove: removeMedia } = useMedia()
+  const { media, loading, error, upload, addExternal, update, remove: removeMedia } = useMedia()
 
   const [folder, setFolder] = useState<FolderFilter>('all')
   const [search, setSearch] = useState('')
@@ -78,6 +80,20 @@ export function MediaSection() {
   const [editForm, setEditForm] = useState({ title: '', alt: '' })
   const [saving, setSaving] = useState(false)
 
+  // External link dialog
+  const [externalOpen, setExternalOpen] = useState(false)
+  const [externalForm, setExternalForm] = useState({
+    url: '',
+    title: '',
+    alt: '',
+    folder: 'general' as MediaItem['folder'],
+  })
+  const [externalSaving, setExternalSaving] = useState(false)
+
+  // Pagination
+  const PAGE_SIZE = 20
+  const [page, setPage] = useState(1)
+
   // Delete confirm
   const [deleteItem, setDeleteItem] = useState<MediaItem | null>(null)
 
@@ -93,6 +109,12 @@ export function MediaSection() {
       )
     })
   }, [media, folder, search])
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1) }, [folder, search])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const totals = useMemo(
     () => ({
@@ -149,6 +171,20 @@ export function MediaSection() {
       toast.error((err as Error).message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleExternalConfirm = async () => {
+    setExternalSaving(true)
+    try {
+      await addExternal(externalForm.url.trim(), externalForm.folder, externalForm.alt.trim() || undefined, externalForm.title.trim() || undefined)
+      toast.success('External image added.')
+      setExternalOpen(false)
+      setExternalForm({ url: '', title: '', alt: '', folder: 'general' })
+    } catch (err) {
+      toast.error((err as Error).message)
+    } finally {
+      setExternalSaving(false)
     }
   }
 
@@ -218,6 +254,14 @@ export function MediaSection() {
                 className="hidden"
               />
               <Button
+                variant="outline"
+                onClick={() => setExternalOpen(true)}
+                className="font-semibold"
+              >
+                <LinkSimple className="mr-2" weight="bold" />
+                Add external link
+              </Button>
+              <Button
                 onClick={() => fileInputRef.current?.click()}
                 className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
               >
@@ -262,8 +306,9 @@ export function MediaSection() {
             description="Upload images or change your filters."
           />
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filtered.map((m) => (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {paginated.map((m) => (
               <div
                 key={m.id}
                 className="group rounded-xl border border-slate-200 overflow-hidden bg-white hover:shadow-md transition-shadow"
@@ -284,6 +329,15 @@ export function MediaSection() {
                   >
                     {m.folder}
                   </Badge>
+                  {m.isExternal && (
+                    <Badge
+                      variant="outline"
+                      className="absolute top-2 right-2 bg-blue-50/90 text-blue-700 border-blue-200 text-[10px] flex items-center gap-1"
+                    >
+                      <ArrowSquareOut size={10} />
+                      External
+                    </Badge>
+                  )}
                 </div>
                 <div className="p-3 space-y-1">
                   <div className="font-semibold text-sm text-slate-900 truncate" title={m.title}>
@@ -330,10 +384,152 @@ export function MediaSection() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            {/* Pagination bar */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <span className="text-xs text-muted-foreground">
+                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    disabled={page === 1}
+                    onClick={() => setPage(1)}
+                  >
+                    «
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    ‹
+                  </Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                    .reduce<(number | '…')[]>((acc, p, i, arr) => {
+                      if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('…')
+                      acc.push(p)
+                      return acc
+                    }, [])
+                    .map((p, i) =>
+                      p === '…' ? (
+                        <span key={`ellipsis-${i}`} className="px-1 text-xs text-muted-foreground">…</span>
+                      ) : (
+                        <Button
+                          key={p}
+                          variant={page === p ? 'default' : 'outline'}
+                          size="sm"
+                          className="h-8 w-8 p-0 text-xs"
+                          onClick={() => setPage(p as number)}
+                        >
+                          {p}
+                        </Button>
+                      )
+                    )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    disabled={page === totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    ›
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    disabled={page === totalPages}
+                    onClick={() => setPage(totalPages)}
+                  >
+                    »
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </SectionCard>
+
+      {/* External link dialog */}
+      <Dialog open={externalOpen} onOpenChange={(open) => { if (!open) setExternalOpen(false) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add external image</DialogTitle>
+            <DialogDescription>Paste a public image URL. It won't be stored in Supabase Storage.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="ext-url">Image URL</Label>
+              <Input
+                id="ext-url"
+                type="url"
+                value={externalForm.url}
+                onChange={(e) => setExternalForm((f) => ({ ...f, url: e.target.value }))}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+            {externalForm.url.trim() && (
+              <img
+                src={externalForm.url.trim()}
+                alt="preview"
+                className="w-full max-h-40 object-contain rounded-lg border border-slate-200"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="ext-title">Title <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                id="ext-title"
+                value={externalForm.title}
+                onChange={(e) => setExternalForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Descriptive title..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ext-alt">Alt text <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                id="ext-alt"
+                value={externalForm.alt}
+                onChange={(e) => setExternalForm((f) => ({ ...f, alt: e.target.value }))}
+                placeholder="Describe the image for screen readers..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Folder</Label>
+              <Select
+                value={externalForm.folder}
+                onValueChange={(v) => setExternalForm((f) => ({ ...f, folder: v as MediaItem['folder'] }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {FOLDERS.map((f) => (
+                    <SelectItem key={f} value={f} className="capitalize">{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExternalOpen(false)}>Cancel</Button>
+            <Button
+              disabled={externalSaving || !externalForm.url.trim()}
+              onClick={handleExternalConfirm}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              {externalSaving ? 'Adding...' : 'Add image'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Upload dialog */}
       <Dialog

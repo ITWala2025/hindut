@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { ReceiptRecord, ReceiptTemplate, ReceiptType } from '@/data/adminMock'
+import type { ReceiptRecord, ReceiptTemplate, ReceiptType } from '@/lib/types'
 
 interface ReceiptRow {
   id: string

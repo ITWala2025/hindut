@@ -33,6 +33,7 @@ export interface MediaItem {
   uploadedAt: string
   title: string
   alt: string
+  isExternal?: boolean
 }
 
 export interface AttendeeRecord {

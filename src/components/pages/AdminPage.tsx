@@ -7,6 +7,7 @@ import { EventsSection } from '@/components/admin/sections/EventsSection'
 import { MembersSection } from '@/components/admin/sections/MembersSection'
 import { ReceiptsSection } from '@/components/admin/sections/ReceiptsSection'
 import { MediaSection } from '@/components/admin/sections/MediaSection'
+import { ServicesSection } from '@/components/admin/sections/ServicesSection'
 import { UsersSection } from '@/components/admin/sections/UsersSection'
 import { SettingsSection } from '@/components/admin/sections/SettingsSection'
 
@@ -53,6 +54,8 @@ function renderSection(
       return <EventsSection />
     case 'media':
       return <MediaSection />
+    case 'services':
+      return <ServicesSection />
     case 'users':
       return <UsersSection />
     case 'settings':
