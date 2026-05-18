@@ -6,13 +6,10 @@
     "scripts": {
         "dev": "vite",
         "kill": "fuser -k 5000/tcp",
-        "predev": "node scripts/convert-gallery.mjs",
-        "prebuild": "node scripts/convert-gallery.mjs",
         "build": "tsc -b --noCheck && vite build",
         "lint": "eslint .",
         "optimize": "vite optimize",
         "preview": "vite preview",
-        "gallery:convert": "node scripts/convert-gallery.mjs",
         "gallery:upload": "node scripts/upload-gallery.mjs"
     },
     "dependencies": {

@@ -46,7 +46,7 @@ import { KpiCard, SectionCard, EmptyState } from '@/components/admin/adminUi'
 
 type FolderFilter = 'all' | MediaItem['folder']
 
-const FOLDERS: MediaItem['folder'][] = ['events', 'temple', 'community', 'general', 'gallery']
+const FOLDERS: MediaItem['folder'][] = ['events', 'temple', 'community', 'general', 'gallery-webp']
 
 function formatBytes(kb: number): string {
   if (kb < 1024) return `${kb} KB`

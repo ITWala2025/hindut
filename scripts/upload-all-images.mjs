@@ -102,7 +102,7 @@ for (const filename of webpFiles) {
     .from('media')
     .select('id, path, filename')
     .eq('bucket', BUCKET)
-    .eq('folder', 'gallery')
+    .eq('folder', 'gallery-webp')
 
   const match = (rows ?? []).find(r => {
     const rowStem = parse(r.filename ?? r.path).name
@@ -129,7 +129,7 @@ for (const filename of webpFiles) {
       bucket:    BUCKET,
       path:      storagePath,
       filename:  filename,
-      folder:    'gallery',
+      folder:    'gallery-webp',
       size_kb:   0,
       title,
       alt_text:  `Gallery image: ${title}`,

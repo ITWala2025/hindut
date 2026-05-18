@@ -27,7 +27,7 @@ export interface MediaItem {
   id: string
   filename: string
   url: string
-  folder: 'events' | 'temple' | 'community' | 'general' | 'gallery'
+  folder: 'events' | 'temple' | 'community' | 'general' | 'gallery-webp'
   sizeKb: number
   uploadedBy: string
   uploadedAt: string

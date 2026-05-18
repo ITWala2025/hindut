@@ -16,9 +16,10 @@ function useGalleryImages() {
       .from('media')
       .select('path, bucket, title, alt_text, filename')
       .eq('bucket', 'public-gallery')
-      .eq('folder', 'gallery')
+      .like('path', 'gallery-webp/%')
       .order('uploaded_at', { ascending: true })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error('[PhotoGallery] fetch error:', error.message)
         if (data && data.length > 0) {
           setImages(
             data.map((row) => ({
@@ -51,17 +52,17 @@ export function PhotoGallery({
 
   const visible = useMemo(
     () => (preview ? IMAGES.slice(0, preview) : IMAGES),
-    [preview],
+    [IMAGES, preview],
   )
 
   const close = useCallback(() => setActiveIndex(null), [])
   const prev = useCallback(
     () => setActiveIndex((i) => (i === null ? null : (i - 1 + IMAGES.length) % IMAGES.length)),
-    [],
+    [IMAGES.length],
   )
   const next = useCallback(
     () => setActiveIndex((i) => (i === null ? null : (i + 1) % IMAGES.length)),
-    [],
+    [IMAGES.length],
   )
 
   useEffect(() => {

@@ -44,7 +44,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 const GALLERY_SRC = join(ROOT, 'public', 'images', 'Gallery')
 const BUCKET      = 'public-gallery'
-const FOLDER      = 'gallery'
+const FOLDER      = 'gallery-webp'
 
 const MIME = {
   '.jpg':  'image/jpeg',
