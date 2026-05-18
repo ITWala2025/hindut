@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Logo } from '@/components/Logo'
-import { useAuth, MOCK_USERS } from '@/lib/auth'
+import { useAuth } from '@/lib/auth'
 import {
   ShieldCheck,
   SignIn,
@@ -53,11 +53,9 @@ export function LoginScreen() {
     setError(null)
     setLoading(true)
     try {
-      // Mock the email round-trip: show a "check your inbox" state
-      // before signing the user in automatically.
       setMagicSent(true)
-      const user = await loginWithMagicLink(magicEmail)
-      toast.success(`Signed in as ${user.name}.`)
+      await loginWithMagicLink(magicEmail)
+      toast.success('Check your inbox for a sign-in link.')
     } catch (err) {
       setMagicSent(false)
       setError(err instanceof Error ? err.message : 'Magic link failed.')
@@ -66,28 +64,15 @@ export function LoginScreen() {
     }
   }
 
-  const quickLogin = async (demoEmail: string, demoPassword: string) => {
-    setEmail(demoEmail)
-    setPassword(demoPassword)
-    setError(null)
-    setLoading(true)
-    try {
-      const user = await login(demoEmail, demoPassword)
-      toast.success(`Signed in as ${user.name}.`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-orange-50 via-amber-50 to-orange-100 p-4">
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
         {/* Brand panel */}
         <div className="lg:col-span-2 hidden lg:block">
           <div className="space-y-6">
-            <Logo size="lg" showText={true} />
+            <a href="/" aria-label="Go to home page">
+              <Logo size="lg" showText={true} />
+            </a>
             <h1
               className="text-4xl font-bold text-orange-900"
               style={{ fontFamily: 'var(--font-heading)' }}
@@ -101,29 +86,12 @@ export function LoginScreen() {
             <div className="rounded-2xl border border-orange-200 bg-white/70 p-5 space-y-3 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-orange-800 font-semibold">
                 <ShieldCheck size={20} weight="duotone" />
-                Demo credentials
+                Authorised access only
               </div>
               <p className="text-xs text-muted-foreground">
-                Phase 1 mock environment — sessions are stored in your browser.
+                Sign in with your admin email and password, or request a magic link.
+                Contact the system administrator if you need access.
               </p>
-              <div className="space-y-2">
-                {MOCK_USERS.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => quickLogin(u.email, u.password)}
-                    disabled={loading}
-                    className="w-full text-left rounded-lg border border-orange-200 bg-orange-50/60 hover:bg-orange-100/80 transition-colors px-3 py-2 text-xs disabled:opacity-50"
-                  >
-                    <div className="font-semibold text-orange-900">
-                      {u.name} — {u.role}
-                    </div>
-                    <div className="text-muted-foreground font-mono">
-                      {u.email} · {u.password}
-                    </div>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -132,7 +100,9 @@ export function LoginScreen() {
         <Card className="lg:col-span-3 border-orange-200/60 shadow-2xl shadow-orange-900/10 bg-white/90 backdrop-blur-xl">
           <CardContent className="p-8 md:p-10">
             <div className="lg:hidden mb-6 flex justify-center">
-              <Logo size="md" showText={true} />
+              <a href="/" aria-label="Go to home page">
+                <Logo size="md" showText={true} />
+              </a>
             </div>
             <div className="mb-6">
               <h2
@@ -206,7 +176,7 @@ export function LoginScreen() {
 
                   {error && (
                     <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                      <Warning size={18} weight="fill" className="mt-0.5 flex-shrink-0" />
+                      <Warning size={18} weight="fill" className="shrink-0 mt-0.5" />
                       <span>{error}</span>
                     </div>
                   )}
@@ -214,7 +184,7 @@ export function LoginScreen() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold h-11"
+                    className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold h-11"
                   >
                     <SignIn className="mr-2" weight="bold" />
                     {loading ? 'Signing in…' : 'Sign in'}
@@ -259,7 +229,7 @@ export function LoginScreen() {
 
                     {error && (
                       <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                        <Warning size={18} weight="fill" className="mt-0.5 flex-shrink-0" />
+                        <Warning size={18} weight="fill" className="mt-0.5 shrink-0" />
                         <span>{error}</span>
                       </div>
                     )}
@@ -267,7 +237,7 @@ export function LoginScreen() {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold h-11"
+                      className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold h-11"
                     >
                       <EnvelopeSimple className="mr-2" weight="bold" />
                       {loading ? 'Sending link…' : 'Send magic link'}
@@ -278,25 +248,13 @@ export function LoginScreen() {
             </Tabs>
 
             <div className="lg:hidden mt-8 pt-6 border-t border-orange-100">
-              <p className="text-xs font-semibold text-orange-800 mb-2">Demo accounts</p>
-              <div className="space-y-1.5">
-                {MOCK_USERS.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => quickLogin(u.email, u.password)}
-                    disabled={loading}
-                    className="w-full text-left text-xs px-3 py-2 rounded-md bg-orange-50 hover:bg-orange-100 disabled:opacity-50"
-                  >
-                    <span className="font-semibold text-orange-900">{u.role}:</span>{' '}
-                    <span className="font-mono text-muted-foreground">{u.email}</span>
-                  </button>
-                ))}
-              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Contact the system administrator if you need access.
+              </p>
             </div>
 
             <p className="mt-6 text-center text-xs text-muted-foreground">
-              Protected portal · Hindu Association of Ireland · Phase 1 mock
+              Protected portal · Hindu Association of Ireland
             </p>
           </CardContent>
         </Card>

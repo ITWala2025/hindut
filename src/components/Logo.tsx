@@ -28,10 +28,10 @@ export function Logo({ size = 'md', showText = true, className = '' }: LogoProps
       {/* Stunning Logo Icon */}
       <div className="relative">
         {/* Outer glow ring */}
-        <div className={`${sizeClasses[size]} absolute -inset-2 rounded-full bg-gradient-to-r from-orange-400 via-amber-500 to-orange-400 opacity-30 blur-md animate-pulse`} />
+        <div className={`${sizeClasses[size]} absolute -inset-2 rounded-full bg-linear-to-r from-orange-400 via-amber-500 to-orange-400 opacity-30 blur-md animate-pulse`} />
 
         {/* Main logo circle */}
-        <div className={`${sizeClasses[size]} relative flex items-center justify-center rounded-full bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 shadow-xl glow-saffron-intense`}>
+        <div className={`${sizeClasses[size]} relative flex items-center justify-center rounded-full bg-linear-to-br from-orange-500 via-amber-500 to-orange-600 shadow-xl glow-saffron-intense`}>
           {/* Inner decorative ring */}
           <div className="absolute inset-1 rounded-full border-2 border-white/30" />
 
@@ -52,15 +52,15 @@ export function Logo({ size = 'md', showText = true, className = '' }: LogoProps
       {showText && (
         <div className="flex flex-col justify-center">
           <span
-            className={`${textSizeClasses[size]} font-bold leading-tight bg-gradient-to-r from-orange-700 via-orange-800 to-amber-700 bg-clip-text text-transparent`}
+            className={`${textSizeClasses[size]} font-bold leading-tight bg-linear-to-r from-orange-700 via-orange-800 to-amber-700 bg-clip-text text-transparent`}
             style={{ fontFamily: 'var(--font-heading)' }}
           >
             Hindu Temple
           </span>
           <div className="flex items-center gap-1 mt-0.5">
-            <div className="h-px w-4 bg-gradient-to-r from-transparent via-orange-400 to-transparent" />
+            <div className="h-px w-4 bg-linear-to-r from-transparent via-orange-400 to-transparent" />
             <span className="text-[10px] text-orange-600/80 font-medium tracking-wider">HINDU ASSOCIATION OF IRELAND</span>
-            <div className="h-px w-4 bg-gradient-to-r from-transparent via-orange-400 to-transparent" />
+            <div className="h-px w-4 bg-linear-to-r from-transparent via-orange-400 to-transparent" />
           </div>
         </div>
       )}

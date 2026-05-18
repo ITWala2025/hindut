@@ -49,7 +49,7 @@ export function KpiCard({
           </div>
           <div
             className={cn(
-              'rounded-xl p-3 bg-gradient-to-br shadow-sm',
+              'rounded-xl p-3 bg-linear-to-br shadow-sm',
               ACCENT_STYLES[accent],
             )}
           >

@@ -162,13 +162,13 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[550px] bg-gradient-to-br from-orange-50 via-white to-amber-50">
+      <DialogContent className="sm:max-w-[550px] bg-linear-to-br from-orange-50 via-white to-amber-50">
         {/* Amount Selection Step */}
         {step === 'amount' && (
           <>
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div className="rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 p-3 glow-saffron">
+                <div className="rounded-xl bg-linear-to-br from-orange-500 to-amber-600 p-3 glow-saffron">
                   <Heart className="text-white" size={28} weight="fill" />
                 </div>
                 <div>
@@ -194,7 +194,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                       className={cn(
                         "h-14 text-lg font-semibold transition-all hover:scale-105",
                         selectedAmount === amount
-                          ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg glow-saffron"
+                          ? "bg-linear-to-r from-orange-600 to-amber-600 text-white shadow-lg glow-saffron"
                           : "border-orange-300 text-orange-700 hover:border-orange-500"
                       )}
                       onClick={() => {
@@ -232,7 +232,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
 
               <Button
                 onClick={handleAmountNext}
-                className="w-full h-12 text-base font-semibold bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
+                className="w-full h-12 text-base font-semibold bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
               >
                 Continue to Payment
               </Button>
@@ -273,7 +273,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                 >
                   <div className="flex items-center gap-4">
                     <div className={cn(
-                      "text-4xl w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br",
+                      "text-4xl w-16 h-16 rounded-xl flex items-center justify-center bg-linear-to-br",
                       gateway.color,
                       "shadow-lg"
                     )}>
@@ -348,7 +348,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
 
               <Button
                 type="submit"
-                className="w-full h-12 text-base font-semibold bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
+                className="w-full h-12 text-base font-semibold bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
               >
                 Continue to Payment
               </Button>
@@ -455,7 +455,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                   <Button
                     onClick={handleStripePayment}
                     disabled={isProcessing}
-                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                    className="w-full h-12 text-base font-semibold bg-linear-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
                   >
                     {isProcessing ? (
                       <>
@@ -493,7 +493,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                   <Button
                     onClick={handleSumUpPayment}
                     disabled={isProcessing}
-                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-orange-600 to-orange-700 text-white hover:from-orange-700 hover:to-orange-800"
+                    className="w-full h-12 text-base font-semibold bg-linear-to-r from-orange-600 to-orange-700 text-white hover:from-orange-700 hover:to-orange-800"
                   >
                     {isProcessing ? (
                       <>
@@ -517,7 +517,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
         {step === 'success' && (
           <div className="py-8 text-center space-y-6">
             <div className="flex justify-center">
-              <div className="rounded-full bg-gradient-to-br from-orange-100 to-amber-100 p-6 glow-saffron-intense">
+              <div className="rounded-full bg-linear-to-br from-orange-100 to-amber-100 p-6 glow-saffron-intense">
                 <CheckCircle className="text-orange-600" size={64} weight="fill" />
               </div>
             </div>
@@ -537,7 +537,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
             </div>
             <Button
               onClick={handleClose}
-              className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
+              className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
             >
               Close
             </Button>

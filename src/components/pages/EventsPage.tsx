@@ -103,7 +103,7 @@ export function EventsPage() {
         )}
       </HeroCarousel>
 
-      <section className="py-8 md:py-12 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50">
+      <section className="py-8 md:py-12 bg-linear-to-br from-slate-50 via-orange-50/30 to-slate-50">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
             <div>
@@ -125,7 +125,7 @@ export function EventsPage() {
                   className={
                     'px-4 py-2 rounded-lg text-sm font-semibold transition-all ' +
                     (filter === f
-                      ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow'
+                      ? 'bg-linear-to-r from-orange-600 to-amber-600 text-white shadow'
                       : 'text-orange-700 hover:bg-orange-50')
                   }
                 >
@@ -209,7 +209,7 @@ function EventCard({
     >
       <CardContent className="p-6 space-y-4">
         <div className="flex items-start gap-4">
-          <div className="flex flex-col items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl p-3 min-w-[72px] glow-saffron">
+          <div className="flex flex-col items-center justify-center bg-linear-to-br from-orange-100 to-amber-100 rounded-xl p-3 min-w-[72px] glow-saffron">
             <span className="text-xs font-semibold text-orange-700 tracking-widest">
               {month}
             </span>
@@ -257,7 +257,7 @@ function EventCard({
         {event.isPaid ? (
           <Button
             onClick={onDonate}
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
+            className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
           >
             <Ticket className="mr-2" weight="fill" />
             Book ticket

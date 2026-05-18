@@ -119,7 +119,7 @@ export function ContactPage() {
         </div>
       </HeroCarousel>
 
-      <section className="py-8 md:py-12 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50">
+      <section className="py-8 md:py-12 bg-linear-to-br from-slate-50 via-orange-50/30 to-slate-50">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 max-w-7xl mx-auto">
             <div className="lg:col-span-2 space-y-6">
@@ -193,7 +193,7 @@ export function ContactPage() {
               <Card id="contact-form" className={cn('scroll-mt-32 border-orange-200/50 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow', highlightedId === 'form' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
                 <CardContent className="p-8 md:p-10">
                   <div className="flex items-start gap-4 mb-8">
-                    <div className="rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 p-3 glow-saffron">
+                    <div className="rounded-xl bg-linear-to-br from-orange-100 to-amber-100 p-3 glow-saffron">
                       <Envelope className="text-orange-600" size={28} weight="duotone" />
                     </div>
                     <div>
@@ -274,7 +274,7 @@ export function ContactPage() {
 
                     <Button
                       type="submit"
-                      className="w-full h-12 text-base font-semibold bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron hover:scale-[1.02] transition-all"
+                      className="w-full h-12 text-base font-semibold bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron hover:scale-[1.02] transition-all"
                     >
                       <Envelope className="mr-2" size={18} weight="duotone" />
                       Send Message

@@ -115,7 +115,7 @@ export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) 
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'hidden lg:flex flex-col bg-gradient-to-b from-orange-900 via-orange-950 to-orange-900 text-orange-50 transition-all duration-300 sticky top-0 h-screen',
+          'hidden lg:flex flex-col bg-linear-to-b from-orange-900 via-orange-950 to-orange-900 text-orange-50 transition-all duration-300 sticky top-0 h-screen',
           collapsed ? 'w-20' : 'w-64',
         )}
       >
@@ -136,7 +136,7 @@ export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent
           side="left"
-          className="p-0 w-72 bg-gradient-to-b from-orange-900 via-orange-950 to-orange-900 text-orange-50 border-orange-800"
+          className="p-0 w-72 bg-linear-to-b from-orange-900 via-orange-950 to-orange-900 text-orange-50 border-orange-800"
         >
           <SheetTitle className="sr-only">Admin navigation</SheetTitle>
           <SidebarHeader collapsed={false} />
@@ -214,7 +214,7 @@ export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) 
                 <button className="flex items-center gap-2 rounded-full hover:bg-orange-50 pl-1 pr-2 py-1 transition-colors">
                   <div
                     className={cn(
-                      'h-9 w-9 rounded-full bg-gradient-to-br text-white font-semibold flex items-center justify-center',
+                      'h-9 w-9 rounded-full bg-linear-to-br text-white font-semibold flex items-center justify-center',
                       user.avatarColor,
                     )}
                   >
@@ -314,7 +314,7 @@ function SidebarNav({
               collapsed && 'justify-center px-0',
             )}
           >
-            <span className="flex-shrink-0">{item.icon}</span>
+            <span className="shrink-0">{item.icon}</span>
             {!collapsed && (
               <>
                 <span className="flex-1 text-left">{item.label}</span>

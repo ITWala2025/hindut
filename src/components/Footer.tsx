@@ -4,12 +4,12 @@ import { Separator } from '@/components/ui/separator'
 
 export function Footer() {
   return (
-    <footer className="border-t border-orange-200/40 bg-gradient-to-b from-orange-50 via-amber-50 to-orange-100 shadow-inner shadow-orange-200/50">
+    <footer className="border-t border-orange-200/40 bg-linear-to-b from-orange-50 via-amber-50 to-orange-100 shadow-inner shadow-orange-200/50">
       <div className="container mx-auto px-6 md:px-12 lg:px-24 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           <div>
             <div className="flex items-center space-x-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-600 glow-saffron">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-orange-500 to-amber-600 glow-saffron">
                 <span className="text-xl font-bold text-white">ॐ</span>
               </div>
               <span className="text-lg font-bold text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -82,14 +82,14 @@ export function Footer() {
             <h3 className="text-sm font-semibold mb-4 text-orange-800">Temple Hours</h3>
             <div className="space-y-2 text-sm text-orange-700/80">
               <div className="flex items-start gap-2">
-                <Clock className="mt-0.5 flex-shrink-0 text-orange-600" size={16} />
+                <Clock className="mt-0.5 shrink-0 text-orange-600" size={16} />
                 <div>
                   <p className="font-medium text-orange-800">Morning Darshan</p>
                   <p>6:00 AM - 12:00 PM</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <Clock className="mt-0.5 flex-shrink-0 text-orange-600" size={16} />
+                <Clock className="mt-0.5 shrink-0 text-orange-600" size={16} />
                 <div>
                   <p className="font-medium text-orange-800">Evening Darshan</p>
                   <p>5:00 PM - 9:00 PM</p>
@@ -102,15 +102,15 @@ export function Footer() {
             <h3 className="text-sm font-semibold mb-4 text-orange-800">Contact Info</h3>
             <ul className="space-y-3 text-sm text-orange-700/80">
               <li className="flex items-start gap-2">
-                <MapPin className="mt-0.5 flex-shrink-0 text-orange-600" size={16} />
+                <MapPin className="mt-0.5 shrink-0 text-orange-600" size={16} />
                 <span>4 Denmark Street, Co. Limerick, Ireland</span>
               </li>
               <li className="flex items-center gap-2">
-                <Phone className="flex-shrink-0 text-orange-600" size={16} />
+                <Phone className="shrink-0 text-orange-600" size={16} />
                 <span>(087) 495 3334</span>
               </li>
               <li className="flex items-center gap-2">
-                <Envelope className="flex-shrink-0 text-orange-600" size={16} />
+                <Envelope className="shrink-0 text-orange-600" size={16} />
                 <span>info@hindutemple.ie</span>
               </li>
             </ul>

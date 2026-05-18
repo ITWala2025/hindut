@@ -31,12 +31,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
-  MOCK_RECEIPTS,
-  DEFAULT_RECEIPT_TEMPLATES,
   type ReceiptRecord,
   type ReceiptTemplate,
   type ReceiptType,
 } from '@/data/adminMock'
+import { useReceipts } from '@/hooks/useReceipts'
 import { useAuth } from '@/lib/auth'
 import {
   KpiCard,
@@ -54,9 +53,7 @@ const PAGE_SIZE = 8
 export function ReceiptsSection() {
   const { can } = useAuth()
   const canWrite = can('manageReceipts')
-
-  const [receipts, setReceipts] = useState<ReceiptRecord[]>(MOCK_RECEIPTS)
-  const [templates, setTemplates] = useState<ReceiptTemplate[]>(DEFAULT_RECEIPT_TEMPLATES)
+  const { receipts, templates, loading, error, issueReceipt: createReceipt, saveTemplate: saveTemplateToDb } = useReceipts()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [page, setPage] = useState(1)
@@ -129,7 +126,7 @@ export function ReceiptsSection() {
     toast.success(`Mock PDF generated for ${r.id}.`)
   }
 
-  const issueReceipt = (ev: React.FormEvent) => {
+  const issueReceipt = async (ev: React.FormEvent) => {
     ev.preventDefault()
     if (
       !issueForm.recipientName.trim() ||
@@ -140,18 +137,15 @@ export function ReceiptsSection() {
       toast.error('All fields are required and amount must be positive.')
       return
     }
-    const newReceipt: ReceiptRecord = {
-      id: `rcpt-${new Date().getFullYear()}-${String(receipts.length + 1).padStart(4, '0')}`,
+    const newReceipt = await createReceipt({
       recipientName: issueForm.recipientName.trim(),
       recipientEmail: issueForm.recipientEmail.trim(),
       amount: issueForm.amount,
-      currency: 'EUR',
-      date: new Date().toISOString().slice(0, 10),
       type: issueForm.type,
       description: issueForm.description.trim(),
-    }
-    setReceipts((prev) => [newReceipt, ...prev])
-    toast.success(`Receipt ${newReceipt.id} issued and emailed (mock).`)
+      templateId: issueForm.templateId,
+    })
+    toast.success(`Receipt ${newReceipt.id} issued.`)
     setIssueOpen(false)
     setIssueForm({
       recipientName: '',
@@ -163,12 +157,14 @@ export function ReceiptsSection() {
     })
   }
 
-  const saveTemplate = () => {
+  const saveTemplate = async () => {
     if (!activeTemplate) return
-    setTemplates((prev) =>
-      prev.map((t) => (t.id === activeTemplate.id ? { ...t, body: templateDraft } : t)),
-    )
-    toast.success(`Template "${activeTemplate.name}" saved.`)
+    try {
+      await saveTemplateToDb({ name: activeTemplate.name, body: templateDraft })
+      toast.success(`Template "${activeTemplate.name}" saved.`)
+    } catch (err) {
+      toast.error((err as Error).message)
+    }
   }
 
   const onSelectTemplate = (id: string) => {
@@ -176,6 +172,9 @@ export function ReceiptsSection() {
     const t = templates.find((t) => t.id === id)
     if (t) setTemplateDraft(t.body)
   }
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading receipts…</div>
+  if (error) return <div className="p-8 text-center text-red-600">Error loading receipts: {error}</div>
 
   return (
     <div className="space-y-6">
@@ -220,7 +219,7 @@ export function ReceiptsSection() {
               canWrite && (
                 <Button
                   onClick={() => setIssueOpen(true)}
-                  className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                  className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
                 >
                   <Plus className="mr-2" weight="bold" /> Issue receipt
                 </Button>
@@ -364,7 +363,7 @@ export function ReceiptsSection() {
               canWrite && (
                 <Button
                   onClick={saveTemplate}
-                  className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                  className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
                 >
                   <FloppyDisk className="mr-2" weight="bold" /> Save template
                 </Button>
@@ -505,7 +504,7 @@ export function ReceiptsSection() {
               </Button>
               <Button
                 type="submit"
-                className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
+                className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
               >
                 <PaperPlaneTilt className="mr-2" weight="bold" />
                 Issue & email

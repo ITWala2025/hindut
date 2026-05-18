@@ -34,7 +34,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
   }
 
   return (
-    <nav className="fixed top-4 md:top-8 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-7xl rounded-full border border-orange-200/40 bg-gradient-to-r from-orange-50/95 via-amber-50/95 to-orange-50/95 backdrop-blur-xl shadow-2xl shadow-orange-900/20 glow-saffron">
+    <nav className="fixed top-4 md:top-8 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-7xl rounded-full border border-orange-200/40 bg-linear-to-r from-orange-50/95 via-amber-50/95 to-orange-50/95 backdrop-blur-xl shadow-2xl shadow-orange-900/20 glow-saffron">
       <div className="px-4 md:px-8 lg:px-12">
         <div className="flex h-16 md:h-20 items-center justify-between">
           <Link
@@ -52,7 +52,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
                 className={cn(
                   "relative text-[15px] font-semibold tracking-wide transition-all",
                   isActive(item.path)
-                    ? "text-orange-700 after:absolute after:bottom-[-8px] after:left-0 after:h-1 after:w-full after:bg-gradient-to-r after:from-orange-500 after:to-amber-500 after:rounded-full after:shadow-lg after:shadow-orange-500/50"
+                    ? "text-orange-700 after:absolute after:bottom-[-8px] after:left-0 after:h-1 after:w-full after:bg-linear-to-r after:from-orange-500 after:to-amber-500 after:rounded-full after:shadow-lg after:shadow-orange-500/50"
                     : "text-orange-600/80 hover:text-orange-700 hover:scale-105"
                 )}
               >
@@ -61,7 +61,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
             ))}
             <Button
               onClick={onDonateClick}
-              className="rounded-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover:scale-105 transition-all hover-glow-saffron font-semibold"
+              className="rounded-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover:scale-105 transition-all hover-glow-saffron font-semibold"
             >
               <Heart className="mr-2" weight="fill" />
               Donate
@@ -74,7 +74,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
                 <List className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] bg-gradient-to-b from-orange-50 to-amber-50">
+            <SheetContent side="left" className="w-[300px] bg-linear-to-b from-orange-50 to-amber-50">
               <div className="flex items-center justify-between mb-8">
                 <Logo size="sm" showText={true} />
               </div>
@@ -98,7 +98,7 @@ export function Navigation({ onDonateClick }: NavigationProps) {
                     onDonateClick()
                     setIsOpen(false)
                   }}
-                  className="mt-4 rounded-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
+                  className="mt-4 rounded-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
                 >
                   <Heart className="mr-2" weight="fill" />
                   Donate

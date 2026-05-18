@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button'
 import { KpiCard, SectionCard } from '@/components/admin/adminUi'
 import { useEvents, upcomingOnly } from '@/hooks/useEvents'
 import { useMembership } from '@/hooks/useMembership'
-import { MOCK_RECEIPTS, MOCK_MEDIA } from '@/data/adminMock'
+import { useReceipts } from '@/hooks/useReceipts'
+import { useMedia } from '@/hooks/useMedia'
 import { useAuth, ROLE_LABELS } from '@/lib/auth'
 import type { AdminSectionId } from '@/components/admin/AdminLayout'
 
@@ -22,6 +23,8 @@ export function DashboardSection({ onNavigate }: DashboardProps) {
   const { user } = useAuth()
   const { events } = useEvents()
   const { memberships } = useMembership()
+  const { receipts } = useReceipts()
+  const { media } = useMedia()
 
   const upcoming = useMemo(() => upcomingOnly(events).slice(0, 5), [events])
   const recentMembers = useMemo(
@@ -29,13 +32,13 @@ export function DashboardSection({ onNavigate }: DashboardProps) {
     [memberships],
   )
   const recentReceipts = useMemo(
-    () => [...MOCK_RECEIPTS].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
-    [],
+    () => [...receipts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
+    [receipts],
   )
 
   const receiptsTotal = useMemo(
-    () => MOCK_RECEIPTS.reduce((sum, r) => sum + r.amount, 0),
-    [],
+    () => receipts.reduce((sum, r) => sum + r.amount, 0),
+    [receipts],
   )
 
   const activeMembers = memberships.filter((m) => m.status === 'active').length
@@ -43,7 +46,7 @@ export function DashboardSection({ onNavigate }: DashboardProps) {
   return (
     <div className="space-y-6">
       {/* Greeting */}
-      <div className="rounded-2xl bg-gradient-to-br from-orange-600 via-orange-700 to-amber-600 text-white p-6 md:p-8 shadow-xl">
+      <div className="rounded-2xl bg-linear-to-br from-orange-600 via-orange-700 to-amber-600 text-white p-6 md:p-8 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2
@@ -89,13 +92,13 @@ export function DashboardSection({ onNavigate }: DashboardProps) {
           label="Receipts issued"
           value={`€${receiptsTotal.toLocaleString()}`}
           icon={<Receipt size={26} weight="duotone" />}
-          delta={`${MOCK_RECEIPTS.length} receipts`}
+          delta={`${receipts.length} receipts`}
           deltaPositive
           accent="green"
         />
         <KpiCard
           label="Media assets"
-          value={String(MOCK_MEDIA.length)}
+          value={String(media.length)}
           icon={<ImageIcon size={26} weight="duotone" />}
           delta="Library"
           accent="blue"
@@ -120,7 +123,7 @@ export function DashboardSection({ onNavigate }: DashboardProps) {
               <ul className="divide-y divide-slate-100">
                 {upcoming.map((e) => (
                   <li key={e.id} className="py-3 flex items-start gap-3">
-                    <div className="flex-shrink-0 w-14 text-center">
+                    <div className="shrink-0 w-14 text-center">
                       <div className="text-[10px] uppercase tracking-wider text-orange-700 font-semibold">
                         {new Date(e.date).toLocaleString('en-IE', { month: 'short' })}
                       </div>
@@ -193,7 +196,7 @@ export function DashboardSection({ onNavigate }: DashboardProps) {
           <ul className="divide-y divide-slate-100">
             {recentMembers.map((m) => (
               <li key={m.id} className="py-3 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-200 to-amber-200 text-orange-800 font-semibold flex items-center justify-center">
+                <div className="h-10 w-10 rounded-full bg-linear-to-br from-orange-200 to-amber-200 text-orange-800 font-semibold flex items-center justify-center">
                   {m.fullName
                     .split(' ')
                     .map((n) => n[0])

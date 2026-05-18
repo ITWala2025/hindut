@@ -150,7 +150,7 @@ export function MembershipPage() {
         </div>
       </HeroCarousel>
 
-      <section className="py-8 md:py-12 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50">
+      <section className="py-8 md:py-12 bg-linear-to-br from-slate-50 via-orange-50/30 to-slate-50">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2
@@ -180,14 +180,14 @@ export function MembershipPage() {
                 )}
               >
                 {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg">
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-linear-to-r from-orange-600 to-amber-600 text-white shadow-lg">
                     <Sparkle className="mr-1" weight="fill" size={14} />
                     Most popular
                   </Badge>
                 )}
                 <CardContent className="p-8 space-y-5">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 p-3 glow-saffron">
+                    <div className="rounded-xl bg-linear-to-br from-orange-100 to-amber-100 p-3 glow-saffron">
                       <Crown className="text-orange-600" size={28} weight="duotone" />
                     </div>
                     <div>
@@ -218,7 +218,7 @@ export function MembershipPage() {
                         <CheckCircle
                           size={18}
                           weight="fill"
-                          className="mt-0.5 flex-shrink-0 text-orange-600"
+                          className="mt-0.5 shrink-0 text-orange-600"
                         />
                         <span>{benefit}</span>
                       </li>
@@ -230,7 +230,7 @@ export function MembershipPage() {
                     className={cn(
                       'w-full h-12 font-semibold',
                       plan.popular
-                        ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron'
+                        ? 'bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron'
                         : 'bg-white text-orange-700 border-2 border-orange-300 hover:bg-orange-50',
                     )}
                   >
@@ -263,7 +263,7 @@ export function MembershipPage() {
       </section>
 
       <Dialog open={open} onOpenChange={(o) => (!o ? close() : null)}>
-        <DialogContent className="sm:max-w-[520px] bg-gradient-to-br from-orange-50 via-white to-amber-50">
+        <DialogContent className="sm:max-w-[520px] bg-linear-to-br from-orange-50 via-white to-amber-50">
           {step === 'details' && selected && (
             <>
               <DialogHeader>
@@ -316,7 +316,7 @@ export function MembershipPage() {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                  className="w-full h-12 bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
                 >
                   Continue to payment
                 </Button>
@@ -370,7 +370,7 @@ export function MembershipPage() {
                 <Button
                   onClick={pay}
                   disabled={processing}
-                  className="w-full h-12 bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                  className="w-full h-12 bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
                 >
                   {processing ? (
                     <>
@@ -416,7 +416,7 @@ export function MembershipPage() {
               </div>
               <Button
                 onClick={close}
-                className="w-full h-12 bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                className="w-full h-12 bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
               >
                 Done
               </Button>
@@ -440,7 +440,7 @@ function Feature({
   return (
     <Card className="border-orange-200/60 bg-white/85 backdrop-blur-sm">
       <CardContent className="p-6 text-center space-y-3">
-        <div className="mx-auto rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 p-3 inline-flex glow-saffron">
+        <div className="mx-auto rounded-xl bg-linear-to-br from-orange-100 to-amber-100 p-3 inline-flex glow-saffron">
           <Icon size={28} weight="duotone" className="text-orange-600" />
         </div>
         <h3

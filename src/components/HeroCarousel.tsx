@@ -15,10 +15,9 @@ interface HeroCarouselProps {
   images?: string[]
 }
 
-// Only reference files that actually exist in /public/images. Add more
-// entries here once additional artwork is dropped into that folder.
+// Background images served from Supabase Storage (public-gallery / branding/).
 const DEFAULT_IMAGES = [
-  '/images/Hindu%20T.png',
+  'https://gsqfaguqsmnuoeuhpxro.supabase.co/storage/v1/object/public/public-gallery/branding/Hindu_T.png',
 ]
 
 export function HeroCarousel({
@@ -65,7 +64,7 @@ export function HeroCarousel({
         )}
         {/* Lighter overlay — keeps text readable while letting the temple
             imagery clearly show through. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/20 to-black/55" />
+        <div className="absolute inset-0 bg-linear-to-b from-black/35 via-black/20 to-black/55" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_65%,rgba(0,0,0,0.35),transparent_70%)]" />
       </div>
 

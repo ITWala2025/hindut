@@ -55,7 +55,6 @@ import {
   type TempleEvent,
   type TicketTier,
 } from '@/data/events'
-import { MOCK_ATTENDEES } from '@/data/adminMock'
 import { useAuth } from '@/lib/auth'
 import { SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 
@@ -74,7 +73,7 @@ const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
 
 export function EventsSection() {
   const { can } = useAuth()
-  const { events, addEvent, updateEvent, deleteEvent, resetEvents } = useEvents()
+  const { events, addEvent, updateEvent, deleteEvent } = useEvents()
   const canWrite = can('manageEvents')
 
   const [search, setSearch] = useState('')
@@ -83,7 +82,6 @@ export function EventsSection() {
   const [editing, setEditing] = useState<TempleEvent | null>(null)
   const [form, setForm] = useState<Omit<TempleEvent, 'id'>>(EMPTY_FORM)
   const [confirmDelete, setConfirmDelete] = useState<TempleEvent | null>(null)
-  const [resetOpen, setResetOpen] = useState(false)
   const [attendeesFor, setAttendeesFor] = useState<TempleEvent | null>(null)
 
   const filtered = useMemo(() => {
@@ -182,25 +180,8 @@ export function EventsSection() {
     }))
   }
 
-  const exportAttendeeCsv = (e: TempleEvent) => {
-    const rows = MOCK_ATTENDEES.filter((a) => a.eventId === e.id)
-    if (rows.length === 0) {
-      toast.error('No attendees to export for this event.')
-      return
-    }
-    const header = ['Name', 'Email', 'Tier', 'Quantity', 'Paid', 'Purchased']
-    const data = rows.map((a) => [a.name, a.email, a.tier, a.quantity, a.paid, a.purchasedAt])
-    const csv = [header, ...data]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `attendees-${e.id}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Attendees exported.')
+  const exportAttendeeCsv = (_e: TempleEvent) => {
+    toast.info('Attendee export is available once tickets are synced from the database.')
   }
 
   return (
@@ -212,18 +193,8 @@ export function EventsSection() {
           <>
             {canWrite && (
               <Button
-                variant="outline"
-                onClick={() => setResetOpen(true)}
-                className="border-orange-300 text-orange-700 hover:bg-orange-50"
-              >
-                <ArrowsClockwise className="mr-2" />
-                Reset to seed
-              </Button>
-            )}
-            {canWrite && (
-              <Button
                 onClick={openCreate}
-                className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
               >
                 <Plus className="mr-2" weight="bold" />
                 New event
@@ -544,7 +515,7 @@ export function EventsSection() {
               </Button>
               <Button
                 type="submit"
-                className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
               >
                 {editing ? 'Save changes' : 'Create event'}
               </Button>
@@ -580,23 +551,8 @@ export function EventsSection() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_ATTENDEES.filter((a) => a.eventId === attendeesFor.id).map((a) => (
-                    <tr key={a.id} className="border-t border-slate-100">
-                      <Td>
-                        <div className="font-semibold text-slate-900">{a.name}</div>
-                        <div className="text-xs text-muted-foreground">{a.email}</div>
-                      </Td>
-                      <Td>{a.tier}</Td>
-                      <Td>{a.quantity}</Td>
-                      <Td>€{a.paid}</Td>
-                    </tr>
-                  ))}
-                  {MOCK_ATTENDEES.filter((a) => a.eventId === attendeesFor.id).length === 0 && (
-                    <tr>
-                      <Td colSpan={4} className="text-center text-muted-foreground italic">
-                        No attendees yet.
-                      </Td>
-                    </tr>
+                  {attendeesFor && (
+                    <p className="text-sm text-muted-foreground italic text-center py-4">Ticket data available in the database — connect attendees query to view here.</p>
                   )}
                 </tbody>
               </DataTable>
@@ -605,10 +561,7 @@ export function EventsSection() {
         </SheetContent>
       </Sheet>
 
-      <AlertDialog
-        open={!!confirmDelete}
-        onOpenChange={(o) => (!o ? setConfirmDelete(null) : null)}
-      >
+      <AlertDialog open={!!confirmDelete} onOpenChange={(open) => { if (!open) setConfirmDelete(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete event?</AlertDialogTitle>
@@ -623,31 +576,6 @@ export function EventsSection() {
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset to seed events?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This replaces the current event list with the bundled seed events from
-              the Hindu Association of Ireland calendar.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                resetEvents()
-                toast.success('Events restored to seed data.')
-                setResetOpen(false)
-              }}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-            >
-              Reset
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

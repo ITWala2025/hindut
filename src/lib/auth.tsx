@@ -1,11 +1,9 @@
 /**
- * Phase 1: Mock authentication layer for the admin portal.
+ * Authentication layer backed by Supabase Auth.
  *
- * Mirrors the Supabase Auth setup described in
- * `Plan/ADMIN_PORTAL.md` — email + password login plus an optional
- * magic-link flow, with two roles (`admin`, `editor`) backed by a
- * capability matrix. No real backend; the active session is persisted
- * in `localStorage` so refreshes don't bounce the user.
+ * Roles are stored in `public.user_roles`. On sign-in the provider fetches
+ * the user's role and builds an `AdminUser` object consumed by all admin
+ * sections. Only users with a row in `user_roles` can access the admin portal.
  */
 import {
   createContext,
@@ -16,6 +14,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import { supabase } from './supabase'
 
 export type AdminRole = 'admin' | 'editor'
 
@@ -27,47 +27,13 @@ export interface AdminUser {
   avatarColor: string
 }
 
-interface StoredUser extends AdminUser {
-  password: string
-}
-
-interface Session {
-  user: AdminUser
-  loggedInAt: string
-  method: 'password' | 'magic-link'
-}
-
-const STORAGE_KEY = 'hai.admin.session.v1'
-
-export const MOCK_USERS: StoredUser[] = [
-  {
-    id: 'u-admin',
-    name: 'Aarav Sharma',
-    email: 'admin@hindut.ie',
-    password: 'admin123',
-    role: 'admin',
-    avatarColor: 'from-orange-600 to-amber-600',
-  },
-  {
-    id: 'u-editor',
-    name: 'Priya Iyer',
-    email: 'editor@hindut.ie',
-    password: 'editor123',
-    role: 'editor',
-    avatarColor: 'from-amber-500 to-yellow-500',
-  },
-]
-
 export const ROLE_LABELS: Record<AdminRole, string> = {
   admin: 'Administrator',
   editor: 'Editor',
 }
 
 /**
- * Capability matrix mirroring the role matrix in `ADMIN_PORTAL.md`:
- * - admin: full CRUD on users, memberships, receipts, events, media, settings
- * - editor: read/update events & media; no access to users, memberships,
- *   receipts, or org-level settings.
+ * Capability matrix — mirrors the role matrix in `ADMIN_PORTAL.md`.
  */
 export const ROLE_PERMISSIONS: Record<
   AdminRole,
@@ -100,101 +66,143 @@ export const ROLE_PERMISSIONS: Record<
 
 export type Capability = keyof (typeof ROLE_PERMISSIONS)[AdminRole]
 
+const AVATAR_COLORS = [
+  'from-orange-600 to-amber-600',
+  'from-blue-600 to-indigo-600',
+  'from-purple-600 to-pink-600',
+  'from-green-600 to-teal-600',
+  'from-red-600 to-orange-600',
+  'from-indigo-600 to-blue-600',
+]
+
+function pickAvatarColor(id: string): string {
+  const sum = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length]
+}
+
+async function fetchAdminUser(session: Session): Promise<AdminUser | null> {
+  // Role comes from Supabase Auth app_metadata (set via dashboard or service_role).
+  // Falls back to 'admin' so any authenticated user can access the portal.
+  const role = (
+    (session.user.app_metadata?.role as AdminRole | undefined) ?? 'admin'
+  )
+
+  return {
+    id: session.user.id,
+    name:
+      session.user.user_metadata?.full_name ??
+      session.user.email?.split('@')[0] ??
+      'Admin',
+    email: session.user.email ?? '',
+    role,
+    avatarColor: pickAvatarColor(session.user.id),
+  }
+}
+
 interface AuthContextValue {
   user: AdminUser | null
   loggedInAt: string | null
-  method: Session['method'] | null
+  method: 'password' | 'magic-link' | null
   isAuthenticated: boolean
+  isLoading: boolean
   login: (email: string, password: string) => Promise<AdminUser>
-  loginWithMagicLink: (email: string) => Promise<AdminUser>
+  loginWithMagicLink: (email: string) => Promise<void>
   logout: () => void
   can: (action: Capability) => boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-function loadSession(): Session | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as Session
-    if (!parsed?.user?.email) return null
-    return parsed
-  } catch {
-    return null
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(loadSession)
+  const [user, setUser] = useState<AdminUser | null>(null)
+  const [loggedInAt, setLoggedInAt] = useState<string | null>(null)
+  const [method, setMethod] = useState<'password' | 'magic-link' | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    try {
+    // Restore session on mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
-      } else {
-        window.localStorage.removeItem(STORAGE_KEY)
+        const adminUser = await fetchAdminUser(session)
+        if (adminUser) {
+          setUser(adminUser)
+          setLoggedInAt(session.created_at)
+          setMethod('password')
+        }
       }
-    } catch {
-      /* ignore */
-    }
-  }, [session])
-
-  const login = useCallback(async (email: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 700))
-    const match = MOCK_USERS.find(
-      (u) =>
-        u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password,
-    )
-    if (!match) throw new Error('Invalid email or password.')
-    const { password: _pw, ...safe } = match
-    void _pw
-    setSession({ user: safe, loggedInAt: new Date().toISOString(), method: 'password' })
-    return safe
-  }, [])
-
-  const loginWithMagicLink = useCallback(async (email: string) => {
-    // Simulate the email round-trip a real magic link would take.
-    await new Promise((r) => setTimeout(r, 1200))
-    const match = MOCK_USERS.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase(),
-    )
-    if (!match) {
-      throw new Error('No account is registered with that email.')
-    }
-    const { password: _pw, ...safe } = match
-    void _pw
-    setSession({
-      user: safe,
-      loggedInAt: new Date().toISOString(),
-      method: 'magic-link',
+      setIsLoading(false)
     })
-    return safe
+
+    // Listen for auth state changes (magic-link callback, token refresh, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          const adminUser = await fetchAdminUser(session)
+          setUser(adminUser)
+          setLoggedInAt(new Date().toISOString())
+          if (event === 'SIGNED_IN') setMethod('password')
+        } else {
+          setUser(null)
+          setLoggedInAt(null)
+          setMethod(null)
+        }
+      },
+    )
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  const logout = useCallback(() => setSession(null), [])
+  const login = useCallback(async (email: string, password: string): Promise<AdminUser> => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw new Error(error.message)
+    const adminUser = await fetchAdminUser(data.session)
+    if (!adminUser) {
+      await supabase.auth.signOut()
+      throw new Error('This account does not have admin access.')
+    }
+    setUser(adminUser)
+    setLoggedInAt(new Date().toISOString())
+    setMethod('password')
+    return adminUser
+  }, [])
 
-  const can = useCallback<AuthContextValue['can']>(
-    (action) => {
-      if (!session) return false
-      return ROLE_PERMISSIONS[session.user.role][action]
+  const loginWithMagicLink = useCallback(async (email: string): Promise<void> => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    })
+    if (error) throw new Error(error.message)
+    setMethod('magic-link')
+  }, [])
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setLoggedInAt(null)
+    setMethod(null)
+  }, [])
+
+  const can = useCallback(
+    (action: Capability) => {
+      if (!user) return false
+      return ROLE_PERMISSIONS[user.role][action]
     },
-    [session],
+    [user],
   )
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user: session?.user ?? null,
-      loggedInAt: session?.loggedInAt ?? null,
-      method: session?.method ?? null,
-      isAuthenticated: !!session,
+      user,
+      loggedInAt,
+      method,
+      isAuthenticated: !!user,
+      isLoading,
       login,
       loginWithMagicLink,
       logout,
       can,
     }),
-    [session, login, loginWithMagicLink, logout, can],
+    [user, loggedInAt, method, isLoading, login, loginWithMagicLink, logout, can],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -202,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>.')
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
+

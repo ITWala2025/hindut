@@ -53,7 +53,7 @@ export function SettingsSection() {
           <Button
             onClick={() => save('Organisation profile')}
             disabled={!canWrite}
-            className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
+            className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
           >
             <FloppyDisk className="mr-2" weight="bold" />
             Save changes
@@ -175,7 +175,7 @@ export function SettingsSection() {
       >
         <div className="flex items-center gap-4">
           <div
-            className={`h-16 w-16 rounded-full bg-gradient-to-br ${user?.avatarColor ?? 'from-slate-400 to-slate-600'} text-white font-bold text-xl flex items-center justify-center`}
+            className={`h-16 w-16 rounded-full bg-linear-to-br ${user?.avatarColor ?? 'from-slate-400 to-slate-600'} text-white font-bold text-xl flex items-center justify-center`}
           >
             {user?.name
               .split(' ')

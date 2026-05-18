@@ -143,7 +143,7 @@ export function ServicesPage() {
             }}
             className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></span>
+            <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
             <span className="relative flex items-center justify-center gap-2">
               <HandsPraying size={18} weight="duotone" className="hidden sm:block" />
               Daily Pujas
@@ -156,7 +156,7 @@ export function ServicesPage() {
             }}
             className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></span>
+            <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
             <span className="relative flex items-center justify-center gap-2">
               <CalendarBlank size={18} weight="duotone" className="hidden sm:block" />
               Special
@@ -169,7 +169,7 @@ export function ServicesPage() {
             }}
             className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></span>
+            <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
             <span className="relative flex items-center justify-center gap-2">
               <GraduationCap size={18} weight="duotone" className="hidden sm:block" />
               Education
@@ -182,7 +182,7 @@ export function ServicesPage() {
             }}
             className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></span>
+            <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
             <span className="relative flex items-center justify-center gap-2">
               <Users size={18} weight="duotone" className="hidden sm:block" />
               Community
@@ -191,23 +191,23 @@ export function ServicesPage() {
         </div>
       </HeroCarousel>
 
-      <section id="services-tabs" className="py-8 md:py-12 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50">
+      <section id="services-tabs" className="py-8 md:py-12 bg-linear-to-br from-slate-50 via-orange-50/30 to-slate-50">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-6xl mx-auto">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-12 h-auto p-2 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200">
-              <TabsTrigger id="daily-tab" value="daily" className="text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-12 h-auto p-2 bg-linear-to-r from-orange-50 to-amber-50 border border-orange-200">
+              <TabsTrigger id="daily-tab" value="daily" className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
                 <HandsPraying className="mr-2 hidden sm:inline" size={20} weight="duotone" />
                 Daily Pujas
               </TabsTrigger>
-              <TabsTrigger id="special-tab" value="special" className="text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
+              <TabsTrigger id="special-tab" value="special" className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
                 <CalendarBlank className="mr-2 hidden sm:inline" size={20} weight="duotone" />
                 Special Services
               </TabsTrigger>
-              <TabsTrigger id="education-tab" value="education" className="text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
+              <TabsTrigger id="education-tab" value="education" className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
                 <GraduationCap className="mr-2 hidden sm:inline" size={20} weight="duotone" />
                 Education
               </TabsTrigger>
-              <TabsTrigger id="community-tab" value="community" className="text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
+              <TabsTrigger id="community-tab" value="community" className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
                 <Users className="mr-2 hidden sm:inline" size={20} weight="duotone" />
                 Community
               </TabsTrigger>
@@ -293,7 +293,7 @@ export function ServicesPage() {
                         <CalendarBlank className="text-orange-600" size={18} weight="duotone" />
                         <span className="font-medium text-orange-800">{program.schedule}</span>
                       </div>
-                      <div className="bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 px-3 py-1 rounded-full inline-block text-sm font-semibold">
+                      <div className="bg-linear-to-r from-orange-100 to-amber-100 text-orange-700 px-3 py-1 rounded-full inline-block text-sm font-semibold">
                         {program.ageGroup}
                       </div>
                     </CardContent>
@@ -319,7 +319,7 @@ export function ServicesPage() {
                       <CardDescription className="text-base">{event.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="bg-gradient-to-r from-amber-100 to-orange-100 text-orange-700 px-3 py-1 rounded-full inline-block text-sm font-semibold">
+                      <div className="bg-linear-to-r from-amber-100 to-orange-100 text-orange-700 px-3 py-1 rounded-full inline-block text-sm font-semibold">
                         {event.frequency}
                       </div>
                     </CardContent>
@@ -331,7 +331,7 @@ export function ServicesPage() {
         </div>
       </section>
 
-      <section className="py-8 md:py-12 bg-gradient-to-br from-orange-700 via-amber-600 to-orange-800 relative overflow-hidden">
+      <section className="py-8 md:py-12 bg-linear-to-br from-orange-700 via-amber-600 to-orange-800 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,237,213,0.25),transparent_70%)]" />
         <div className="container mx-auto px-6 md:px-12 lg:px-24 text-center relative z-10">
           <div className="max-w-3xl mx-auto space-y-6">

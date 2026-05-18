@@ -4,12 +4,13 @@ import { Separator } from '@/components/ui/separator'
 import { Heart, Users, BookOpen, Lightbulb, HandsPraying, MapPin } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
-import { TEAM_MEMBERS } from '@/data/team'
+import { useTeam } from '@/hooks/useTeam'
 
 type AboutTarget = 'story' | 'values' | 'team'
 
 export function AboutPage() {
   const [highlightedId, setHighlightedId] = useState<AboutTarget | null>(null)
+  const { teamMembers, loading: teamLoading } = useTeam()
 
   const scrollToSection = (target: AboutTarget) => {
     const elId = target === 'story' ? 'story-section' : target === 'values' ? 'values-section' : 'team-section'
@@ -57,7 +58,7 @@ export function AboutPage() {
             onClick={() => scrollToSection('story')}
             className="group relative px-6 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-sm shadow-lg hover:shadow-white/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></span>
+            <span aria-hidden className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
             <span className="relative flex items-center gap-2">
               <BookOpen size={20} weight="duotone" />
               Our Story
@@ -67,7 +68,7 @@ export function AboutPage() {
             onClick={() => scrollToSection('values')}
             className="group relative px-6 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-sm shadow-lg hover:shadow-white/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></span>
+            <span aria-hidden className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
             <span className="relative flex items-center gap-2">
               <Heart size={20} weight="duotone" />
               Core Values
@@ -77,7 +78,7 @@ export function AboutPage() {
             onClick={() => scrollToSection('team')}
             className="group relative px-6 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-sm shadow-lg hover:shadow-white/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></span>
+            <span aria-hidden className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
             <span className="relative flex items-center gap-2">
               <Users size={20} weight="duotone" />
               Our Team
@@ -86,7 +87,7 @@ export function AboutPage() {
         </div>
       </HeroCarousel>
 
-      <section id="story-section" className={cn('scroll-mt-32 py-16 md:py-24 bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-50 transition-shadow', highlightedId === 'story' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
+      <section id="story-section" className={cn('scroll-mt-32 py-16 md:py-24 bg-linear-to-br from-slate-50 via-orange-50/30 to-slate-50 transition-shadow', highlightedId === 'story' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16">
 
@@ -95,7 +96,7 @@ export function AboutPage() {
               <Card id="story-card" className="border-orange-200/50 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
                 <CardContent className="p-8 md:p-10">
                   <div className="flex items-start gap-4 mb-6">
-                    <div className="rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 p-3 glow-saffron">
+                    <div className="rounded-xl bg-linear-to-br from-orange-100 to-amber-100 p-3 glow-saffron">
                       <BookOpen className="text-orange-600" size={32} weight="duotone" />
                     </div>
                     <div>
@@ -132,7 +133,7 @@ export function AboutPage() {
               <Card className="border-orange-200/50 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
                 <CardContent className="p-8 md:p-10">
                   <div className="flex items-start gap-4 mb-6">
-                    <div className="rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 p-3 glow-saffron">
+                    <div className="rounded-xl bg-linear-to-br from-amber-100 to-orange-100 p-3 glow-saffron">
                       <Lightbulb className="text-orange-600" size={32} weight="duotone" />
                     </div>
                     <h2 className="text-3xl md:text-4xl font-bold text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -152,7 +153,7 @@ export function AboutPage() {
               <Card className="border-orange-200/50 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
                 <CardContent className="p-8 md:p-10">
                   <div className="flex items-start gap-4 mb-6">
-                    <div className="rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 p-3 glow-saffron">
+                    <div className="rounded-xl bg-linear-to-br from-orange-100 to-amber-100 p-3 glow-saffron">
                       <HandsPraying className="text-orange-600" size={32} weight="duotone" />
                     </div>
                     <h2 className="text-3xl md:text-4xl font-bold text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -192,7 +193,7 @@ export function AboutPage() {
                     <Card key={value.title} className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all hover:scale-[1.02] duration-300 hover-glow-saffron bg-white/80 backdrop-blur-sm">
                       <CardContent className="p-6">
                         <div className="flex items-start gap-3">
-                          <div className="rounded-lg bg-gradient-to-br from-orange-100 to-amber-100 p-2 glow-saffron flex-shrink-0">
+                          <div className="rounded-lg bg-linear-to-br from-orange-100 to-amber-100 p-2 glow-saffron shrink-0">
                             <value.icon className="text-orange-600" size={24} weight="duotone" />
                           </div>
                           <div>
@@ -239,7 +240,7 @@ export function AboutPage() {
       </section>
 
       {/* Our Team */}
-      <section id="team-section" className={cn('relative scroll-mt-32 py-10 md:py-14 bg-gradient-to-b from-white via-orange-50/30 to-white overflow-hidden transition-shadow', highlightedId === 'team' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
+      <section id="team-section" className={cn('relative scroll-mt-32 py-10 md:py-14 bg-linear-to-b from-white via-orange-50/30 to-white overflow-hidden transition-shadow', highlightedId === 'team' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
         {/* subtle background pattern */}
         <div
           aria-hidden
@@ -265,7 +266,7 @@ export function AboutPage() {
               >
                 Meet the people behind HAI
               </h2>
-              <div className="mx-auto w-16 h-1 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 mb-5" />
+              <div className="mx-auto w-16 h-1 rounded-full bg-linear-to-r from-orange-500 to-amber-500 mb-5" />
               <p className="text-base md:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
                 A volunteer-led team of professionals and community organisers from
                 across India and Sri Lanka, bringing the Hindu Association of Ireland
@@ -275,7 +276,9 @@ export function AboutPage() {
 
             {/* Team grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {TEAM_MEMBERS.map((member) => {
+              {teamLoading ? (
+                <p className="text-slate-500 col-span-full text-center py-8">Loading team…</p>
+              ) : teamMembers.map((member) => {
                 const initials = member.name
                   .split(' ')
                   .filter((p) => !p.endsWith('.'))
@@ -289,10 +292,10 @@ export function AboutPage() {
                     className="group relative rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_24px_48px_-12px_rgba(194,65,12,0.18)] hover:border-orange-300 transition-all duration-300 overflow-hidden"
                   >
                     {/* Accent bar */}
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-orange-500 via-amber-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                     {/* Avatar header — subtle saffron wash */}
-                    <div className="relative h-28 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100/60 border-b border-slate-100">
+                    <div className="relative h-28 bg-linear-to-br from-orange-50 via-amber-50 to-orange-100/60 border-b border-slate-100">
                       <div
                         aria-hidden
                         className="absolute inset-0 opacity-40"
@@ -303,8 +306,8 @@ export function AboutPage() {
                       />
                       <div className="absolute -bottom-9 left-6">
                         <div className="relative">
-                          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 blur-md opacity-40 group-hover:opacity-70 transition-opacity" />
-                          <div className="relative w-[72px] h-[72px] rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-bold text-xl flex items-center justify-center shadow-lg ring-4 ring-white">
+                          <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-orange-500 to-amber-600 blur-md opacity-40 group-hover:opacity-70 transition-opacity" />
+                          <div className="relative w-[72px] h-[72px] rounded-2xl bg-linear-to-br from-orange-500 to-amber-600 text-white font-bold text-xl flex items-center justify-center shadow-lg ring-4 ring-white">
                             {initials}
                           </div>
                         </div>

@@ -33,7 +33,7 @@ import {
 import { toast } from 'sonner'
 import { useMembership } from '@/hooks/useMembership'
 import { useAuth } from '@/lib/auth'
-import { MEMBERSHIP_PLANS, type MembershipPlanId } from '@/data/membership'
+import { type MembershipPlanId } from '@/data/membership'
 import { KpiCard, SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 
 type StatusFilter = 'all' | 'active' | 'expired' | 'pending'
@@ -41,7 +41,7 @@ type PlanFilter = 'all' | MembershipPlanId
 
 export function MembersSection() {
   const { can } = useAuth()
-  const { memberships, cancel, remove, setStatus, syncStripe } = useMembership()
+  const { memberships, plans, cancel, remove, setStatus, syncStripe } = useMembership()
   const canWrite = can('manageMemberships')
 
   const [search, setSearch] = useState('')
@@ -186,7 +186,7 @@ export function MembersSection() {
             <Button
               onClick={runSync}
               disabled={syncing || !canWrite}
-              className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-700 hover:to-blue-700 font-semibold"
+              className="bg-linear-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-700 hover:to-blue-700 font-semibold"
             >
               <ArrowsClockwise
                 className={`mr-2 ${syncing ? 'animate-spin' : ''}`}
@@ -249,7 +249,7 @@ export function MembersSection() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All plans</SelectItem>
-              {MEMBERSHIP_PLANS.map((p) => (
+              {plans.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}
                 </SelectItem>

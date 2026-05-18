@@ -1,15 +1,38 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { X, CaretLeft, CaretRight, ImagesSquare } from '@phosphor-icons/react'
-import manifest from '@/data/galleryManifest.json'
+import { supabase } from '@/lib/supabase'
 
 type GalleryImage = {
   src: string
-  width: number
-  height: number
   alt: string
 }
 
-const IMAGES = ((manifest as { images?: GalleryImage[] }).images ?? []) as GalleryImage[]
+function useGalleryImages() {
+  const [images, setImages] = useState<GalleryImage[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .from('media')
+      .select('path, bucket, title, alt_text, filename')
+      .eq('bucket', 'public-gallery')
+      .eq('folder', 'gallery')
+      .order('uploaded_at', { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setImages(
+            data.map((row) => ({
+              src: supabase.storage.from(row.bucket).getPublicUrl(row.path).data.publicUrl,
+              alt: row.alt_text ?? row.title ?? row.filename ?? 'Gallery image',
+            }))
+          )
+        }
+        setLoading(false)
+      })
+  }, [])
+
+  return { images, loading }
+}
 
 interface PhotoGalleryProps {
   /** Optional max number of images to show on the home page; the rest open in a lightbox. */
@@ -23,6 +46,7 @@ export function PhotoGallery({
   title = 'Moments from our Community',
   subtitle = 'Festivals, prayers and gatherings — a glimpse of life at HAI',
 }: PhotoGalleryProps) {
+  const { images: IMAGES, loading } = useGalleryImages()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
   const visible = useMemo(
@@ -55,6 +79,14 @@ export function PhotoGallery({
     }
   }, [activeIndex, close, prev, next])
 
+  if (loading) {
+    return (
+      <section className="py-16 flex justify-center">
+        <div className="h-8 w-8 rounded-full border-4 border-orange-300 border-t-orange-600 animate-spin" />
+      </section>
+    )
+  }
+
   if (IMAGES.length === 0) {
     return null
   }
@@ -64,7 +96,7 @@ export function PhotoGallery({
   return (
     <section
       id="gallery-section"
-      className="relative pt-10 pb-12 md:pt-14 md:pb-16 bg-gradient-to-b from-orange-50/40 via-white to-amber-50/40 overflow-hidden"
+      className="relative pt-10 pb-12 md:pt-14 md:pb-16 bg-linear-to-b from-orange-50/40 via-white to-amber-50/40 overflow-hidden"
       aria-labelledby="gallery-heading"
     >
       {/* decorative blobs */}
@@ -94,14 +126,12 @@ export function PhotoGallery({
                 key={img.src}
                 type="button"
                 onClick={() => setActiveIndex(realIndex)}
-                className="group relative aspect-[4/3] overflow-hidden rounded-2xl shadow-md hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-500 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-400"
+                className="group relative aspect-4/3 overflow-hidden rounded-2xl shadow-md hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-500 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-400"
                 aria-label={`Open image ${idx + 1}`}
               >
                 <img
                   src={img.src}
                   alt={img.alt}
-                  width={img.width}
-                  height={img.height}
                   loading="lazy"
                   decoding="async"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -118,7 +148,7 @@ export function PhotoGallery({
           role="dialog"
           aria-modal="true"
           aria-label="Image viewer"
-          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-100 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={close}
         >
           <button
@@ -164,8 +194,7 @@ export function PhotoGallery({
             <img
               src={active.src}
               alt={active.alt}
-              width={active.width}
-              height={active.height}
+
               className="max-h-[80vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
             />
             <figcaption className="mt-4 text-white/80 text-sm text-center capitalize">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, UserCircle, ShieldCheck, Trash, PaperPlaneTilt } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,34 +21,41 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
-import { MOCK_USERS, ROLE_LABELS, useAuth, type AdminRole, type AdminUser } from '@/lib/auth'
+import { ROLE_LABELS, useAuth, type AdminRole, type AdminUser } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 
 interface DisplayUser extends AdminUser {
   invitedBy?: string
   lastActive?: string
 }
 
-const INITIAL: DisplayUser[] = MOCK_USERS.map((u) => ({
-  id: u.id,
-  name: u.name,
-  email: u.email,
-  role: u.role,
-  avatarColor: u.avatarColor,
-  invitedBy: 'system',
-  lastActive: 'Today',
-}))
-
 export function UsersSection() {
   const { user, can } = useAuth()
   const canManage = can('manageUsers')
 
-  const [users, setUsers] = useState<DisplayUser[]>(INITIAL)
+  const [users, setUsers] = useState<DisplayUser[]>([])
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<{ name: string; email: string; role: AdminRole }>({
     name: '',
     email: '',
     role: 'editor',
   })
+
+  useEffect(() => {
+    supabase.rpc('list_admin_users').then(({ data, error }) => {
+      if (!error && data) {
+        const rows = data as Array<{ id: string; email: string; full_name: string | null; role: string }>
+        setUsers(rows.map((r) => ({
+          id: r.id,
+          name: r.full_name ?? r.email.split('@')[0],
+          email: r.email,
+          role: r.role as AdminRole,
+          avatarColor: 'from-slate-400 to-slate-600',
+          lastActive: 'N/A',
+        })))
+      }
+    })
+  }, [])
 
   const invite = (ev: React.FormEvent) => {
     ev.preventDefault()
@@ -98,7 +105,7 @@ export function UsersSection() {
           canManage && (
             <Button
               onClick={() => setOpen(true)}
-              className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+              className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
             >
               <Plus className="mr-2" weight="bold" />
               Invite user
@@ -132,7 +139,7 @@ export function UsersSection() {
                   <Td>
                     <div className="flex items-center gap-3">
                       <div
-                        className={`h-9 w-9 rounded-full bg-gradient-to-br ${u.avatarColor} text-white font-semibold flex items-center justify-center text-xs`}
+                        className={`h-9 w-9 rounded-full bg-linear-to-br ${u.avatarColor} text-white font-semibold flex items-center justify-center text-xs`}
                       >
                         {u.name
                           .split(' ')
@@ -262,7 +269,7 @@ export function UsersSection() {
               </Button>
               <Button
                 type="submit"
-                className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
+                className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
               >
                 <PaperPlaneTilt className="mr-2" weight="bold" />
                 Send invite
