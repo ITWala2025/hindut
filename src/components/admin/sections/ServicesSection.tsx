@@ -359,7 +359,14 @@ export function ServicesSection() {
                       <button
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600"
                         title="Delete"
-                        onClick={() => setDeleteCat({ id: cat.id, name: cat.name })}
+                        onClick={() => {
+                          const linked = services.filter((s) => s.category === cat.name).length
+                          if (linked > 0) {
+                            toast.warning(`Cannot delete "${cat.name}" — it has ${linked} service${linked !== 1 ? 's' : ''} linked to it. Reassign or delete those services first.`)
+                          } else {
+                            setDeleteCat({ id: cat.id, name: cat.name })
+                          }
+                        }}
                       >
                         <X size={12} weight="bold" />
                       </button>
@@ -853,7 +860,7 @@ export function ServicesSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirm */}
+      {/* Delete service confirm */}
       <AlertDialog open={!!deleteItem} onOpenChange={(open) => { if (!open) setDeleteItem(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -869,6 +876,29 @@ export function ServicesSection() {
             <AlertDialogAction
               className="bg-red-600 text-white hover:bg-red-700"
               onClick={handleDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete category confirm */}
+      <AlertDialog open={!!deleteCat} onOpenChange={(open) => { if (!open) setDeleteCat(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the category{' '}
+              <span className="font-semibold">"{deleteCat?.name}"</span>.{' '}
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={handleDeleteCategory}
             >
               Delete
             </AlertDialogAction>
