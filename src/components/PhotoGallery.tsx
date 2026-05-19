@@ -1,38 +1,47 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { X, CaretLeft, CaretRight, ImagesSquare } from '@phosphor-icons/react'
+import { X, CaretLeft, CaretRight, ImagesSquare, ArrowSquareOut } from '@phosphor-icons/react'
 import { supabase } from '@/lib/supabase'
 
-type GalleryImage = {
+type GalleryItem = {
   src: string
   alt: string
+  mediaType: 'image' | 'album'
+  href?: string // external URL for albums
 }
 
-function useGalleryImages() {
-  const [images, setImages] = useState<GalleryImage[]>([])
+function useGalleryItems(limit: number) {
+  const [items, setItems] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase
       .from('media')
-      .select('path, bucket, title, alt_text, filename')
-      .eq('bucket', 'public-gallery')
-      .like('path', 'gallery-webp/%')
-      .order('uploaded_at', { ascending: true })
+      .select('bucket, path, title, alt_text, filename, media_type, thumbnail_url')
+      .order('uploaded_at', { ascending: false })
+      .limit(limit)
       .then(({ data, error }) => {
         if (error) console.error('[PhotoGallery] fetch error:', error.message)
         if (data && data.length > 0) {
-          setImages(
-            data.map((row) => ({
-              src: supabase.storage.from(row.bucket).getPublicUrl(row.path).data.publicUrl,
-              alt: row.alt_text ?? row.title ?? row.filename ?? 'Gallery image',
-            }))
+          setItems(
+            data.map((row) => {
+              const mediaType: 'image' | 'album' = row.media_type ?? 'image'
+              const label = row.alt_text ?? row.title ?? row.filename ?? 'Gallery image'
+              if (mediaType === 'album') {
+                return { src: row.thumbnail_url ?? '', alt: label, mediaType: 'album' as const, href: row.path }
+              }
+              const isExternal = row.bucket === 'external'
+              const src = isExternal
+                ? row.path
+                : supabase.storage.from(row.bucket).getPublicUrl(row.path).data.publicUrl
+              return { src, alt: label, mediaType: 'image' as const }
+            })
           )
         }
         setLoading(false)
       })
-  }, [])
+  }, [limit])
 
-  return { images, loading }
+  return { items, loading }
 }
 
 interface PhotoGalleryProps {
@@ -43,26 +52,24 @@ interface PhotoGalleryProps {
 }
 
 export function PhotoGallery({
-  preview,
+  preview = 9,
   title = 'Moments from our Community',
   subtitle = 'Festivals, prayers and gatherings — a glimpse of life at HAI',
 }: PhotoGalleryProps) {
-  const { images: IMAGES, loading } = useGalleryImages()
+  const { items, loading } = useGalleryItems(preview)
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
-  const visible = useMemo(
-    () => (preview ? IMAGES.slice(0, preview) : IMAGES),
-    [IMAGES, preview],
-  )
+  // Only images participate in the lightbox; albums open externally
+  const lightboxImages = useMemo(() => items.filter((i) => i.mediaType === 'image'), [items])
 
   const close = useCallback(() => setActiveIndex(null), [])
   const prev = useCallback(
-    () => setActiveIndex((i) => (i === null ? null : (i - 1 + IMAGES.length) % IMAGES.length)),
-    [IMAGES.length],
+    () => setActiveIndex((i) => (i === null ? null : (i - 1 + lightboxImages.length) % lightboxImages.length)),
+    [lightboxImages.length],
   )
   const next = useCallback(
-    () => setActiveIndex((i) => (i === null ? null : (i + 1) % IMAGES.length)),
-    [IMAGES.length],
+    () => setActiveIndex((i) => (i === null ? null : (i + 1) % lightboxImages.length)),
+    [lightboxImages.length],
   )
 
   useEffect(() => {
@@ -88,11 +95,11 @@ export function PhotoGallery({
     )
   }
 
-  if (IMAGES.length === 0) {
+  if (items.length === 0) {
     return null
   }
 
-  const active = activeIndex !== null ? IMAGES[activeIndex] : null
+  const active = activeIndex !== null ? lightboxImages[activeIndex] : null
 
   return (
     <section
@@ -118,21 +125,54 @@ export function PhotoGallery({
           </p>
         </div>
 
-        {/* Uniform 3-column grid — every cell shares the same aspect ratio */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
-          {visible.map((img, idx) => {
-            const realIndex = IMAGES.indexOf(img)
+          {items.map((item) => {
+            if (item.mediaType === 'album') {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block rounded-2xl shadow-md hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-500"
+                  aria-label={`Open album: ${item.alt}`}
+                >
+                  <div className="relative aspect-4/3 overflow-hidden rounded-2xl bg-linear-to-br from-indigo-500 to-purple-600">
+                    {item.src && (
+                      <img
+                        src={item.src}
+                        alt={item.alt}
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors duration-300" />
+                    <div className="absolute bottom-0 left-0 right-0 p-3 flex items-end justify-between">
+                      <span className="text-white text-sm font-medium truncate pr-2 drop-shadow">{item.alt}</span>
+                      <ArrowSquareOut size={18} weight="bold" className="text-white/80 shrink-0" />
+                    </div>
+                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-indigo-600/90 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                      <ImagesSquare size={12} weight="fill" />
+                      Album
+                    </div>
+                  </div>
+                </a>
+              )
+            }
+            const lbIndex = lightboxImages.indexOf(item)
             return (
               <button
-                key={img.src}
+                key={item.src}
                 type="button"
-                onClick={() => setActiveIndex(realIndex)}
+                onClick={() => setActiveIndex(lbIndex)}
                 className="group relative aspect-4/3 overflow-hidden rounded-2xl shadow-md hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-500 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-400"
-                aria-label={`Open image ${idx + 1}`}
+                aria-label={`Open image: ${item.alt}`}
               >
                 <img
-                  src={img.src}
-                  alt={img.alt}
+                  src={item.src}
+                  alt={item.alt}
                   loading="lazy"
                   decoding="async"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -199,7 +239,7 @@ export function PhotoGallery({
               className="max-h-[80vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
             />
             <figcaption className="mt-4 text-white/80 text-sm text-center capitalize">
-              {active.alt} · {(activeIndex ?? 0) + 1} / {IMAGES.length}
+              {active.alt} · {(activeIndex ?? 0) + 1} / {lightboxImages.length}
             </figcaption>
           </figure>
         </div>
