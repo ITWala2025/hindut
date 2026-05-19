@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   House,
   CalendarBlank,
@@ -24,14 +24,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useAuth, ROLE_LABELS } from '@/lib/auth'
 import { Logo } from '@/components/Logo'
@@ -130,7 +122,6 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) {
   const { user, logout, can } = useAuth()
-  const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -165,20 +156,120 @@ export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) 
         />
       </aside>
 
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar — enterprise drawer */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent
           side="left"
-          className="p-0 w-72 bg-linear-to-b from-orange-900 via-orange-950 to-orange-900 text-orange-50 border-orange-800"
+          className="p-0 w-[300px] bg-linear-to-b from-orange-900 via-orange-950 to-orange-900 text-orange-50 border-orange-800/60 flex flex-col overflow-hidden"
         >
           <SheetTitle className="sr-only">Admin navigation</SheetTitle>
-          <SidebarHeader collapsed={false} />
-          <SidebarNav
-            collapsed={false}
-            items={visibleItems}
-            active={active}
-            onNavigate={handleNavigate}
-          />
+
+          {/* Header */}
+          <div className="h-16 flex items-center gap-3 px-4 border-b border-orange-800/50 shrink-0">
+            <Logo size="sm" showText={false} />
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-orange-300/80 leading-none mb-0.5">
+                Admin Portal
+              </div>
+              <div className="text-sm font-bold text-orange-50 truncate leading-tight">
+                HAI — Ireland
+              </div>
+            </div>
+          </div>
+
+          {/* User profile card */}
+          <div className="px-3 py-3 border-b border-orange-800/40 shrink-0">
+            <div className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-3 ring-1 ring-white/10">
+              <div
+                className={cn(
+                  'h-10 w-10 rounded-xl bg-linear-to-br text-white font-bold text-sm flex items-center justify-center shrink-0 ring-2 ring-white/20',
+                  user.avatarColor,
+                )}
+              >
+                {user.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .slice(0, 2)
+                  .join('')}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-orange-50 truncate leading-tight">
+                  {user.name}
+                </div>
+                <div className="text-[11px] text-orange-300/80 truncate leading-tight mt-0.5">
+                  {ROLE_LABELS[user.role]}
+                </div>
+              </div>
+              <div className="h-2 w-2 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_2px_rgba(52,211,153,0.4)]" title="Online" />
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+            {visibleItems.map((item) => {
+              const isActive = active === item.id
+              return (
+                <Link
+                  key={item.id}
+                  to={`/admin/${item.id}`}
+                  onClick={() => handleNavigate(item.id)}
+                  className={cn(
+                    'group flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-all duration-150',
+                    isActive
+                      ? 'bg-linear-to-r from-orange-500/25 to-amber-400/15 text-white shadow-sm ring-1 ring-orange-400/30'
+                      : 'text-orange-200/80 hover:bg-white/8 hover:text-white',
+                  )}
+                >
+                  {/* Icon pill */}
+                  <span
+                    className={cn(
+                      'h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors',
+                      isActive
+                        ? 'bg-orange-500/30 text-orange-100'
+                        : 'bg-white/5 text-orange-300 group-hover:bg-white/10 group-hover:text-white',
+                    )}
+                  >
+                    {item.icon}
+                  </span>
+
+                  <span className="flex-1 truncate">{item.label}</span>
+
+                  {item.badge && (
+                    <Badge className="bg-amber-500 text-white text-[10px] h-4 px-1.5 leading-none">
+                      {item.badge}
+                    </Badge>
+                  )}
+
+                  {isActive && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
+                  )}
+                </Link>
+              )
+            })}
+          </nav>
+
+          {/* Footer actions */}
+          <div className="border-t border-orange-800/50 p-2 space-y-0.5 shrink-0">
+            <Link
+              to="/"
+              onClick={() => setMobileOpen(false)}
+              className="group flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm text-orange-200/80 hover:bg-white/8 hover:text-white transition-all duration-150"
+            >
+              <span className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-orange-300 group-hover:bg-white/10 group-hover:text-white transition-colors">
+                <ArrowSquareOut size={18} />
+              </span>
+              <span className="flex-1">View public site</span>
+            </Link>
+            <button
+              onClick={() => { logout(); setMobileOpen(false) }}
+              className="group w-full flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm text-orange-200/80 hover:bg-red-500/20 hover:text-red-200 transition-all duration-150"
+            >
+              <span className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-orange-300 group-hover:bg-red-400/30 group-hover:text-red-200 transition-colors">
+                <SignOut size={18} />
+              </span>
+              <span className="flex-1 text-left">Sign out</span>
+            </button>
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -242,9 +333,7 @@ export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) 
               Public site
             </Link>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full hover:bg-orange-50 pl-1 pr-2 py-1 transition-colors">
+<div className="flex items-center gap-2 pl-1 pr-2 py-1">
                   <div
                     className={cn(
                       'h-9 w-9 rounded-full bg-linear-to-br text-white font-semibold flex items-center justify-center',
@@ -265,31 +354,7 @@ export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) 
                       {ROLE_LABELS[user.role]}
                     </div>
                   </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="font-semibold">{user.name}</div>
-                  <div className="text-xs text-muted-foreground font-normal">{user.email}</div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
-                  <Gear className="mr-2" size={16} /> Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/">
-                    <ArrowSquareOut className="mr-2" size={16} /> View public site
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="text-red-600 focus:text-red-700 focus:bg-red-50"
-                >
-                  <SignOut className="mr-2" size={16} /> Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </div>
           </div>
         </header>
 
@@ -305,8 +370,16 @@ function SidebarHeader({ collapsed }: { collapsed: boolean }) {
       {collapsed ? (
         <Logo size="sm" showText={false} />
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
           <Logo size="sm" showText={false} />
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-orange-300/80 leading-none mb-0.5">
+              Admin Portal
+            </div>
+            <div className="text-sm font-bold text-orange-50 truncate leading-tight">
+              Hindu Association of Ireland
+            </div>
+          </div>
         </div>
       )}
     </div>

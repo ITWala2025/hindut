@@ -145,23 +145,36 @@ export function HomePage({ onDonateClick }: HomePageProps) {
 
       <HeroCarousel
         title="Welcome to the Hindu Association of Ireland"
-        subtitle="A united platform working to establish a permanent Hindu Temple in Limerick — join us in prayer, celebration and community."
+        subtitle="A united platform working to establish a permanent Hindu Temple in Limerick. Join us in prayer, celebration and community."
         enableRevealAnimation={true}
       >
-        <div className="inline-block mb-8 relative">
+        <div className="inline-block mb-8 mt-8 relative">
           {/* Circular Text Animation */}
           <div className="relative flex items-center justify-center">
             <CircularText
               text="ॐ HINDU ASSOCIATION OF IRELAND ॐ LIMERICK • AHANE • PALLASKENRY • MUNGRET ॐ"
               className="text-white/80"
             />
-            {/* Central OM Symbol */}
-            <div className="absolute flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-orange-500 to-amber-600 shadow-lg glow-saffron-intense animate-pulse-glow-saffron z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-3">
-              <span className="text-5xl font-bold text-white">ॐ</span>
+            {/* Central Logo */}
+            <div className="absolute z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-3">
+              <div className="relative h-24 w-24">
+                {/* Outer glow ring */}
+                <div className="absolute inset-0 rounded-full bg-linear-to-br from-orange-400 via-amber-500 to-orange-600 animate-pulse-glow-saffron blur-sm scale-110" />
+                {/* Gold border ring */}
+                <div className="absolute inset-0 rounded-full bg-linear-to-br from-amber-300 via-orange-400 to-amber-600 p-[3px] shadow-2xl shadow-orange-500/60 glow-saffron-intense">
+                  <div className="h-full w-full rounded-full overflow-hidden bg-white">
+                    <img
+                      src="/logo.jpeg"
+                      alt="Hindu Association of Ireland"
+                      className="h-full w-full object-cover rounded-full"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-8 items-center pt-4">
+        <div className="flex flex-col gap-8 items-center pt-10">
           <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
             <button
               onClick={() => navigate('/about')}

@@ -1,8 +1,18 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { List, Heart } from '@phosphor-icons/react'
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import {
+  List,
+  Heart,
+  House,
+  Info,
+  Sparkle,
+  CalendarBlank,
+  IdentificationCard,
+  Envelope,
+  ArrowRight,
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/Logo'
 
@@ -16,12 +26,12 @@ export function Navigation({ onDonateClick }: NavigationProps) {
   const navigate = useNavigate()
 
   const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/about', label: 'About Us' },
-    { path: '/services', label: 'Services' },
-    { path: '/events', label: 'Events' },
-    { path: '/membership', label: 'Membership' },
-    { path: '/contact', label: 'Contact' },
+    { path: '/', label: 'Home', icon: <House size={18} weight="duotone" /> },
+    { path: '/about', label: 'About Us', icon: <Info size={18} weight="duotone" /> },
+    { path: '/services', label: 'Services', icon: <Sparkle size={18} weight="duotone" /> },
+    { path: '/events', label: 'Events', icon: <CalendarBlank size={18} weight="duotone" /> },
+    { path: '/membership', label: 'Membership', icon: <IdentificationCard size={18} weight="duotone" /> },
+    { path: '/contact', label: 'Contact', icon: <Envelope size={18} weight="duotone" /> },
   ]
 
   const isActive = (path: string) =>
@@ -73,35 +83,94 @@ export function Navigation({ onDonateClick }: NavigationProps) {
                 <List className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] bg-linear-to-b from-orange-50 to-amber-50">
-              <div className="flex items-center justify-between mb-8">
-                <Logo size="sm" showText={true} />
+            <SheetContent
+              side="left"
+              className="w-[300px] p-0 flex flex-col overflow-hidden bg-white border-r border-slate-200"
+            >
+              <SheetTitle className="sr-only">Site navigation</SheetTitle>
+
+              {/* Branded header */}
+              <div className="relative overflow-hidden bg-linear-to-br from-orange-600 via-orange-600 to-amber-600 px-5 pt-7 pb-6 shrink-0">
+                {/* Gloss sheen — top-lit highlight */}
+                <div className="absolute inset-0 bg-linear-to-b from-white/25 via-white/8 to-transparent pointer-events-none" />
+                {/* Highlight edge */}
+                <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-white/60 to-transparent" />
+                {/* Decorative orbs */}
+                <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-amber-300/25 blur-2xl" />
+                <div className="absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-orange-400/20 blur-2xl" />
+
+                {/* Logo + title */}
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-xl overflow-hidden bg-white/20 ring-1 ring-white/40 shadow-lg shadow-orange-900/30 shrink-0 flex items-center justify-center">
+                    <Logo size="sm" showText={false} />
+                  </div>
+                  <div>
+                    <h2
+                      className="text-[17px] font-extrabold text-white leading-tight drop-shadow-[0_1px_3px_rgba(180,60,0,0.5)]"
+                      style={{ fontFamily: 'var(--font-heading)' }}
+                    >
+                      Hindu Temple
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Tagline */}
+
+                {/* Bottom gloss edge */}
+                <div className="absolute bottom-0 inset-x-0 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
               </div>
-              <div className="flex flex-col gap-4">
-                {navItems.map((item) => (
-                  <button
-                    key={item.path}
-                    onClick={() => handleMobileClick(item.path)}
-                    className={cn(
-                      "text-left text-lg font-semibold transition-all py-2 rounded-full px-4",
-                      isActive(item.path)
-                        ? "text-orange-700 bg-orange-100/70 shadow-sm"
-                        : "text-orange-600/80 hover:text-orange-700 hover:bg-orange-50"
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+
+              {/* Nav items */}
+              <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+                {navItems.map((item) => {
+                  const active = isActive(item.path)
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => handleMobileClick(item.path)}
+                      className={cn(
+                        'group w-full flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-150',
+                        active
+                          ? 'bg-linear-to-r from-orange-500/15 to-amber-400/10 text-orange-800 ring-1 ring-orange-300/40'
+                          : 'text-slate-600 hover:bg-orange-50/80 hover:text-orange-800',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors',
+                          active
+                            ? 'bg-orange-500/20 text-orange-700'
+                            : 'bg-slate-100 text-slate-400 group-hover:bg-orange-100 group-hover:text-orange-600',
+                        )}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {active ? (
+                        <span className="h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />
+                      ) : (
+                        <ArrowRight
+                          size={14}
+                          className="text-slate-300 group-hover:text-orange-400 opacity-0 group-hover:opacity-100 transition-all -translate-x-1 group-hover:translate-x-0"
+                        />
+                      )}
+                    </button>
+                  )
+                })}
+              </nav>
+
+              {/* Donate CTA footer */}
+              <div className="px-4 py-5 border-t border-slate-100 shrink-0 space-y-3 bg-slate-50/60">
                 <Button
-                  onClick={() => {
-                    onDonateClick()
-                    setIsOpen(false)
-                  }}
-                  className="mt-4 rounded-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
+                  onClick={() => { onDonateClick(); setIsOpen(false) }}
+                  className="w-full rounded-xl h-11 bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all"
                 >
-                  <Heart className="mr-2" weight="fill" />
-                  Donate
+                  <Heart className="mr-2" size={16} weight="fill" />
+                  Make a Donation
                 </Button>
+                <p className="text-center text-[11px] text-slate-400">
+                  Serving the Hindu community in Ireland
+                </p>
               </div>
             </SheetContent>
           </Sheet>

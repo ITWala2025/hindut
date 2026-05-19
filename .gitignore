@@ -1,5 +1,6 @@
 node_modules
 dist/
+.superpowers/
 
 # Environment variables (secrets)
 .env
@@ -12,3 +13,4 @@ src/data/galleryManifest.json
 
 # Local Netlify folder
 .netlify
+.superpowers 

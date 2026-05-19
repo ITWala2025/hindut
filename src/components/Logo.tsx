@@ -5,63 +5,45 @@ interface LogoProps {
 }
 
 export function Logo({ size = 'md', showText = true, className = '' }: LogoProps) {
-  const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-10 w-10 md:h-12 md:w-12',
-    lg: 'h-16 w-16 md:h-20 md:w-20'
+  // Logo image native aspect ratio is ~1109:1278 (≈ 0.87). Height drives width via object-contain.
+  const logoSize = {
+    sm: 'h-9 md:h-10',
+    md: 'h-11 md:h-14',
+    lg: 'h-20 md:h-24',
   }
 
-  const textSizeClasses = {
+  const titleSize = {
     sm: 'text-sm',
-    md: 'text-base md:text-xl',
-    lg: 'text-xl md:text-2xl'
+    md: 'text-base md:text-lg',
+    lg: 'text-xl md:text-2xl',
   }
 
-  const omSizeClasses = {
-    sm: 'text-base',
-    md: 'text-xl md:text-2xl',
-    lg: 'text-3xl md:text-4xl'
+  const subtitleSize = {
+    sm: 'text-[9px]',
+    md: 'text-[10px] md:text-[11px]',
+    lg: 'text-xs md:text-sm',
   }
 
   return (
-    <div className={`flex items-center space-x-2 md:space-x-3 ${className}`}>
-      {/* Stunning Logo Icon */}
-      <div className="relative">
-        {/* Outer glow ring */}
-        <div className={`${sizeClasses[size]} absolute -inset-2 rounded-full bg-linear-to-r from-orange-400 via-amber-500 to-orange-400 opacity-30 blur-md animate-pulse`} />
+    <div className={`flex items-center gap-2 md:gap-3 ${className}`}>
+      <img
+        src="/logo.webp"
+        alt="Hindu Association of Ireland"
+        className={`${logoSize[size]} w-auto object-contain select-none rounded-2xl drop-shadow-[0_2px_6px_rgba(154,52,18,0.18)] transition-transform duration-300 ease-out hover:scale-[1.04]`}
+        draggable={false}
+      />
 
-        {/* Main logo circle */}
-        <div className={`${sizeClasses[size]} relative flex items-center justify-center rounded-full bg-linear-to-br from-orange-500 via-amber-500 to-orange-600 shadow-xl glow-saffron-intense`}>
-          {/* Inner decorative ring */}
-          <div className="absolute inset-1 rounded-full border-2 border-white/30" />
-
-          {/* Om symbol with enhanced styling */}
-          <span className={`${omSizeClasses[size]} font-bold text-white relative z-10`} style={{
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-            textShadow: '0 0 10px rgba(255,255,255,0.5)'
-          }}>
-            ॐ
-          </span>
-
-          {/* Sparkle effect */}
-          <div className="absolute top-1 right-1 h-2 w-2 rounded-full bg-white/80 animate-pulse" />
-        </div>
-      </div>
-
-      {/* Temple Name */}
       {showText && (
-        <div className="flex flex-col justify-center">
+        <div className="flex flex-col justify-center leading-tight">
           <span
-            className={`${textSizeClasses[size]} font-bold leading-tight bg-linear-to-r from-orange-700 via-orange-800 to-amber-700 bg-clip-text text-transparent`}
+            className={`${titleSize[size]} font-semibold tracking-tight text-orange-800`}
             style={{ fontFamily: 'var(--font-heading)' }}
           >
-            Hindu Temple
+            Hindu Temple Limerick
           </span>
-          <div className="flex items-center gap-1 mt-0.5">
-            <div className="h-px w-4 bg-linear-to-r from-transparent via-orange-400 to-transparent" />
-            <span className="text-[10px] text-orange-600/80 font-medium tracking-wider">HINDU ASSOCIATION OF IRELAND</span>
-            <div className="h-px w-4 bg-linear-to-r from-transparent via-orange-400 to-transparent" />
-          </div>
+          <span className={`${subtitleSize[size]} font-medium uppercase tracking-[0.18em] text-orange-600/70 mt-0.5`}>
+            Hindu Association of Ireland
+          </span>
         </div>
       )}
     </div>

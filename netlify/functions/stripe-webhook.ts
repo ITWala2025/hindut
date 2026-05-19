@@ -25,7 +25,50 @@
 
 import type { Handler } from '@netlify/functions'
 import Stripe from 'stripe'
+import nodemailer from 'nodemailer'
 import { supabaseAdmin, jsonHeaders } from './lib/stripe.js'
+import {
+  buildMembershipWelcomeEmailHtml,
+  buildMembershipWelcomeEmailText,
+  type MembershipWelcomeEmailParams,
+} from './lib/membershipEmailTemplate.js'
+
+// ---------------------------------------------------------------------------
+// SMTP helpers (same credentials as rsvp-submit)
+// ---------------------------------------------------------------------------
+function createMailTransporter() {
+  return nodemailer.createTransport({
+    host:   process.env.SMTP_HOST,
+    port:   Number(process.env.SMTP_PORT ?? 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+}
+
+/**
+ * Generate next HAI-YYYY-MM-XXXX code for the given Supabase client.
+ * Uses optimistic insert: if a race produces a duplicate, the unique
+ * constraint on member_code ensures at most one code per member.
+ */
+async function generateMemberCode(
+  supabase: ReturnType<typeof supabaseAdmin>,
+): Promise<string> {
+  const now  = new Date()
+  const yyyy = now.getFullYear()
+  const mm   = String(now.getMonth() + 1).padStart(2, '0')
+  const prefix = `HAI-${yyyy}-${mm}-`
+
+  const { count } = await supabase
+    .from('members')
+    .select('id', { count: 'exact', head: true })
+    .like('member_code', `${prefix}%`)
+
+  const seq = String((count ?? 0) + 1).padStart(4, '0')
+  return `${prefix}${seq}`
+}
 
 function getStripeForSecret(secretKey: string | undefined): Stripe | null {
   if (!secretKey) return null
@@ -124,8 +167,21 @@ export const handler: Handler = async (event) => {
             .eq('id', donationId)
           console.log('[stripe-webhook] donation', donationId, '→ succeeded')
         } else if (kind === 'membership') {
-          const membershipId = session.metadata?.membershipId
+          const membershipId  = session.metadata?.membershipId
           if (!membershipId) break
+
+          const memberId      = session.metadata?.memberId   ?? null
+          const memberName    = session.metadata?.fullName   ?? 'Member'
+          const memberEmail   = session.metadata?.email      ?? null
+          const planId        = session.metadata?.planId     ?? 'annual'
+
+          // Map plan id to human-readable name
+          const PLAN_NAMES: Record<string, string> = {
+            'monthly':     'Monthly',
+            'semi-annual': 'Semi-Annual',
+            'annual':      'Annual',
+          }
+          const planName = PLAN_NAMES[planId] ?? 'Annual'
 
           const subscriptionId =
             typeof session.subscription === 'string'
@@ -159,6 +215,62 @@ export const handler: Handler = async (event) => {
             })
             .eq('id', membershipId)
           console.log('[stripe-webhook] membership', membershipId, '→ active')
+
+          // ── Assign Member ID (one per email — never regenerated) ──────────
+          let memberCode: string | null = null
+          if (memberId) {
+            // Fetch current member_code (may already exist for returning members)
+            const { data: memberRow } = await supabase
+              .from('members')
+              .select('member_code')
+              .eq('id', memberId)
+              .maybeSingle()
+
+            memberCode = (memberRow as { member_code?: string | null } | null)?.member_code ?? null
+
+            if (!memberCode) {
+              // Generate a new code and assign it atomically (only if still null)
+              const newCode = await generateMemberCode(supabase)
+              const { data: updated } = await supabase
+                .from('members')
+                .update({ member_code: newCode })
+                .eq('id', memberId)
+                .is('member_code', null)   // guard against race condition
+                .select('member_code')
+                .maybeSingle()
+              memberCode = (updated as { member_code?: string | null } | null)?.member_code ?? newCode
+              console.log('[stripe-webhook] assigned member_code', memberCode, 'to member', memberId)
+            } else {
+              console.log('[stripe-webhook] member', memberId, 'already has member_code', memberCode)
+            }
+          }
+
+          // ── Send welcome email ────────────────────────────────────────────
+          if (memberEmail && memberCode && process.env.SMTP_HOST) {
+            try {
+              const emailParams: MembershipWelcomeEmailParams = {
+                memberName,
+                memberCode,
+                memberEmail,
+                planName,
+                addedMonthly: false, // standalone monthly giving is a separate flow
+              }
+              const transporter = createMailTransporter()
+              await transporter.sendMail({
+                from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+                to:      memberEmail,
+                subject: 'Welcome to the Hindu Association of Ireland Community!',
+                html:    buildMembershipWelcomeEmailHtml(emailParams),
+                text:    buildMembershipWelcomeEmailText(emailParams),
+              })
+              console.log('[stripe-webhook] welcome email sent to', memberEmail, 'code:', memberCode)
+            } catch (emailErr) {
+              // Non-fatal: membership is already active. Log and continue.
+              console.error('[stripe-webhook] welcome email error:', (emailErr as Error).message)
+            }
+          } else if (!process.env.SMTP_HOST) {
+            console.log('[dev] SMTP_HOST not set — skipping welcome email for', memberEmail)
+          }
         }
         break
       }

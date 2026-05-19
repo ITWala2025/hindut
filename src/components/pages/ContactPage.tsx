@@ -52,7 +52,7 @@ export function ContactPage() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col overflow-x-hidden">
       <HeroCarousel
         title="Contact Us"
         subtitle="We'd love to hear from you. Reach out with any questions or visit us in person."
@@ -160,8 +160,8 @@ export function ContactPage() {
                       <div>
                         <h3 className="font-semibold text-lg mb-1 text-orange-800">Phone</h3>
                         <p className="text-muted-foreground">
-                          Main Contact: (087) 495 3334<br />
-                          WhatsApp available
+                          +353 87 495 3334<br />
+                          (available 9am - 6pm, Mon-Fri)
                         </p>
                       </div>
                     </div>
@@ -176,9 +176,9 @@ export function ContactPage() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-lg mb-1 text-orange-800">Email</h3>
-                        <p className="text-muted-foreground">
-                          General: info@hindutemple.ie<br />
-                          Membership: hinduassociationireland@gmail.com
+                        <p className="text-muted-foreground break-all">
+                          info@hindutemple.ie<br />
+                          hinduassociationireland@gmail.com
                         </p>
                       </div>
                     </div>

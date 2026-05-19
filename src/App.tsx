@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { Navigation } from '@/components/Navigation'
+import { Header } from '@/components/Header'
+import { WhatsAppButton } from '@/components/WhatsAppButton'
 import { Footer } from '@/components/Footer'
 import { DonationDialog } from '@/components/DonationDialog'
 import { HomePage } from '@/components/pages/HomePage'
@@ -47,7 +48,7 @@ function AppShell() {
   return (
     <div className="flex flex-col min-h-screen relative">
       <ScrollToTop />
-      <Navigation onDonateClick={openDonation} />
+      <Header onDonateClick={openDonation} />
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage onDonateClick={openDonation} />} />
@@ -67,6 +68,7 @@ function AppShell() {
         </Routes>
       </main>
       <Footer />
+      <WhatsAppButton />
       <DonationDialog open={isDonationOpen} onOpenChange={setIsDonationOpen} />
       <Toaster />
     </div>

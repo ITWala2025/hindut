@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sheet'
 import { CalendarBlank, MapPin, Clock, Ticket, Heart, ArrowDown, ClipboardText, Image as ImageIcon } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
+import { EventsGalleryStrip } from '@/components/EventsGalleryStrip'
 import { RsvpDialog } from '@/components/RsvpDialog'
 import { TicketBookingDialog } from '@/components/TicketBookingDialog'
 import { cn } from '@/lib/utils'
@@ -115,7 +116,22 @@ export function EventsPage() {
         )}
       </HeroCarousel>
 
-      <section className="py-8 md:py-12 bg-linear-to-br from-slate-50 via-orange-50/30 to-slate-50">
+      {/*
+       * Gallery Strip — pulled up with a negative top margin so the cards
+       * visually sit at the bottom edge of the hero, overlapping the
+       * hero–content boundary. z-20 keeps the strip above the hero overlay
+       * but below any Sheet/Dialog portals.
+       *
+       * The strip container has its own dark-to-transparent gradient so the
+       * header row (labels + buttons) always reads clearly against the
+       * hero background, while the bottom half of the cards blends into the
+       * section below.
+       */}
+      <div className="relative z-20 -mt-24 sm:-mt-32 md:-mt-40 lg:-mt-48 w-full">
+        <EventsGalleryStrip />
+      </div>
+
+      <section className="pt-6 pb-8 md:pb-12 bg-linear-to-br from-slate-50 via-orange-50/30 to-slate-50">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
             <div>

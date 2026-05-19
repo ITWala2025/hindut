@@ -34,6 +34,7 @@ interface MembershipRow {
     full_name: string
     email: string | null
     phone: string | null
+    member_code: string | null
   } | null
 }
 
@@ -55,6 +56,7 @@ function toPlan(row: PlanRow): MembershipPlan {
 function toRecord(row: MembershipRow): MembershipRecord {
   return {
     id: row.id,
+    memberCode: row.members?.member_code ?? undefined,
     planId: row.plan as MembershipPlanId,
     fullName: row.members?.full_name ?? 'Unknown',
     email: row.members?.email ?? '',
@@ -95,7 +97,7 @@ export function useMembership() {
     setLoading(true)
     const { data, error: err } = await supabase
       .from('memberships')
-      .select('*, members(full_name, email, phone)')
+      .select('*, members(full_name, email, phone, member_code)')
       .order('created_at', { ascending: false })
     if (err) {
       setError(err.message)

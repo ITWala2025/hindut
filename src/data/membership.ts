@@ -18,6 +18,7 @@ export interface MembershipPlan {
 
 export interface MembershipRecord {
   id: string
+  memberCode?: string
   planId: MembershipPlanId
   fullName: string
   email: string

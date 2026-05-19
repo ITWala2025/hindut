@@ -12,7 +12,7 @@ import { useEvents, upcomingOnly } from '@/hooks/useEvents'
 import { useMembership } from '@/hooks/useMembership'
 import { useReceipts } from '@/hooks/useReceipts'
 import { useMedia } from '@/hooks/useMedia'
-import { useAuth, ROLE_LABELS } from '@/lib/auth'
+import { useAuth } from '@/lib/auth'
 import type { AdminSectionId } from '@/components/admin/AdminLayout'
 
 interface DashboardProps {
@@ -56,7 +56,7 @@ export function DashboardSection({ onNavigate }: DashboardProps) {
               Namaste, {user?.name.split(' ')[0]} 🙏
             </h2>
             <p className="text-orange-50/90 mt-1">
-              Signed in as {user ? ROLE_LABELS[user.role] : ''}. Here's your snapshot for today.
+              Here's your snapshot for today.
             </p>
           </div>
           <Button
