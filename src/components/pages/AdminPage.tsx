@@ -5,6 +5,8 @@ import { AdminLayout, type AdminSectionId } from '@/components/admin/AdminLayout
 import { DashboardSection } from '@/components/admin/sections/DashboardSection'
 import { EventsSection } from '@/components/admin/sections/EventsSection'
 import { RsvpsSection } from '@/components/admin/sections/RsvpsSection'
+import { TicketBookingsSection } from '@/components/admin/sections/TicketBookingsSection'
+import { DonationsSection } from '@/components/admin/sections/DonationsSection'
 import { MembersSection } from '@/components/admin/sections/MembersSection'
 import { ReceiptsSection } from '@/components/admin/sections/ReceiptsSection'
 import { MediaSection } from '@/components/admin/sections/MediaSection'
@@ -61,6 +63,10 @@ function renderSection(
       return <EventsSection />
     case 'rsvps':
       return <RsvpsSection />
+    case 'tickets':
+      return <TicketBookingsSection />
+    case 'donations':
+      return <DonationsSection />
     case 'media':
       return <MediaSection />
     case 'services':

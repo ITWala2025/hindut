@@ -191,7 +191,7 @@ export function RsvpsSection() {
                 size="sm"
                 onClick={handleExport}
                 disabled={exporting || rsvps.length === 0}
-                className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
               >
                 {exporting ? (
                   <ArrowsClockwise size={15} className="mr-1.5 animate-spin" />

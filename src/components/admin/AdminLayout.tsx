@@ -16,6 +16,8 @@ import {
   MagnifyingGlass,
   ArrowSquareOut,
   Sparkle,
+  Ticket,
+  HandCoins,
 } from '@phosphor-icons/react'
 import type { Capability } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
@@ -40,6 +42,8 @@ export type AdminSectionId =
   | 'receipts'
   | 'events'
   | 'rsvps'
+  | 'tickets'
+  | 'donations'
   | 'media'
   | 'services'
   | 'users'
@@ -85,6 +89,18 @@ const NAV_ITEMS: NavItem[] = [
     label: 'RSVPs',
     icon: <ClipboardText size={20} weight="duotone" />,
     capability: 'manageEvents',
+  },
+  {
+    id: 'tickets',
+    label: 'Ticket Bookings',
+    icon: <Ticket size={20} weight="duotone" />,
+    capability: 'manageEvents',
+  },
+  {
+    id: 'donations',
+    label: 'Donations',
+    icon: <HandCoins size={20} weight="duotone" />,
+    capability: 'manageReceipts',
   },
   {
     id: 'services',
