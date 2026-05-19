@@ -154,7 +154,6 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
         reset()
         setStep('details')
         setFormSnapshot(null)
-        setSelectedGateway(null)
         setBookingRef('')
       }, 300)
     }
@@ -169,10 +168,6 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
 
   // Step 2 → Step 3
   const handlePay = async () => {
-    if (!selectedGateway) {
-      toast.error('Please select a payment method')
-      return
-    }
     if (!formSnapshot) return
     setIsProcessing(true)
     try {
