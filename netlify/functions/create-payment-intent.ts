@@ -76,6 +76,9 @@ export const handler: Handler = async (event) => {
     const intent = await ctx.stripe.paymentIntents.create({
       amount:    Math.round(totalEur * 100),
       currency:  'eur',
+      // automatic_payment_methods lets the Stripe Dashboard control which
+      // payment methods appear (credit card, Apple Pay, Google Pay, Revolut Pay, etc.)
+      // Enable individual methods at: https://dashboard.stripe.com/settings/payment_methods
       automatic_payment_methods: { enabled: true },
       receipt_email: parsed.data.email,
       description:   `Tickets: ${evt.title}`,

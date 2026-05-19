@@ -5,23 +5,31 @@
  *
  *   • Loads secret keys from Netlify env vars (NEVER from the DB).
  *   • Detects which mode to use:
- *       1. Admin DB override  (payment_settings.mode_override = 'test' | 'live')
- *       2. STRIPE_MODE        (explicit env override)
- *       3. Host header        ('limerickhindutemple.netlify.app' → live, else test)
+ *       1. STRIPE_MODE env var    (explicit override — set to 'test' for sandbox)
+ *       2. Admin DB override      (payment_settings.mode_override = 'test' | 'live')
+ *       3. Host header            (matches PRODUCTION_HOSTS env var → live, else test)
  *   • Exposes the matching publishable key + webhook secret.
  *
+ * Current setup:
+ *   limerickhindutemple.netlify.app is the SANDBOX/test site.
+ *   Set STRIPE_MODE=test in Netlify env vars to ensure it always uses test keys.
+ *   When a production domain is ready, add it to the PRODUCTION_HOSTS env var
+ *   and set live keys (STRIPE_SECRET_KEY_LIVE etc.) in Netlify.
+ *
  * Required Netlify env vars:
- *   STRIPE_SECRET_KEY_TEST          — sk_test_...
- *   STRIPE_PUBLISHABLE_KEY_TEST     — pk_test_...
- *   STRIPE_WEBHOOK_SECRET_TEST      — whsec_...  (set after creating webhook endpoint)
+ *   STRIPE_SECRET_KEY_TEST          — sk_test_...  (sandbox)
+ *   STRIPE_PUBLISHABLE_KEY_TEST     — pk_test_...  (sandbox)
+ *   STRIPE_WEBHOOK_SECRET_TEST      — whsec_...    (set after creating test webhook)
+ *
+ * Add when production domain is ready:
  *   STRIPE_SECRET_KEY_LIVE          — sk_live_...
  *   STRIPE_PUBLISHABLE_KEY_LIVE     — pk_live_...
  *   STRIPE_WEBHOOK_SECRET_LIVE      — whsec_...
  *
  * Optional:
- *   STRIPE_MODE                     — 'test' | 'live'   (force mode, ignores host detection)
+ *   STRIPE_MODE                     — 'test' | 'live'  (force mode; recommended: 'test' for now)
  *   PRODUCTION_HOSTS                — comma-separated hostnames that trigger live mode
- *                                     (default: 'limerickhindutemple.netlify.app')
+ *                                     (leave unset until production domain is confirmed)
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — required to read DB mode_override.
  */
 
@@ -39,7 +47,11 @@ export interface ResolvedStripeContext {
   source:           'db-override' | 'env-override' | 'host'
 }
 
-const DEFAULT_PRODUCTION_HOSTS = ['limerickhindutemple.netlify.app']
+// No default production hosts — live mode is only triggered when the user
+// explicitly sets PRODUCTION_HOSTS (once the production domain is confirmed)
+// or sets STRIPE_MODE=live. This prevents accidentally charging real money
+// on the sandbox site (limerickhindutemple.netlify.app).
+const DEFAULT_PRODUCTION_HOSTS: string[] = []
 
 function productionHosts(): string[] {
   const raw = process.env.PRODUCTION_HOSTS ?? ''

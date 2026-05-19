@@ -147,7 +147,9 @@ export const handler: Handler = async (event) => {
 
       const session = await ctx.stripe.checkout.sessions.create({
         mode:             d.recurring ? 'subscription' : 'payment',
-        payment_method_types: ['card'],
+        // Omitting payment_method_types lets the Stripe Dashboard control which
+        // methods appear (card, Apple Pay, Google Pay, Revolut Pay, etc.).
+        // Enable individual methods at: https://dashboard.stripe.com/settings/payment_methods
         line_items:       [lineItem],
         customer_email:   d.donorEmail,
         success_url:      `${d.successUrl ?? `${origin}/donation-success`}?session_id={CHECKOUT_SESSION_ID}`,
@@ -258,7 +260,8 @@ export const handler: Handler = async (event) => {
     const cadence = PLAN_TO_STRIPE[m.planId]
     const session = await ctx.stripe.checkout.sessions.create({
       mode:             'subscription',
-      payment_method_types: ['card'],
+      // Omitting payment_method_types lets the Stripe Dashboard control which
+      // methods appear. Revolut Pay is not supported in subscription mode.
       customer_email:   m.email,
       line_items: [{
         quantity: 1,
