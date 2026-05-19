@@ -10,6 +10,9 @@
 
 [context.production.environment]
   NODE_VERSION = "18"
+  # limerickhindutemple.netlify.app is the SANDBOX site — always use test keys.
+  # Remove this line only when this site becomes the real production domain.
+  STRIPE_MODE = "test"
 
 # SPA fallback so client-side routes (react-router) work on refresh / deep links.
 # Netlify evaluates function routes BEFORE redirect rules, so /.netlify/functions/*
