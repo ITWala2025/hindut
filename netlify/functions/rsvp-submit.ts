@@ -20,6 +20,7 @@
 
 import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
+import { randomBytes } from 'node:crypto'
 import nodemailer from 'nodemailer'
 import { z } from 'zod'
 import {
@@ -73,7 +74,7 @@ function maskPhone(phone: string): string {
  */
 function generateReference(eventSlug?: string | null, eventId?: string): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const buf   = require('crypto').randomBytes(4) as Buffer
+  const buf   = randomBytes(4)
   const suffix = Array.from(buf).map((b: number) => chars[b % chars.length]).join('')
 
   let code: string
