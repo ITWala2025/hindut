@@ -1,0 +1,83 @@
+{
+  "images": [
+    {
+      "src": "/images/gallery-webp/DSC_0001.webp",
+      "width": 1600,
+      "height": 1067,
+      "alt": "DSC 0001"
+    },
+    {
+      "src": "/images/gallery-webp/DSC_0043.webp",
+      "width": 1600,
+      "height": 1067,
+      "alt": "DSC 0043"
+    },
+    {
+      "src": "/images/gallery-webp/DSC_0054.webp",
+      "width": 1600,
+      "height": 1067,
+      "alt": "DSC 0054"
+    },
+    {
+      "src": "/images/gallery-webp/DSC_0077.webp",
+      "width": 1600,
+      "height": 1067,
+      "alt": "DSC 0077"
+    },
+    {
+      "src": "/images/gallery-webp/DSC_0103.webp",
+      "width": 1600,
+      "height": 1067,
+      "alt": "DSC 0103"
+    },
+    {
+      "src": "/images/gallery-webp/DSC_0154.webp",
+      "width": 1600,
+      "height": 1067,
+      "alt": "DSC 0154"
+    },
+    {
+      "src": "/images/gallery-webp/WhatsApp_Image_2023-10-24_at_10.35.50_AM_2_.webp",
+      "width": 1024,
+      "height": 768,
+      "alt": "WhatsApp Image 2023 10 24 at 10.35.50 AM (2)"
+    },
+    {
+      "src": "/images/gallery-webp/WhatsApp_Image_2023-10-24_at_10.35.50_AM.webp",
+      "width": 1024,
+      "height": 768,
+      "alt": "WhatsApp Image 2023 10 24 at 10.35.50 AM"
+    },
+    {
+      "src": "/images/gallery-webp/WhatsApp_Image_2023-10-26_at_10.26.32_AM_1_.webp",
+      "width": 1024,
+      "height": 948,
+      "alt": "WhatsApp Image 2023 10 26 at 10.26.32 AM (1)"
+    },
+    {
+      "src": "/images/gallery-webp/WhatsApp_Image_2023-10-26_at_10.26.32_AM_2_.webp",
+      "width": 1024,
+      "height": 576,
+      "alt": "WhatsApp Image 2023 10 26 at 10.26.32 AM (2)"
+    },
+    {
+      "src": "/images/gallery-webp/WhatsApp_Image_2023-10-26_at_10.26.32_AM.webp",
+      "width": 1024,
+      "height": 724,
+      "alt": "WhatsApp Image 2023 10 26 at 10.26.32 AM"
+    },
+    {
+      "src": "/images/gallery-webp/WhatsApp_Image_2026-05-17_at_19.14.27.webp",
+      "width": 1600,
+      "height": 900,
+      "alt": "WhatsApp Image 2026 05 17 at 19.14.27"
+    },
+    {
+      "src": "/images/gallery-webp/WhatsApp_Image_2026-05-17_at_19.14.28.webp",
+      "width": 1200,
+      "height": 1600,
+      "alt": "WhatsApp Image 2026 05 17 at 19.14.28"
+    }
+  ],
+  "generatedAt": "2026-05-17T18:46:43.910Z"
+}

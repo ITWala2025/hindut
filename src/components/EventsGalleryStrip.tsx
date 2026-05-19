@@ -2,8 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ImagesSquare, ArrowSquareOut } from '@phosphor-icons/react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import galleryManifest from '@/data/galleryManifest.json'
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type StripItem = {
@@ -13,13 +11,7 @@ type StripItem = {
   href?: string
 }
 
-// ─── Data: Supabase (images + albums) with local-manifest fallback ────────────
-
-const LOCAL_ITEMS: StripItem[] = (
-  galleryManifest.images as Array<{ src: string; alt: string }>
-)
-  .slice(0, 14)
-  .map((img) => ({ src: img.src, alt: img.alt, mediaType: 'image' as const }))
+// ─── Data: Supabase (images + albums) ───────────────────────────────────────
 
 function useStripItems(limit = 16) {
   const [items, setItems] = useState<StripItem[]>([])
@@ -187,7 +179,7 @@ function GlossyCard({ item, tabIndex, onFocus }: GlossyCardProps) {
 
 export function EventsGalleryStrip() {
   const { items, loading } = useStripItems(16)
-  const displayItems = !loading && items.length > 0 ? items : LOCAL_ITEMS
+  const displayItems = items
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -367,7 +359,7 @@ export function EventsGalleryStrip() {
     [scrollPrev, scrollNext],
   )
 
-  if (loading && LOCAL_ITEMS.length === 0) return null
+  if (loading && items.length === 0) return null
 
   return (
     <section
