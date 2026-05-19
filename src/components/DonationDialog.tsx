@@ -3,20 +3,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Heart, CheckCircle, CreditCard, ArrowLeft, Spinner } from '@phosphor-icons/react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Heart, CheckCircle, CreditCard, ArrowLeft, Spinner, ShieldCheck } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { loadStripe } from '@stripe/stripe-js'
 
 interface DonationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
-
-type PaymentGateway = 'stripe' | null
-
-// Initialize Stripe (replace with your publishable key)
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_placeholder')
 
 export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
   const [step, setStep] = useState<'amount' | 'details' | 'payment' | 'success'>('amount')
@@ -24,6 +19,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
   const [customAmount, setCustomAmount] = useState('')
   const [donorName, setDonorName] = useState('')
   const [donorEmail, setDonorEmail] = useState('')
+  const [recurring, setRecurring] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
 
   const presetAmounts = [10, 25, 50, 100, 250, 500]
@@ -54,39 +50,38 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
   }
 
   const handleStripePayment = async () => {
+    const amount = getDonationAmount()
+    if (amount <= 0) {
+      toast.error('Invalid donation amount')
+      return
+    }
     setIsProcessing(true)
     try {
-      const stripe = await stripePromise
-      if (!stripe) {
-        throw new Error('Stripe failed to load')
-      }
-
-      // In a real implementation, you would:
-      // 1. Call your backend to create a Checkout Session
-      // 2. Redirect to Stripe Checkout with the session ID
-
-      // For demo purposes, we'll simulate the process
-      const response = await fetch('/api/create-checkout-session', {
+      const res = await fetch('/.netlify/functions/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: getDonationAmount(),
-          email: donorEmail,
-          name: donorName,
+          kind:       'donation',
+          amountEur:  amount,
+          donorName,
+          donorEmail,
+          recurring,
+          successUrl: `${window.location.origin}/donation-success`,
+          cancelUrl:  `${window.location.origin}${window.location.pathname}?donation_cancelled=1`,
         }),
-      }).catch(() => {
-        // Demo: Simulate successful payment after 2 seconds
-        return new Promise(resolve => setTimeout(() => resolve({ ok: true }), 2000))
       })
-
-      if (response && typeof response === 'object' && 'ok' in response) {
-        setStep('success')
-        toast.success('Payment processed successfully via Stripe!')
+      const json = await res.json()
+      if (!res.ok || !json.url) {
+        console.error('[donation] checkout error:', json)
+        toast.error(json.error ?? 'Could not start Stripe checkout. Please try again.')
+        setIsProcessing(false)
+        return
       }
+      // Hand off to Stripe-hosted checkout.
+      window.location.href = json.url
     } catch (error) {
-      toast.error('Payment failed. Please try again.')
-      console.error('Stripe error:', error)
-    } finally {
+      console.error('[donation] network error:', error)
+      toast.error('Network error. Please check your connection and try again.')
       setIsProcessing(false)
     }
   }
@@ -99,6 +94,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
       setCustomAmount('')
       setDonorName('')
       setDonorEmail('')
+      setRecurring(false)
     }, 300)
   }
 
@@ -176,6 +172,29 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                   />
                 </div>
               </div>
+
+              <label
+                htmlFor="recurring"
+                className={cn(
+                  'flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors',
+                  recurring ? 'border-orange-500 bg-orange-50' : 'border-orange-200 bg-white hover:bg-orange-50/60',
+                )}
+              >
+                <Checkbox
+                  id="recurring"
+                  checked={recurring}
+                  onCheckedChange={(v) => setRecurring(v === true)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-orange-800">
+                    Make this a monthly recurring donation
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    You will be charged €{getDonationAmount() || '—'} every month. Cancel any time.
+                  </div>
+                </div>
+              </label>
 
               <Button
                 onClick={handleAmountNext}
@@ -282,32 +301,35 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                 <div className="mb-4">
                   <h3 className="font-bold text-lg text-orange-800 mb-2">Stripe Checkout</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    You will be redirected to Stripe's secure checkout to complete your €{getDonationAmount()} donation
+                    You will be redirected to Stripe's secure checkout to complete your €{getDonationAmount()}
+                    {recurring ? ' monthly recurring' : ''} donation.
                   </p>
                 </div>
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
                   <div className="flex items-start gap-2">
-                    <CreditCard className="text-orange-600 mt-1" size={20} />
+                    <ShieldCheck className="text-orange-600 mt-1" size={20} weight="fill" />
                     <div>
-                      <p className="text-sm font-semibold text-orange-800">Secure Payment</p>
-                      <p className="text-xs text-muted-foreground">Your payment information is processed securely by Stripe</p>
+                      <p className="text-sm font-semibold text-orange-800">PCI-compliant payment</p>
+                      <p className="text-xs text-muted-foreground">
+                        Your card details are entered on Stripe's secure page — never on this site.
+                      </p>
                     </div>
                   </div>
                 </div>
                 <Button
                   onClick={handleStripePayment}
                   disabled={isProcessing}
-                  className="w-full h-12 text-base font-semibold bg-linear-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                  className="w-full h-12 text-base font-semibold bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
                 >
                   {isProcessing ? (
                     <>
                       <Spinner className="mr-2 animate-spin" size={20} />
-                      Processing...
+                      Redirecting to Stripe…
                     </>
                   ) : (
                     <>
                       <CreditCard className="mr-2" size={20} />
-                      Pay €{getDonationAmount()} with Stripe
+                      Continue to Stripe · €{getDonationAmount()}{recurring ? '/mo' : ''}
                     </>
                   )}
                 </Button>

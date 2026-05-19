@@ -1,22 +1,56 @@
 # Configuration Guide
 
-## .env.example
-```
-# Vercel / Next.js
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<your-stripe-publishable-key>
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
+## Netlify environment variables (current architecture)
 
-# Server‑side (Vercel Functions)
-STRIPE_SECRET_KEY=<your-stripe-secret-key>
-STRIPE_WEBHOOK_SECRET=<your-stripe-webhook-secret>
-SUPABASE_SERVICE_ROLE_KEY=<your-supabase-service-role-key>
-SENDGRID_API_KEY=<your-sendgrid-api-key>
-VERCEL_URL=https://your-project.vercel.app
+The app runs on **Netlify Functions + Supabase**. Both **test** and **live**
+Stripe keys are stored simultaneously — the server picks the right pair at
+request-time based on the hostname (see `netlify/functions/lib/stripe.ts`).
 
-# Optional – email sender
-EMAIL_FROM=no-reply@hindutemple.ie
-```
+| Variable                          | Required | Purpose                                          |
+| --------------------------------- | -------- | ------------------------------------------------ |
+| `STRIPE_SECRET_KEY_TEST`          | ✅       | Server secret for sandbox (`sk_test_…`)          |
+| `STRIPE_PUBLISHABLE_KEY_TEST`     | ✅       | Sent to browser when in test mode (`pk_test_…`)  |
+| `STRIPE_WEBHOOK_SECRET_TEST`      | ✅       | Verifies signatures from the test webhook        |
+| `STRIPE_SECRET_KEY_LIVE`          | ✅\*     | Server secret for production (`sk_live_…`)       |
+| `STRIPE_PUBLISHABLE_KEY_LIVE`     | ✅\*     | Sent to browser when in live mode (`pk_live_…`)  |
+| `STRIPE_WEBHOOK_SECRET_LIVE`      | ✅\*     | Verifies signatures from the live webhook        |
+| `STRIPE_MODE`                     | optional | Force `test` or `live` regardless of host        |
+| `PRODUCTION_HOSTS`                | optional | Comma-separated hostnames that count as live. Defaults to `limerickhindutemple.netlify.app`. |
+| `SUPABASE_URL` / `VITE_SUPABASE_URL`             | ✅ | Supabase project URL                |
+| `SUPABASE_ANON_KEY` / `VITE_SUPABASE_ANON_KEY`   | ✅ | Public anon key                     |
+| `SUPABASE_SERVICE_ROLE_KEY`        | ✅       | Server-only key for Netlify Functions            |
+
+\* Live values only required once you flip the production domain into live mode.
+
+### Mode resolution order
+1. `STRIPE_MODE` env var (if set, wins).
+2. `payment_settings.mode_override` row in Supabase (set via Admin → Settings → Stripe payments).
+3. Host detection: hostname matches `PRODUCTION_HOSTS` → `live`, otherwise → `test`.
+
+### Stripe Dashboard setup
+1. **Create two webhook endpoints** in the Stripe Dashboard pointing to
+   `https://<your-site>/.netlify/functions/stripe-webhook` — one in **test**
+   mode and one in **live** mode. Subscribe each to the following events:
+   - `checkout.session.completed`
+   - `payment_intent.payment_failed`
+   - `charge.refunded`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+2. Copy each webhook's signing secret into `STRIPE_WEBHOOK_SECRET_TEST` /
+   `STRIPE_WEBHOOK_SECRET_LIVE`. The function automatically tries both
+   secrets when verifying signatures so a single endpoint code path works
+   for either mode.
+3. **No product objects required** — donations use ad-hoc `price_data` and
+   memberships use `price_data` with the cadence from `membership_plans`.
+
+### Admin override
+Authorised admins can visit **Admin → Settings → Stripe payments** to:
+- See the current mode + Stripe account snapshot.
+- Verify all six environment variables are present (without exposing values).
+- Force test or live mode for end-to-end rehearsal without redeploying.
+
+Secret keys themselves are **never editable from the UI** — they live only in
+Netlify environment variables.
 
 ## Supabase Project Setup
 1. **Create a new Supabase project** – choose a region close to your primary audience (e.g., EU‑West).
@@ -27,16 +61,6 @@ EMAIL_FROM=no-reply@hindutemple.ie
    * `public-gallery` – for photo gallery images.
    * `videos` – for video assets.
 6. **API keys** – copy the `anon` and `service_role` keys into the `.env` file.
-
-## Stripe Dashboard Setup
-1. **Create products** for each membership plan and donation tier.
-   * Annual Membership – product ID `prod_annual_membership`
-   * Semi‑Annual – `prod_semi_annual`
-   * Monthly – `prod_monthly`
-   * Donation tiers – create separate price objects (e.g., `price_shraddha`, `price_seva`, `price_bhakti`).
-2. **Configure webhook** – endpoint URL: `https://<your‑vercel‑url>/api/stripe/webhook`.
-   * Add the webhook secret to `STRIPE_WEBHOOK_SECRET`.
-3. **Enable email receipts** – set up SendGrid API key and verify sender domain.
 
 ---
 

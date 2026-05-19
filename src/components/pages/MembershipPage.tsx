@@ -30,14 +30,14 @@ import type { MembershipPlan, MembershipRecord } from '@/data/membership'
 
 type PaymentMethod = MembershipRecord['paymentMethod']
 
+// Only Stripe is wired up at the moment; the other gateways listed in earlier
+// mocks (PayPal, SumUp) were placeholders and never actually charged a card.
 const PAYMENT_METHODS: { id: PaymentMethod; label: string; description: string; glyph: string }[] = [
-  { id: 'stripe', label: 'Card (Stripe)', description: 'Visa, Mastercard, Apple Pay', glyph: '💳' },
-  { id: 'paypal', label: 'PayPal', description: 'Pay with your PayPal balance', glyph: '🅿️' },
-  { id: 'sumup', label: 'SumUp', description: 'Quick checkout via SumUp', glyph: '⚡' },
+  { id: 'stripe', label: 'Card (Stripe)', description: 'Visa, Mastercard, Apple Pay, Google Pay', glyph: '💳' },
 ]
 
 export function MembershipPage() {
-  const { plans, purchase } = useMembership()
+  const { plans } = useMembership()
   const [selected, setSelected] = useState<MembershipPlan | null>(null)
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<'details' | 'payment' | 'success'>('details')
@@ -92,20 +92,31 @@ export function MembershipPage() {
     if (!selected) return
     setProcessing(true)
     try {
-      const record = await purchase({
-        planId: selected.id,
-        fullName: fullName.trim(),
-        email: email.trim(),
-        phone: phone.trim() || undefined,
-        paymentMethod,
+      const res = await fetch('/.netlify/functions/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind:       'membership',
+          planId:     selected.id,
+          fullName:   fullName.trim(),
+          email:      email.trim(),
+          phone:      phone.trim() || undefined,
+          successUrl: `${window.location.origin}/membership-success`,
+          cancelUrl:  `${window.location.origin}/membership?cancelled=1`,
+        }),
       })
-      setReceipt(record)
-      setStep('success')
-      toast.success(`Welcome to HAI, ${record.fullName}!`)
+      const json = await res.json()
+      if (!res.ok || !json.url) {
+        console.error('[membership] checkout error:', json)
+        toast.error(json.error ?? 'Could not start Stripe checkout. Please try again.')
+        setProcessing(false)
+        return
+      }
+      // Hand off to Stripe-hosted checkout for subscription.
+      window.location.href = json.url
     } catch (err) {
-      console.error(err)
-      toast.error('Mock payment failed. Please try again.')
-    } finally {
+      console.error('[membership] network error:', err)
+      toast.error('Network error. Please check your connection and try again.')
       setProcessing(false)
     }
   }
@@ -364,8 +375,12 @@ export function MembershipPage() {
                     />
                   </button>
                 ))}
-                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-                  Phase 1: this is a <strong>mock checkout</strong>. No real charge will be made.
+                <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-xs text-orange-800 flex items-start gap-2">
+                  <ShieldCheck size={16} weight="fill" className="shrink-0 mt-0.5 text-orange-600" />
+                  <span>
+                    You'll be redirected to Stripe's secure checkout. Your
+                    membership will renew automatically until you cancel.
+                  </span>
                 </div>
                 <Button
                   onClick={pay}
@@ -375,12 +390,12 @@ export function MembershipPage() {
                   {processing ? (
                     <>
                       <Spinner className="mr-2 animate-spin" />
-                      Processing…
+                      Redirecting to Stripe…
                     </>
                   ) : (
                     <>
                       <Heart className="mr-2" weight="fill" />
-                      Pay €{selected.price}
+                      Continue to Stripe · €{selected.price}
                     </>
                   )}
                 </Button>

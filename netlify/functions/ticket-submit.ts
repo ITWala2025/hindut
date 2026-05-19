@@ -17,6 +17,7 @@ import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
 import ws from 'ws'
+import { resolveStripe } from './lib/stripe.js'
 
 // ---------------------------------------------------------------------------
 // Validation schema
@@ -31,6 +32,7 @@ const TicketSchema = z.object({
   numChildren:    z.number().int().min(0).max(50).optional().default(0),
   amountEur:      z.number().min(0),
   paymentGateway: z.literal('stripe'),
+  paymentIntentId: z.string().min(1, 'paymentIntentId is required').optional(),
   consentGdpr:    z.literal(true),
 })
 
@@ -143,6 +145,37 @@ export const handler: Handler = async (event) => {
       return { statusCode: 404, headers, body: JSON.stringify({ error: 'Event not found' }) }
     }
 
+    // -- Verify Stripe PaymentIntent BEFORE saving the booking ---------------
+    // The client must confirm the PaymentElement payment first; we then verify
+    // here that the intent is succeeded and was created with the same eventId.
+    if (!data.paymentIntentId) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing paymentIntentId. Complete payment first.' }) }
+    }
+    let paymentReference: string
+    try {
+      const host  = event.headers.host ?? event.headers.Host ?? null
+      const sCtx  = await resolveStripe({ host })
+      const intent = await sCtx.stripe.paymentIntents.retrieve(data.paymentIntentId)
+      if (intent.status !== 'succeeded') {
+        console.warn('[ticket-submit] PaymentIntent not succeeded:', intent.id, intent.status)
+        return { statusCode: 402, headers, body: JSON.stringify({ error: `Payment not completed (status: ${intent.status})` }) }
+      }
+      if (intent.metadata?.eventId && intent.metadata.eventId !== data.eventId) {
+        console.error('[ticket-submit] PaymentIntent eventId mismatch:', intent.metadata.eventId, 'vs', data.eventId)
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Payment does not match this event' }) }
+      }
+      const expectedCents = Math.round((Number(evtRow.ticket_price_eur) * data.numAdults) * 100)
+      if (typeof intent.amount_received === 'number' && intent.amount_received < expectedCents) {
+        console.error('[ticket-submit] Underpaid intent:', intent.amount_received, 'vs', expectedCents)
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Payment amount mismatch' }) }
+      }
+      paymentReference = intent.id
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[ticket-submit] PaymentIntent verification failed:', message)
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Payment verification failed' }) }
+    }
+
     const firstName = sanitiseText(data.firstName)
     const lastName  = sanitiseText(data.lastName)
     const reference = generateReference(evtRow.slug, data.eventId)
@@ -177,7 +210,13 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    console.log('[ticket-submit] Booking saved:', reference, 'id:', bookingId)
+    // Persist the Stripe PaymentIntent ID on the booking row for reconciliation.
+    await supabase
+      .from('ticket_bookings')
+      .update({ payment_reference: paymentReference })
+      .eq('id', bookingId)
+
+    console.log('[ticket-submit] Booking saved:', reference, 'id:', bookingId, 'pi:', paymentReference)
 
     return {
       statusCode: 200,

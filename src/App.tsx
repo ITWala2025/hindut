@@ -14,6 +14,7 @@ import { PrivacyPolicyPage } from '@/components/pages/PrivacyPolicyPage'
 import { CookiesPolicyPage } from '@/components/pages/CookiesPolicyPage'
 import { TermsAndConditionsPage } from '@/components/pages/TermsAndConditionsPage'
 import { RefundPolicyPage } from '@/components/pages/RefundPolicyPage'
+import { PaymentSuccessPage } from '@/components/pages/PaymentSuccessPage'
 import { Toaster } from '@/components/ui/sonner'
 
 function ScrollToTop() {
@@ -59,6 +60,9 @@ function AppShell() {
           <Route path="/cookies-policy" element={<CookiesPolicyPage />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
           <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/donation-success" element={<PaymentSuccessPage variant="donation" />} />
+          <Route path="/membership-success" element={<PaymentSuccessPage variant="membership" />} />
+          <Route path="/ticket-success" element={<PaymentSuccessPage variant="ticket" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

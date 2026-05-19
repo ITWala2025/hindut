@@ -2,13 +2,16 @@
  * TicketBookingDialog.tsx
  * Two-step modal for paid event ticket booking:
  *   Step 1 – Attendee details (same fields as RsvpDialog)
- *   Step 2 – Payment gateway selection & processing
+ *   Step 2 – Stripe Payment Element (embedded card form)
  *   Step 3 – Success / booking confirmation
  */
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import type { Stripe as StripeJs, StripeElementsOptions } from '@stripe/stripe-js'
+import { getStripe } from '@/lib/stripeClient'
 import {
   Dialog,
   DialogContent,
@@ -84,8 +87,6 @@ type DetailsFormData = z.infer<typeof detailsSchema>
 
 type Step = 'details' | 'payment' | 'success'
 
-type PaymentGateway = 'stripe'
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -122,9 +123,14 @@ interface TicketBookingDialogProps {
 export function TicketBookingDialog({ open, onOpenChange, event }: TicketBookingDialogProps) {
   const [step, setStep] = useState<Step>('details')
   const [formSnapshot, setFormSnapshot] = useState<DetailsFormData | null>(null)
-  const [selectedGateway] = useState<PaymentGateway>('stripe')
   const [isProcessing, setIsProcessing] = useState(false)
   const [bookingRef, setBookingRef] = useState('')
+
+  // Stripe state for the embedded Payment Element.
+  const [stripePromise, setStripePromise] = useState<Promise<StripeJs | null> | null>(null)
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
 
   const adultPrice = event.price ?? 0
   const childPrice = 0 // children free
@@ -155,19 +161,54 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
         setStep('details')
         setFormSnapshot(null)
         setBookingRef('')
+        setClientSecret(null)
+        setPaymentIntentId(null)
+        setPaymentError(null)
       }, 300)
     }
     onOpenChange(v)
   }
 
-  // Step 1 → Step 2
-  const onDetailsSubmit = (data: DetailsFormData) => {
+  // Step 1 → Step 2: snapshot the form, then request a PaymentIntent
+  //   from the server so the embedded Payment Element can mount.
+  const onDetailsSubmit = async (data: DetailsFormData) => {
     setFormSnapshot(data)
-    setStep('payment')
+    setIsProcessing(true)
+    setPaymentError(null)
+    try {
+      const res = await fetch('/.netlify/functions/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId:     event.id,
+          numAdults:   data.numAdults,
+          numChildren: data.numChildren ?? 0,
+          email:       data.email,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.clientSecret) {
+        toast.error(json.error ?? 'Could not start payment. Please try again.')
+        setIsProcessing(false)
+        return
+      }
+      setClientSecret(json.clientSecret)
+      setPaymentIntentId(json.paymentIntentId)
+      setStripePromise(getStripe())
+      setStep('payment')
+    } catch (err) {
+      console.error('[ticket] PaymentIntent error:', err)
+      toast.error('Network error. Please try again.')
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
-  // Step 2 → Step 3
-  const handlePay = async () => {
+  /**
+   * Called by <TicketPaymentForm> after stripe.confirmPayment succeeds.
+   * Persists the booking server-side (which re-verifies the intent).
+   */
+  const finaliseBooking = async (pid: string) => {
     if (!formSnapshot) return
     setIsProcessing(true)
     try {
@@ -175,30 +216,30 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventId:        event.id,
-          firstName:      formSnapshot.firstName,
-          lastName:       formSnapshot.lastName,
-          phone:          formSnapshot.phone,
-          email:          formSnapshot.email,
-          numAdults:      formSnapshot.numAdults,
-          numChildren:    formSnapshot.numChildren ?? 0,
-          amountEur:      total,
-          paymentGateway: selectedGateway,
-          consentGdpr:    true,
+          eventId:         event.id,
+          firstName:       formSnapshot.firstName,
+          lastName:        formSnapshot.lastName,
+          phone:           formSnapshot.phone,
+          email:           formSnapshot.email,
+          numAdults:       formSnapshot.numAdults,
+          numChildren:     formSnapshot.numChildren ?? 0,
+          amountEur:       total,
+          paymentGateway:  'stripe',
+          paymentIntentId: pid,
+          consentGdpr:     true,
         }),
       })
-
       const json = await res.json()
-
       if (!res.ok) {
-        toast.error(json.error ?? 'Booking failed. Please try again.')
+        toast.error(json.error ?? 'Booking failed. Please contact us with your payment reference: ' + pid)
+        setPaymentError(json.error ?? 'Booking failed after payment.')
         return
       }
-
       setBookingRef(json.referenceNumber)
       setStep('success')
-    } catch {
-      toast.error('Network error. Please check your connection and try again.')
+    } catch (err) {
+      console.error('[ticket] finaliseBooking error:', err)
+      toast.error('Network error. Your payment succeeded; please email us with this reference: ' + pid)
     } finally {
       setIsProcessing(false)
     }
@@ -502,51 +543,37 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
                 </div>
               </div>
 
-              {/* Stripe payment info */}
-              <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
-                <div className="flex items-start gap-3">
-                  <CreditCard size={20} className="text-violet-600 mt-0.5 shrink-0" weight="duotone" />
-                  <div>
-                    <p className="text-sm font-semibold text-violet-800">Stripe — Secure Card Payment</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      You will be redirected to Stripe's secure checkout to complete your payment.
-                      Your card details are never stored by us.
-                    </p>
-                  </div>
+              {/* Embedded Stripe Payment Element */}
+              {clientSecret && stripePromise ? (
+                <Elements
+                  stripe={stripePromise}
+                  options={{
+                    clientSecret,
+                    appearance: { theme: 'stripe', variables: { colorPrimary: '#d97706' } },
+                  } satisfies StripeElementsOptions}
+                >
+                  <TicketPaymentForm
+                    onPaid={finaliseBooking}
+                    onError={(msg) => setPaymentError(msg)}
+                    total={total}
+                    paymentIntentId={paymentIntentId}
+                    externalProcessing={isProcessing}
+                    onBack={() => setStep('details')}
+                  />
+                </Elements>
+              ) : (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  <Spinner size={16} className="inline mr-2 animate-spin" />
+                  Loading secure payment form…
                 </div>
-              </div>
-            </div>
+              )}
 
-            {/* Footer */}
-            <div className="px-6 pb-6 flex gap-3 border-t border-amber-100 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep('details')}
-                className="border-amber-200 text-amber-700 hover:bg-amber-50"
-                disabled={isProcessing}
-              >
-                <ArrowLeft size={16} className="mr-1" weight="bold" />
-                Back
-              </Button>
-              <Button
-                type="button"
-                onClick={handlePay}
-                disabled={isProcessing}
-                className="flex-1 bg-linear-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700 font-semibold disabled:opacity-50"
-              >
-                {isProcessing ? (
-                  <>
-                    <Spinner size={16} className="mr-2 animate-spin" />
-                    Processing…
-                  </>
-                ) : (
-                  <>
-                    <CreditCard size={16} className="mr-2" weight="fill" />
-                    Pay €{total.toFixed(2)}
-                  </>
-                )}
-              </Button>
+              {paymentError && (
+                <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700 flex items-start gap-2">
+                  <Warning size={16} weight="fill" className="mt-0.5 shrink-0" />
+                  <span>{paymentError}</span>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -603,5 +630,117 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
 
       </DialogContent>
     </Dialog>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ *  Embedded Stripe Payment Element form
+ *  Renders the universal PaymentElement, calls stripe.confirmPayment with
+ *  redirect:'if_required' so we can finalise the booking inline when no
+ *  3DS challenge is required.  For redirect-based methods Stripe will send
+ *  the user to confirmParams.return_url and our success page will pick up
+ *  the payment_intent query param.
+ * ────────────────────────────────────────────────────────────────────────── */
+interface TicketPaymentFormProps {
+  onPaid: (paymentIntentId: string) => void | Promise<void>
+  onError: (msg: string) => void
+  total: number
+  paymentIntentId: string | null
+  externalProcessing: boolean
+  onBack: () => void
+}
+
+function TicketPaymentForm({
+  onPaid,
+  onError,
+  total,
+  paymentIntentId,
+  externalProcessing,
+  onBack,
+}: TicketPaymentFormProps) {
+  const stripe   = useStripe()
+  const elements = useElements()
+  const [submitting, setSubmitting] = useState(false)
+  const [ready, setReady] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!stripe || !elements) return
+    setSubmitting(true)
+    onError('')
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          // For card flows that need redirect (3DS), come back to a page that
+          // can pick up the result.  Our success route handles ?payment_intent.
+          return_url: `${window.location.origin}/ticket-success`,
+        },
+        redirect: 'if_required',
+      })
+      if (error) {
+        // error.message is user-safe per Stripe docs.
+        onError(error.message ?? 'Payment failed. Please try a different card.')
+        setSubmitting(false)
+        return
+      }
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        await onPaid(paymentIntent.id)
+      } else if (paymentIntent && paymentIntentId) {
+        // Edge case: status not succeeded but no error (e.g. processing for
+        // bank debits) — let user know.
+        onError(`Payment is ${paymentIntent.status}. Please refresh once your bank confirms.`)
+        setSubmitting(false)
+      } else {
+        onError('Unexpected payment state. Please try again.')
+        setSubmitting(false)
+      }
+    } catch (err) {
+      console.error('[ticket] confirmPayment error:', err)
+      onError('Unexpected error. Please try again.')
+      setSubmitting(false)
+    }
+  }
+
+  const disabled = !stripe || !elements || !ready || submitting || externalProcessing
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <PaymentElement
+          onReady={() => setReady(true)}
+          options={{ layout: 'tabs' }}
+        />
+      </div>
+      <div className="flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={submitting || externalProcessing}
+          className="border-amber-200 text-amber-700 hover:bg-amber-50"
+        >
+          <ArrowLeft size={16} className="mr-1" weight="bold" />
+          Back
+        </Button>
+        <Button
+          type="submit"
+          disabled={disabled}
+          className="flex-1 bg-linear-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700 font-semibold disabled:opacity-50"
+        >
+          {submitting || externalProcessing ? (
+            <>
+              <Spinner size={16} className="mr-2 animate-spin" />
+              Processing…
+            </>
+          ) : (
+            <>
+              <CreditCard size={16} className="mr-2" weight="fill" />
+              Pay €{total.toFixed(2)}
+            </>
+          )}
+        </Button>
+      </div>
+    </form>
   )
 }

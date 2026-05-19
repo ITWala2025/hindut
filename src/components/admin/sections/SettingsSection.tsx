@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { SectionCard } from '@/components/admin/adminUi'
+import { StripePaymentsCard } from '@/components/admin/sections/StripePaymentsCard'
 import { useAuth } from '@/lib/auth'
 
 export function SettingsSection() {
@@ -135,6 +136,8 @@ export function SettingsSection() {
           />
         </div>
       </SectionCard>
+
+      <StripePaymentsCard canWrite={canWrite} />
 
       <SectionCard
         title="Feature flags"
