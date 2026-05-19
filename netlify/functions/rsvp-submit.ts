@@ -164,6 +164,7 @@ export const handler: Handler = async (event) => {
       .single()
 
     if (evtErr || !evtRow) {
+      console.error('[rsvp-submit] Event lookup error:', JSON.stringify(evtErr), 'eventId:', data.eventId)
       return { statusCode: 404, headers, body: JSON.stringify({ error: 'Event not found' }) }
     }
     if (evtRow.is_paid) {
@@ -194,7 +195,7 @@ export const handler: Handler = async (event) => {
     })
 
     if (insertErr) {
-      console.error('insert_rsvp_encrypted error:', insertErr)
+      console.error('[rsvp-submit] insert_rsvp_encrypted RPC error:', JSON.stringify(insertErr))
       return {
         statusCode: 500,
         headers,
@@ -291,11 +292,14 @@ export const handler: Handler = async (event) => {
       }),
     }
   } catch (err) {
-    console.error('Unhandled error in rsvp-submit:', err)
+    const message  = err instanceof Error ? err.message : String(err)
+    const stack    = err instanceof Error ? err.stack   : undefined
+    console.error('[rsvp-submit] Unhandled error:', message)
+    if (stack) console.error('[rsvp-submit] Stack:', stack)
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'An unexpected error occurred. Please try again.' }),
+      body: JSON.stringify({ error: 'An unexpected error occurred. Please try again.', _debug: message }),
     }
   }
 }

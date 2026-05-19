@@ -13,6 +13,7 @@ import {
 import { CalendarBlank, MapPin, Clock, Ticket, Heart, ArrowDown, ClipboardText, Image as ImageIcon } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { RsvpDialog } from '@/components/RsvpDialog'
+import { TicketBookingDialog } from '@/components/TicketBookingDialog'
 import { cn } from '@/lib/utils'
 import { useEvents, sortByDate, upcomingOnly } from '@/hooks/useEvents'
 import { CATEGORY_LABELS, type EventCategory, type TempleEvent } from '@/data/events'
@@ -46,6 +47,7 @@ export function EventsPage() {
   const [filter, setFilter] = useState<Filter>('all')
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const [rsvpEvent, setRsvpEvent] = useState<TempleEvent | null>(null)
+  const [ticketEvent, setTicketEvent] = useState<TempleEvent | null>(null)
   const [detailEvent, setDetailEvent] = useState<TempleEvent | null>(null)
 
   const visible = useMemo(() => {
@@ -157,7 +159,7 @@ export function EventsPage() {
                 <EventCard
                   key={event.id}
                   event={event}
-                  onDonate={() => navigate('/membership')}
+                  onBookTicket={() => setTicketEvent(event)}
                   onRsvp={() => setRsvpEvent(event)}
                   onViewDetails={() => setDetailEvent(event)}
                   highlighted={highlightedId === event.id}
@@ -174,6 +176,14 @@ export function EventsPage() {
             />
           )}
 
+          {ticketEvent && (
+            <TicketBookingDialog
+              open={!!ticketEvent}
+              onOpenChange={(v) => { if (!v) setTicketEvent(null) }}
+              event={ticketEvent}
+            />
+          )}
+
           {/* Event detail sheet */}
           <Sheet open={!!detailEvent} onOpenChange={(v) => { if (!v) setDetailEvent(null) }}>
             <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0">
@@ -181,7 +191,7 @@ export function EventsPage() {
                 <EventDetailPanel
                   event={detailEvent}
                   onRsvp={() => { setDetailEvent(null); setRsvpEvent(detailEvent) }}
-                  onDonate={() => { setDetailEvent(null); navigate('/membership') }}
+                  onBookTicket={() => { setDetailEvent(null); setTicketEvent(detailEvent) }}
                 />
               )}
             </SheetContent>
@@ -223,13 +233,13 @@ export function EventsPage() {
 
 function EventCard({
   event,
-  onDonate,
+  onBookTicket,
   onRsvp,
   onViewDetails,
   highlighted = false,
 }: {
   event: TempleEvent
-  onDonate: () => void
+  onBookTicket: () => void
   onRsvp: () => void
   onViewDetails: () => void
   highlighted?: boolean
@@ -258,10 +268,10 @@ function EventCard({
               alt={event.title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
           </div>
         ) : (
-          <div className="h-2 bg-gradient-to-r from-orange-400 to-amber-400" />
+          <div className="h-2 bg-linear-to-r from-orange-400 to-amber-400" />
         )}
       </button>
 
@@ -328,7 +338,7 @@ function EventCard({
           </button>
           {event.isPaid ? (
             <Button
-              onClick={onDonate}
+              onClick={onBookTicket}
               className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
             >
               <Ticket className="mr-2" weight="fill" />
@@ -336,7 +346,7 @@ function EventCard({
             </Button>
           ) : (
             <Button
-              className="w-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+              className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
               onClick={onRsvp}
             >
               <ClipboardText className="mr-2" weight="fill" />
@@ -352,11 +362,11 @@ function EventCard({
 function EventDetailPanel({
   event,
   onRsvp,
-  onDonate,
+  onBookTicket,
 }: {
   event: TempleEvent
   onRsvp: () => void
-  onDonate: () => void
+  onBookTicket: () => void
 }) {
   const { full } = formatEventDate(event.date)
 
@@ -370,10 +380,10 @@ function EventDetailPanel({
             alt={event.title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
         </div>
       ) : (
-        <div className="h-20 bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0">
+        <div className="h-20 bg-linear-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0">
           <ImageIcon size={40} className="text-white/60" weight="duotone" />
         </div>
       )}
@@ -423,7 +433,7 @@ function EventDetailPanel({
         <div className="pt-2">
           {event.isPaid ? (
             <Button
-              onClick={onDonate}
+              onClick={onBookTicket}
               className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
             >
               <Ticket className="mr-2" weight="fill" />
@@ -431,7 +441,7 @@ function EventDetailPanel({
             </Button>
           ) : (
             <Button
-              className="w-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+              className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
               onClick={onRsvp}
             >
               <ClipboardText className="mr-2" weight="fill" />

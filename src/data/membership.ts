@@ -25,7 +25,7 @@ export interface MembershipRecord {
   startDate: string
   expiresOn: string
   status: 'active' | 'expired' | 'pending'
-  paymentMethod: 'stripe' | 'paypal' | 'sumup' | 'manual'
+  paymentMethod: 'stripe' | 'manual'
   reference: string
   stripeCustomerId?: string
 }

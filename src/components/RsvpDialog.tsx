@@ -374,7 +374,7 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                  className="flex-1 bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
                 >
                   {isSubmitting ? (
                     <>
@@ -426,7 +426,7 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
 
             <Button
               onClick={() => handleClose(false)}
-              className="w-full bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold mt-2"
+              className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold mt-2"
             >
               Done
             </Button>
