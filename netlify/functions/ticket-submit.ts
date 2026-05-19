@@ -16,6 +16,7 @@ import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
+import ws from 'ws'
 
 // ---------------------------------------------------------------------------
 // Validation schema
@@ -119,7 +120,10 @@ export const handler: Handler = async (event) => {
     const data = parsed.data
 
     // -- Supabase admin client (bypasses RLS via service role)
-    const supabase = createClient(supabaseUrl, serviceKey)
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      realtime: { transport: ws },
+    })
 
     // -- Verify event exists, is paid, and is published
     const { data: evtRow, error: evtErr } = await supabase
