@@ -13,6 +13,8 @@ interface MediaRow {
   uploaded_by: string | null
   uploaded_at: string
   alt_text: string | null
+  media_type: 'image' | 'album' | null
+  thumbnail_url: string | null
 }
 
 function toMediaItem(row: MediaRow): MediaItem {
@@ -31,6 +33,8 @@ function toMediaItem(row: MediaRow): MediaItem {
     title: row.title ?? row.filename,
     alt: row.alt_text ?? row.filename,
     isExternal,
+    mediaType: row.media_type ?? 'image',
+    thumbnailUrl: row.thumbnail_url ?? undefined,
   }
 }
 
@@ -155,6 +159,7 @@ export function useMedia() {
           size_kb: 0,
           title: title ?? filename,
           alt_text: altText ?? filename,
+          media_type: 'image',
         })
         .select('*')
         .single()
@@ -166,5 +171,30 @@ export function useMedia() {
     [],
   )
 
-  return { media, loading, error, upload, addExternal, update, remove, refetch: fetchMedia }
+  const addAlbum = useCallback(
+    async (url: string, folder: MediaItem['folder'], title: string, thumbnailUrl?: string): Promise<MediaItem> => {
+      const { data: row, error: insertErr } = await supabase
+        .from('media')
+        .insert({
+          filename: title || 'photo-album',
+          bucket: 'external',
+          path: url,
+          folder,
+          size_kb: 0,
+          title,
+          alt_text: title,
+          media_type: 'album',
+          ...(thumbnailUrl ? { thumbnail_url: thumbnailUrl } : {}),
+        })
+        .select('*')
+        .single()
+      if (insertErr) throw new Error(insertErr.message)
+      const item = toMediaItem(row as MediaRow)
+      setMedia((prev) => [item, ...prev])
+      return item
+    },
+    [],
+  )
+
+  return { media, loading, error, upload, addExternal, addAlbum, update, remove, refetch: fetchMedia }
 }

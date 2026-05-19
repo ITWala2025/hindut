@@ -29,6 +29,8 @@ export interface MediaItem {
   title: string
   alt: string
   isExternal?: boolean
+  mediaType: 'image' | 'album'
+  thumbnailUrl?: string
 }
 
 export interface AttendeeRecord {

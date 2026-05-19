@@ -10,6 +10,7 @@ import {
   HardDrives,
   LinkSimple,
   ArrowSquareOut,
+  ImagesSquare,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,7 +60,7 @@ export function MediaSection() {
   const { can } = useAuth()
   const canWrite = can('manageMedia')
 
-  const { media, loading, error, upload, addExternal, update, remove: removeMedia } = useMedia()
+  const { media, loading, error, upload, addExternal, addAlbum, update, remove: removeMedia } = useMedia()
 
   const [folder, setFolder] = useState<FolderFilter>('all')
   const [search, setSearch] = useState('')
@@ -89,6 +90,39 @@ export function MediaSection() {
     folder: 'general' as MediaItem['folder'],
   })
   const [externalSaving, setExternalSaving] = useState(false)
+
+  // Album dialog
+  const [albumOpen, setAlbumOpen] = useState(false)
+  const [albumForm, setAlbumForm] = useState({
+    url: '',
+    title: '',
+    thumbnailUrl: '',
+    folder: 'general' as MediaItem['folder'],
+  })
+  const [albumSaving, setAlbumSaving] = useState(false)
+  const [albumFetching, setAlbumFetching] = useState(false)
+
+  // Auto-fetch OG image when the album URL is pasted
+  useEffect(() => {
+    const url = albumForm.url.trim()
+    if (!url || !albumOpen) return
+    const t = setTimeout(async () => {
+      setAlbumFetching(true)
+      try {
+        const res = await fetch(`/.netlify/functions/fetch-og-image?url=${encodeURIComponent(url)}`)
+        if (res.status === 200) {
+          const { thumbnail } = await res.json() as { thumbnail: string }
+          if (thumbnail) setAlbumForm((f) => ({ ...f, thumbnailUrl: thumbnail }))
+        }
+      } catch {
+        // silent — user can still proceed without a thumbnail
+      } finally {
+        setAlbumFetching(false)
+      }
+    }, 800)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [albumForm.url, albumOpen])
 
   // Pagination
   const PAGE_SIZE = 20
@@ -188,6 +222,21 @@ export function MediaSection() {
     }
   }
 
+  const handleAlbumConfirm = async () => {
+    if (!albumForm.url.trim() || !albumForm.title.trim()) return
+    setAlbumSaving(true)
+    try {
+      await addAlbum(albumForm.url.trim(), albumForm.folder, albumForm.title.trim(), albumForm.thumbnailUrl.trim() || undefined)
+      toast.success('Photo album added.')
+      setAlbumOpen(false)
+      setAlbumForm({ url: '', title: '', thumbnailUrl: '', folder: 'general' })
+    } catch (err) {
+      toast.error((err as Error).message)
+    } finally {
+      setAlbumSaving(false)
+    }
+  }
+
   const confirmDelete = async () => {
     if (!deleteItem) return
     try {
@@ -262,6 +311,14 @@ export function MediaSection() {
                 Add external link
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setAlbumOpen(true)}
+                className="font-semibold border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+              >
+                <ImagesSquare className="mr-2" weight="bold" />
+                Add photo album
+              </Button>
+              <Button
                 onClick={() => fileInputRef.current?.click()}
                 className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
               >
@@ -313,52 +370,116 @@ export function MediaSection() {
                 key={m.id}
                 className="group rounded-xl border border-slate-200 overflow-hidden bg-white hover:shadow-md transition-shadow"
               >
-                <div className="aspect-square bg-slate-100 overflow-hidden relative">
-                  <img
-                    src={m.url}
-                    alt={m.alt}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      ;(e.target as HTMLImageElement).style.opacity = '0.3'
-                    }}
-                  />
-                  <Badge
-                    variant="outline"
-                    className="absolute top-2 left-2 capitalize bg-white/90 text-[10px]"
-                  >
-                    {m.folder}
-                  </Badge>
-                  {m.isExternal && (
+                {m.mediaType === 'album' ? (
+                  /* ── Album card ── */
+                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="block">
+                    <div className="aspect-square relative overflow-hidden bg-linear-to-br from-indigo-500 to-purple-600">
+                      {m.thumbnailUrl && (
+                        <img
+                          src={m.thumbnailUrl}
+                          alt={m.title}
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      )}
+                      {/* dark scrim so title + badges are always readable */}
+                      <div className="absolute inset-0 bg-black/30" />
+                      {!m.thumbnailUrl && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                          <ImagesSquare size={48} weight="duotone" className="text-white/90" />
+                        </div>
+                      )}
+                      <Badge
+                        variant="outline"
+                        className="absolute top-2 right-2 bg-black/50 text-white border-white/30 text-[10px] flex items-center gap-1 z-10"
+                      >
+                        <ArrowSquareOut size={10} />
+                        Album
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="absolute top-2 left-2 capitalize bg-black/50 text-white border-white/30 text-[10px] z-10"
+                      >
+                        {m.folder}
+                      </Badge>
+                      <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2 pt-6 pb-2 z-10">
+                        <span className="text-white text-xs font-semibold line-clamp-2 leading-tight">{m.title}</span>
+                      </div>
+                    </div>
+                  </a>
+                ) : (
+                  /* ── Image card thumbnail ── */
+                  <div className="aspect-square bg-slate-100 overflow-hidden relative">
+                    <img
+                      src={m.url}
+                      alt={m.alt}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        ;(e.target as HTMLImageElement).style.opacity = '0.3'
+                      }}
+                    />
                     <Badge
                       variant="outline"
-                      className="absolute top-2 right-2 bg-blue-50/90 text-blue-700 border-blue-200 text-[10px] flex items-center gap-1"
+                      className="absolute top-2 left-2 capitalize bg-white/90 text-[10px]"
                     >
-                      <ArrowSquareOut size={10} />
-                      External
+                      {m.folder}
                     </Badge>
-                  )}
-                </div>
+                    {m.isExternal && (
+                      <Badge
+                        variant="outline"
+                        className="absolute top-2 right-2 bg-blue-50/90 text-blue-700 border-blue-200 text-[10px] flex items-center gap-1"
+                      >
+                        <ArrowSquareOut size={10} />
+                        External
+                      </Badge>
+                    )}
+                  </div>
+                )}
                 <div className="p-3 space-y-1">
                   <div className="font-semibold text-sm text-slate-900 truncate" title={m.title}>
                     {m.title || m.filename}
                   </div>
-                  <div className="text-[11px] text-muted-foreground truncate" title={m.alt}>
-                    Alt: {m.alt}
-                  </div>
+                  {m.mediaType === 'album' ? (
+                    <div className="text-[11px] text-indigo-600 truncate" title={m.url}>
+                      {m.url}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-muted-foreground truncate" title={m.alt}>
+                      Alt: {m.alt}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>{formatBytes(m.sizeKb)}</span>
+                    <span>{m.mediaType === 'album' ? 'Photo album' : formatBytes(m.sizeKb)}</span>
                     <span>{m.uploadedAt}</span>
                   </div>
                   <div className="flex gap-1 pt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-7 text-xs"
-                      onClick={() => copyUrl(m)}
-                    >
-                      <Copy size={12} className="mr-1" /> URL
-                    </Button>
+                    {m.mediaType === 'album' ? (
+                      <a
+                        href={m.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1"
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full h-7 text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                        >
+                          <ArrowSquareOut size={12} className="mr-1" /> Open Album
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => copyUrl(m)}
+                      >
+                        <Copy size={12} className="mr-1" /> URL
+                      </Button>
+                    )}
                     {canWrite && (
                       <>
                         <Button
@@ -686,6 +807,83 @@ export function MediaSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add photo album dialog */}
+      <Dialog open={albumOpen} onOpenChange={(open) => { if (!open) setAlbumOpen(false) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ImagesSquare size={20} className="text-indigo-600" weight="duotone" />
+              Add photo album
+            </DialogTitle>
+            <DialogDescription>
+              Paste a Google Photos, Flickr, or any other shared album URL. It will be stored as a link — not downloaded.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="album-url">Album URL <span className="text-red-500">*</span></Label>
+              <Input
+                id="album-url"
+                type="url"
+                value={albumForm.url}
+                onChange={(e) => setAlbumForm((f) => ({ ...f, url: e.target.value }))}
+                placeholder="https://photos.app.goo.gl/..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="album-title">Album title <span className="text-red-500">*</span></Label>
+              <Input
+                id="album-title"
+                value={albumForm.title}
+                onChange={(e) => setAlbumForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="e.g. Diwali Celebrations 2025"
+              />
+            </div>
+            {/* Thumbnail preview — auto-fetched from og:image */}
+            <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center" style={{ minHeight: '7rem' }}>
+              {albumFetching ? (
+                <span className="text-xs text-muted-foreground animate-pulse">Fetching cover image…</span>
+              ) : albumForm.thumbnailUrl ? (
+                <img
+                  src={albumForm.thumbnailUrl}
+                  alt="cover preview"
+                  className="w-full max-h-36 object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground">Cover image will appear here after URL is entered</span>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="album-folder">Folder</Label>
+              <Select
+                value={albumForm.folder}
+                onValueChange={(v) => setAlbumForm((f) => ({ ...f, folder: v as MediaItem['folder'] }))}
+              >
+                <SelectTrigger id="album-folder">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FOLDERS.map((f) => (
+                    <SelectItem key={f} value={f} className="capitalize">{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAlbumOpen(false)}>Cancel</Button>
+            <Button
+              disabled={albumSaving || !albumForm.url.trim() || !albumForm.title.trim()}
+              onClick={handleAlbumConfirm}
+              className="bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              {albumSaving ? 'Adding...' : 'Add album'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

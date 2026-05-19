@@ -686,7 +686,7 @@ export function EventsSection() {
             <Button
               type="submit"
               form="event-form"
-              className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold px-8"
+              className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold px-8"
             >
               {editing ? 'Save changes' : 'Create event'}
             </Button>
