@@ -124,7 +124,7 @@ export const handler: Handler = async (event) => {
 
   // -- Environment checks
   const encKey       = process.env.RSVP_ENCRYPTION_KEY
-  const supabaseUrl  = process.env.SUPABASE_URL
+  const supabaseUrl  = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL
   const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!encKey || encKey.length < 16) {
