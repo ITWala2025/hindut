@@ -295,12 +295,19 @@ export const handler: Handler = async (event) => {
   } catch (err) {
     const message  = err instanceof Error ? err.message : String(err)
     const stack    = err instanceof Error ? err.stack   : undefined
-    console.error('[rsvp-submit] Unhandled error:', message)
-    if (stack) console.error('[rsvp-submit] Stack:', stack)
+    // Log full detail so it appears in Netlify function logs
+    console.error('[rsvp-submit] ===== UNHANDLED ERROR =====')
+    console.error('[rsvp-submit] message:', message)
+    console.error('[rsvp-submit] stack:', stack ?? 'no stack')
+    console.error('[rsvp-submit] err object:', JSON.stringify(err, Object.getOwnPropertyNames(err as object)))
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'An unexpected error occurred. Please try again.', _debug: message }),
+      body: JSON.stringify({
+        error: 'An unexpected error occurred. Please try again.',
+        _debug: message,
+        _stack: stack?.split('\n').slice(0, 5).join(' | '),
+      }),
     }
   }
 }

@@ -173,7 +173,12 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
           const firstError = Object.values(json.details as Record<string, string[]>)[0]?.[0]
           toast.error(firstError ?? json.error ?? 'Submission failed. Please check the form.')
         } else {
-          toast.error(json.error ?? 'Submission failed. Please try again.')
+          toast.error(json.error ?? 'Submission failed. Please try again.', {
+            description: json._debug
+              ? `Debug: ${json._debug}${json._stack ? ' | ' + json._stack.split(' | ')[0] : ''}`
+              : undefined,
+            duration: 15000,
+          })
         }
         return
       }
