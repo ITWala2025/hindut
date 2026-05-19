@@ -6,6 +6,7 @@
  *   Step 3 – Success / booking confirmation
  */
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -27,7 +28,6 @@ import {
   Ticket,
   ArrowRight,
   ArrowLeft,
-  CheckCircle,
   Spinner,
   User,
   Phone,
@@ -85,7 +85,7 @@ const detailsSchema = z.object({
 
 type DetailsFormData = z.infer<typeof detailsSchema>
 
-type Step = 'details' | 'payment' | 'success'
+type Step = 'details' | 'payment'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -121,10 +121,10 @@ interface TicketBookingDialogProps {
 // Component
 // ---------------------------------------------------------------------------
 export function TicketBookingDialog({ open, onOpenChange, event }: TicketBookingDialogProps) {
+  const navigate = useNavigate()
   const [step, setStep] = useState<Step>('details')
   const [formSnapshot, setFormSnapshot] = useState<DetailsFormData | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [bookingRef, setBookingRef] = useState('')
 
   // Stripe state for the embedded Payment Element.
   const [stripePromise, setStripePromise] = useState<Promise<StripeJs | null> | null>(null)
@@ -160,7 +160,6 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
         reset()
         setStep('details')
         setFormSnapshot(null)
-        setBookingRef('')
         setClientSecret(null)
         setPaymentIntentId(null)
         setPaymentError(null)
@@ -169,10 +168,25 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
     onOpenChange(v)
   }
 
-  // Step 1 → Step 2: snapshot the form, then request a PaymentIntent
-  //   from the server so the embedded Payment Element can mount.
+  // Step 1 → Step 2: snapshot the form, persist to sessionStorage (for Revolut Pay
+  //   redirect recovery), then request a PaymentIntent so the Payment Element mounts.
   const onDetailsSubmit = async (data: DetailsFormData) => {
     setFormSnapshot(data)
+    // Persist so /ticket-success can finalise booking after a Revolut/wallet redirect
+    const amountEur = (data.numAdults * adultPrice) + ((data.numChildren ?? 0) * childPrice)
+    sessionStorage.setItem('ticket_booking_pending', JSON.stringify({
+      eventId:     event.id,
+      firstName:   data.firstName,
+      lastName:    data.lastName,
+      phone:       data.phone,
+      email:       data.email,
+      numAdults:   data.numAdults,
+      numChildren: data.numChildren ?? 0,
+      amountEur,
+      consentGdpr: true,
+      eventTitle:  event.title,
+      eventDate:   event.date,
+    }))
     setIsProcessing(true)
     setPaymentError(null)
     try {
@@ -235,8 +249,12 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
         setPaymentError(json.error ?? 'Booking failed after payment.')
         return
       }
-      setBookingRef(json.referenceNumber)
-      setStep('success')
+      sessionStorage.removeItem('ticket_booking_pending')
+      const ref   = encodeURIComponent(json.referenceNumber ?? '')
+      const name  = encodeURIComponent(`${formSnapshot.firstName} ${formSnapshot.lastName}`)
+      const title = encodeURIComponent(event.title)
+      onOpenChange(false)
+      navigate(`/ticket-success?ref=${ref}&name=${name}&event=${title}&amount=${total}&adults=${formSnapshot.numAdults}&children=${formSnapshot.numChildren ?? 0}`)
     } catch (err) {
       console.error('[ticket] finaliseBooking error:', err)
       toast.error('Network error. Your payment succeeded; please email us with this reference: ' + pid)
@@ -578,55 +596,7 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
           </>
         )}
 
-        {/* ── Step 3: Success ── */}
-        {step === 'success' && (
-          <div className="px-6 py-10 flex flex-col items-center text-center gap-4">
-            <div className="rounded-full bg-emerald-100 p-5 text-emerald-600">
-              <CheckCircle size={44} weight="fill" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
-                Booking Confirmed!
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                A confirmation email will be sent to{' '}
-                <span className="font-medium text-slate-700">{formSnapshot?.email}</span>
-              </p>
-            </div>
-
-            <div className="w-full rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-xs text-amber-700 uppercase tracking-widest mb-1">
-                Booking Reference
-              </p>
-              <p className="text-2xl font-bold font-mono tracking-widest text-amber-800">
-                {bookingRef}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Keep this reference for entry at the event
-              </p>
-            </div>
-
-            <div className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-left space-y-1.5 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">{event.title}</p>
-              <p>{eventDate}{event.time ? ` · ${event.time}` : ''}</p>
-              <p>{event.location}</p>
-              <p className="text-amber-700 font-semibold">
-                {formSnapshot?.numAdults} adult{Number(formSnapshot?.numAdults) !== 1 ? 's' : ''}
-                {Number(formSnapshot?.numChildren) > 0
-                  ? ` + ${formSnapshot?.numChildren} child${Number(formSnapshot?.numChildren) !== 1 ? 'ren' : ''}`
-                  : ''}{' '}
-                · €{total.toFixed(2)} paid
-              </p>
-            </div>
-
-            <Button
-              onClick={() => handleClose(false)}
-              className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold mt-2"
-            >
-              Done
-            </Button>
-          </div>
-        )}
+        {/* Step 3 (success) now navigates to /ticket-success — no inline step needed */}
 
       </DialogContent>
     </Dialog>
