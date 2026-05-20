@@ -116,7 +116,7 @@ export const handler: Handler = async (event) => {
           modeOverride:    (rowData as { mode_override?: string } | null)?.mode_override ?? 'auto',
           updatedAt:       (rowData as { updated_at?: string } | null)?.updated_at ?? null,
           notes:           (rowData as { notes?: string | null } | null)?.notes ?? null,
-          productionHosts: (process.env.PRODUCTION_HOSTS ?? 'limerickhindutemple.netlify.app')
+          productionHosts: (process.env.PRODUCTION_HOSTS ?? '')
             .split(',').map((s) => s.trim()).filter(Boolean),
           envStatus:       envStatus(),
           account,
