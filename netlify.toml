@@ -10,8 +10,9 @@
 
 [context.production.environment]
   NODE_VERSION = "18"
-  # limerickhindutemple.netlify.app is the SANDBOX site — always use test keys.
-  # Remove this line only when this site becomes the real production domain.
+  # limerickhindutemple.netlify.app is the SANDBOX/preview site — always test mode.
+  # Production site: https://www.hindutemple.ie
+  # On the production site, remove STRIPE_MODE=test and set PRODUCTION_HOSTS=www.hindutemple.ie
   STRIPE_MODE = "test"
 
 # SPA fallback so client-side routes (react-router) work on refresh / deep links.

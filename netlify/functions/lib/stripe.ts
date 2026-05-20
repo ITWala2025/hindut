@@ -11,10 +11,9 @@
  *   • Exposes the matching publishable key + webhook secret.
  *
  * Current setup:
- *   limerickhindutemple.netlify.app is the SANDBOX/test site.
- *   Set STRIPE_MODE=test in Netlify env vars to ensure it always uses test keys.
- *   When a production domain is ready, add it to the PRODUCTION_HOSTS env var
- *   and set live keys (STRIPE_SECRET_KEY_LIVE etc.) in Netlify.
+ *   limerickhindutemple.netlify.app is the SANDBOX/test site — always test mode.
+ *   www.hindutemple.ie is the PRODUCTION site — set PRODUCTION_HOSTS=www.hindutemple.ie
+ *   and live keys (STRIPE_SECRET_KEY_LIVE etc.) in Netlify to enable live mode.
  *
  * Required Netlify env vars:
  *   STRIPE_SECRET_KEY_TEST          — sk_test_...  (sandbox)
@@ -29,7 +28,7 @@
  * Optional:
  *   STRIPE_MODE                     — 'test' | 'live'  (force mode; recommended: 'test' for now)
  *   PRODUCTION_HOSTS                — comma-separated hostnames that trigger live mode
- *                                     (leave unset until production domain is confirmed)
+ *                                     e.g. www.hindutemple.ie
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — required to read DB mode_override.
  */
 
@@ -47,11 +46,12 @@ export interface ResolvedStripeContext {
   source:           'db-override' | 'env-override' | 'host'
 }
 
-// No default production hosts — live mode is only triggered when the user
-// explicitly sets PRODUCTION_HOSTS (once the production domain is confirmed)
-// or sets STRIPE_MODE=live. This prevents accidentally charging real money
-// on the sandbox site (limerickhindutemple.netlify.app).
-const DEFAULT_PRODUCTION_HOSTS: string[] = []
+// Known hosts:
+//   SANDBOX  — limerickhindutemple.netlify.app  (STRIPE_MODE=test in netlify.toml)
+//   PRODUCTION — www.hindutemple.ie              (live mode, real charges)
+// The sandbox site is protected by the STRIPE_MODE=test env override, so it
+// will never go live even if it somehow appears in PRODUCTION_HOSTS.
+const DEFAULT_PRODUCTION_HOSTS: string[] = ['www.hindutemple.ie']
 
 function productionHosts(): string[] {
   const raw = process.env.PRODUCTION_HOSTS ?? ''

@@ -43,6 +43,7 @@ interface PaymentSettings {
   updatedAt:       string | null
   notes:           string | null
   productionHosts: string[]
+  sandboxHosts:    string[]
   envStatus: {
     testSecret:        boolean
     testPublishable:   boolean
@@ -321,14 +322,16 @@ export function StripePaymentsCard({ canWrite }: Props) {
           <div>
             <p className="text-sm font-semibold text-slate-900 mb-1">Sandbox / test hosts</p>
             <p className="text-xs text-muted-foreground mb-2">
-              These hostnames always run in <strong>test</strong> mode — no real charges are
-              processed. Use Stripe test cards here freely.
+              These hostnames always run in <strong>test</strong> mode — no real charges.
+              Use Stripe test cards here freely.
             </p>
-            <div className="flex flex-wrap gap-2">
-              <code className="text-xs font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-2 py-1">
-                limerickhindutemple.netlify.app
-              </code>
-              <span className="text-xs text-amber-700 self-center">(Sandbox / test mode)</span>
+            <div className="flex flex-wrap gap-2 items-center">
+              {settings.sandboxHosts.map((h) => (
+                <span key={h} className="flex items-center gap-2">
+                  <code className="text-xs font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-2 py-1">{h}</code>
+                  <span className="text-xs text-amber-700">Test mode (STRIPE_MODE=test)</span>
+                </span>
+              ))}
             </div>
           </div>
 
@@ -336,26 +339,16 @@ export function StripePaymentsCard({ canWrite }: Props) {
           <div>
             <p className="text-sm font-semibold text-slate-900 mb-1">Production hosts</p>
             <p className="text-xs text-muted-foreground mb-2">
-              These hostnames automatically run in <strong>live</strong> mode (set via the
-              <code className="mx-1 font-mono">PRODUCTION_HOSTS</code> env var).
+              These hostnames run in <strong>live</strong> mode — real charges processed.
+              Override via the <code className="mx-1 font-mono">PRODUCTION_HOSTS</code> env var.
             </p>
             <div className="flex flex-wrap gap-2 items-center">
-              {settings.productionHosts.length === 0 ? (
-                <>
-                  <span className="text-xs text-muted-foreground italic">
-                    Production hostname — to be decided.
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Set <code className="font-mono">PRODUCTION_HOSTS</code> in Netlify once the domain is confirmed.
-                  </span>
-                </>
-              ) : (
-                settings.productionHosts.map((h) => (
-                  <code key={h} className="text-xs font-mono bg-slate-100 text-slate-700 rounded px-2 py-1">
-                    {h}
-                  </code>
-                ))
-              )}
+              {settings.productionHosts.map((h) => (
+                <span key={h} className="flex items-center gap-2">
+                  <code className="text-xs font-mono bg-green-50 text-green-800 border border-green-200 rounded px-2 py-1">{h}</code>
+                  <span className="text-xs text-green-700">Live mode</span>
+                </span>
+              ))}
             </div>
           </div>
 

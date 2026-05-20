@@ -107,7 +107,7 @@ function originFrom(event: Parameters<Handler>[0]): string {
   const host = event.headers.host ?? event.headers.Host
   const proto = (event.headers['x-forwarded-proto'] ?? event.headers['X-Forwarded-Proto']) as string | undefined
   if (host) return `${proto ?? 'https'}://${host}`.replace(/\/$/, '')
-  return 'https://limerickhindutemple.netlify.app'
+  return 'https://www.hindutemple.ie'
 }
 
 export const handler: Handler = async (event) => {
