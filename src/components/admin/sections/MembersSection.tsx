@@ -113,7 +113,7 @@ function MemberDetailSheet({
       <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-white border-l border-slate-200">
         <div className="flex flex-col h-full overflow-y-auto">
           {/* Header */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 text-white">
+          <div className="bg-linear-to-br from-slate-800 to-slate-900 p-6 text-white">
             <SheetHeader className="mb-4">
               <SheetTitle className="sr-only">Member details</SheetTitle>
               <SheetDescription className="sr-only">
@@ -123,7 +123,7 @@ function MemberDetailSheet({
             <div className="flex items-start gap-4">
               <div
                 className={cn(
-                  'w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center text-lg font-bold text-white shadow-lg shrink-0',
+                  'w-14 h-14 rounded-2xl bg-linear-to-br flex items-center justify-center text-lg font-bold text-white shadow-lg shrink-0',
                   avatarColor(member.id),
                 )}
               >
@@ -505,7 +505,7 @@ export function MembersSection() {
               size="sm"
               onClick={runSync}
               disabled={syncing || !canWrite}
-              className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl font-semibold"
+              className="bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl font-semibold"
             >
               <ArrowsClockwise
                 size={15}
@@ -673,7 +673,7 @@ export function MembersSection() {
                         <div className="flex items-center gap-3 min-w-0">
                           <div
                             className={cn(
-                              'w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm',
+                              'w-9 h-9 rounded-xl bg-linear-to-br flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm',
                               avatarColor(m.id),
                             )}
                           >

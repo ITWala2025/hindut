@@ -10,7 +10,9 @@
  *                                 stripe_customer_id, stripe_subscription_id,
  *                                 started_at, expires_at = now + plan duration
  *
- *   • payment_intent.payment_failed →  donations / memberships  status='failed' / 'past_due'
+ *   • checkout.session.expired        →  donations.status = 'failed'
+ *                                       memberships.status = 'canceled'
+ *   • payment_intent.payment_failed  →  donations.status = 'failed'
  *   • charge.refunded                →  donations.status = 'refunded'
  *                                       ticket_bookings.status = 'refunded'
  *   • customer.subscription.updated  →  memberships.status mirrors subscription status
@@ -270,6 +272,110 @@ export const handler: Handler = async (event) => {
             }
           } else if (!process.env.SMTP_HOST) {
             console.log('[dev] SMTP_HOST not set — skipping welcome email for', memberEmail)
+          }
+        } else if (kind === 'ticket') {
+          // ── Ticket booking ──────────────────────────────────────────────
+          const meta = session.metadata ?? {}
+          const encKey = process.env.RSVP_ENCRYPTION_KEY
+          if (!encKey || encKey.length < 16) {
+            console.error('[stripe-webhook] RSVP_ENCRYPTION_KEY missing — cannot persist ticket booking')
+            break
+          }
+
+          const firstName   = meta.firstName   ?? ''
+          const lastName    = meta.lastName    ?? ''
+          const phone       = meta.phone       ?? ''
+          const email       = meta.email       ?? ''
+          const eventId     = meta.eventId     ?? ''
+          const reference   = meta.reference   ?? ''
+          const numAdults   = parseInt(meta.numAdults   ?? '1', 10)
+          const numChildren = parseInt(meta.numChildren ?? '0', 10)
+          const amountEur   = parseFloat(meta.amountEur ?? '0')
+
+          if (!eventId || !reference || !firstName || !email) {
+            console.error('[stripe-webhook] ticket metadata incomplete', meta)
+            break
+          }
+
+          // Mask for admin display
+          const emailMasked = email.includes('@')
+            ? (() => {
+                const [local, domain] = email.split('@')
+                const masked = local.length <= 2 ? local[0] + '***' : local[0] + '***' + local[local.length - 1]
+                return `${masked}@${domain}`
+              })()
+            : '***@***'
+          const phoneMasked = phone.length < 5 ? '***' : phone.slice(0, 3) + ' *** *** ' + phone.slice(-4)
+
+          // Get payment reference (PaymentIntent ID)
+          const paymentRef =
+            typeof session.payment_intent === 'string'
+              ? session.payment_intent
+              : session.payment_intent?.id ?? null
+
+          // Insert booking via encrypted RPC (status = 'confirmed' hardcoded in fn)
+          const { data: bookingId, error: insertErr } = await supabase.rpc(
+            'insert_ticket_booking_encrypted',
+            {
+              p_event_id:        eventId,
+              p_reference:       reference,
+              p_first_name:      firstName,
+              p_last_name:       lastName,
+              p_phone:           phone,
+              p_email:           email,
+              p_phone_masked:    phoneMasked,
+              p_email_masked:    emailMasked,
+              p_num_adults:      numAdults,
+              p_num_children:    numChildren,
+              p_amount_eur:      amountEur,
+              p_payment_gateway: 'stripe',
+              p_consent_gdpr:    true,
+              p_enc_key:         encKey,
+            },
+          )
+
+          if (insertErr) {
+            console.error('[stripe-webhook] ticket booking insert error:', JSON.stringify(insertErr))
+            break
+          }
+
+          // Set payment reference on the newly created row.
+          if (paymentRef) {
+            await supabase
+              .from('ticket_bookings')
+              .update({ payment_reference: paymentRef })
+              .eq('id', bookingId)
+          }
+
+          console.log('[stripe-webhook] ticket booking created:', reference, 'id:', bookingId, 'pi:', paymentRef)
+        }
+        break
+      }
+
+      // ─── Checkout abandoned / expired ──────────────────────────────────
+      case 'checkout.session.expired': {
+        const session = stripeEvent.data.object as Stripe.Checkout.Session
+        const kind    = session.metadata?.kind
+
+        if (kind === 'donation') {
+          const donationId = session.metadata?.donationId
+          if (donationId) {
+            await supabase
+              .from('donations')
+              .update({ status: 'failed', updated_at: new Date().toISOString() })
+              .eq('id', donationId)
+              .eq('status', 'pending') // only update if still pending
+            console.log('[stripe-webhook] donation', donationId, '→ failed (session expired)')
+          }
+        } else if (kind === 'membership') {
+          const membershipId = session.metadata?.membershipId
+          if (membershipId) {
+            await supabase
+              .from('memberships')
+              .update({ status: 'canceled', updated_at: new Date().toISOString() })
+              .eq('id', membershipId)
+              .eq('status', 'pending') // only update if still pending
+            console.log('[stripe-webhook] membership', membershipId, '→ canceled (session expired)')
           }
         }
         break

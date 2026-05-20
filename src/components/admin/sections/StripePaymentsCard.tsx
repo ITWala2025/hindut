@@ -317,6 +317,21 @@ export function StripePaymentsCard({ canWrite }: Props) {
             </p>
           </div>
 
+          {/* ── Sandbox / test hosts ────────────────────────────────────── */}
+          <div>
+            <p className="text-sm font-semibold text-slate-900 mb-1">Sandbox / test hosts</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              These hostnames always run in <strong>test</strong> mode — no real charges are
+              processed. Use Stripe test cards here freely.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <code className="text-xs font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-2 py-1">
+                limerickhindutemple.netlify.app
+              </code>
+              <span className="text-xs text-amber-700 self-center">(Sandbox / test mode)</span>
+            </div>
+          </div>
+
           {/* ── Production hosts ────────────────────────────────────────── */}
           <div>
             <p className="text-sm font-semibold text-slate-900 mb-1">Production hosts</p>
@@ -324,9 +339,16 @@ export function StripePaymentsCard({ canWrite }: Props) {
               These hostnames automatically run in <strong>live</strong> mode (set via the
               <code className="mx-1 font-mono">PRODUCTION_HOSTS</code> env var).
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {settings.productionHosts.length === 0 ? (
-                <span className="text-xs text-muted-foreground">None configured.</span>
+                <>
+                  <span className="text-xs text-muted-foreground italic">
+                    Production hostname — to be decided.
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Set <code className="font-mono">PRODUCTION_HOSTS</code> in Netlify once the domain is confirmed.
+                  </span>
+                </>
               ) : (
                 settings.productionHosts.map((h) => (
                   <code key={h} className="text-xs font-mono bg-slate-100 text-slate-700 rounded px-2 py-1">

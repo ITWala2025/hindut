@@ -5,6 +5,7 @@
  *   • a one-off donation         (kind = 'donation')
  *   • a recurring donation       (kind = 'donation' + recurring = true)
  *   • a membership subscription  (kind = 'membership')
+ *   • a ticket booking           (kind = 'ticket')
  *
  * For donations: a 'donations' row is inserted with status='pending', then
  *   its UUID is attached to the Checkout Session metadata. The webhook
@@ -13,10 +14,15 @@
  * For memberships: a 'members' row is upserted (by email) and a 'memberships'
  *   row with status='pending' is created, then linked via session metadata.
  *
+ * For tickets: a reference number is generated, all booking data is embedded
+ *   in Checkout Session metadata. The webhook calls
+ *   insert_ticket_booking_encrypted to persist the booking on payment success.
+ *
  * Response: { url: string }  →  client redirects via window.location.href.
  */
 
 import type { Handler } from '@netlify/functions'
+import { randomBytes } from 'node:crypto'
 import { resolveStripe, supabaseAdmin, jsonHeaders } from './lib/stripe.js'
 import { z } from 'zod'
 
@@ -44,7 +50,42 @@ const MembershipSchema = z.object({
   cancelUrl:   z.string().url().optional(),
 })
 
-const BodySchema = z.discriminatedUnion('kind', [DonationSchema, MembershipSchema])
+const TicketSchema = z.object({
+  kind:        z.literal('ticket'),
+  eventId:     z.string().uuid('Invalid event ID'),
+  firstName:   z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
+  lastName:    z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
+  phone:       z.string().regex(/^\+[1-9]\d{1,14}$/, 'Phone must be E.164'),
+  email:       z.string().email().max(254),
+  numAdults:   z.number().int().min(1).max(20),
+  numChildren: z.number().int().min(0).max(20).optional().default(0),
+  consentGdpr: z.literal(true),
+})
+
+const BodySchema = z.discriminatedUnion('kind', [DonationSchema, MembershipSchema, TicketSchema])
+
+// ---------------------------------------------------------------------------
+// Ticket helpers
+// ---------------------------------------------------------------------------
+function generateTicketReference(eventId: string): string {
+  const chars  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const buf    = randomBytes(4)
+  const suffix = Array.from(buf).map((b: number) => chars[b % chars.length]).join('')
+  const code   = eventId.replace(/-/g, '').toUpperCase().slice(0, 6)
+  return `HAI-TKT-${code}-${suffix}`
+}
+
+function maskTicketEmail(email: string): string {
+  const [local, domain] = email.split('@')
+  if (!domain) return '***@***'
+  const masked =
+    local.length <= 2 ? local[0] + '***' : local[0] + '***' + local[local.length - 1]
+  return `${masked}@${domain}`
+}
+
+function maskTicketPhone(phone: string): string {
+  return phone.length < 5 ? '***' : phone.slice(0, 3) + ' *** *** ' + phone.slice(-4)
+}
 
 // Map UI plan id → DB plan id (memberships.plan check constraint uses underscores).
 const PLAN_ID_TO_DB: Record<string, string> = {
@@ -174,12 +215,91 @@ export const handler: Handler = async (event) => {
             }),
       })
 
-      // Persist session id so we can reconcile if webhook is missed.
-      await supabase.from('donations').update({ description: `${d.description ?? ''} [cs:${session.id}]`.slice(0, 500) }).eq('id', donationId)
-
       console.log('[create-checkout-session] donation', donationId, '→ session', session.id, 'mode:', ctx.mode)
 
       return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ url: session.url, sessionId: session.id, mode: ctx.mode }) }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // TICKET
+    // ─────────────────────────────────────────────────────────────────────
+    if (parsed.data.kind === 'ticket') {
+      const t = parsed.data
+
+      // Verify event is valid, paid, and published.
+      const { data: evtRow, error: evtErr } = await supabase
+        .from('events')
+        .select('id, title, ticket_price_eur, is_paid, published')
+        .eq('id', t.eventId)
+        .single()
+
+      if (evtErr || !evtRow) {
+        return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
+      }
+      const evt = evtRow as { id: string; title: string; ticket_price_eur: number; is_paid: boolean; published: boolean }
+      if (!evt.is_paid) {
+        return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Ticket booking only available for paid events' }) }
+      }
+      if (!evt.published) {
+        return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
+      }
+
+      const adultPrice = Number(evt.ticket_price_eur) || 0
+      const amountEur  = adultPrice * t.numAdults   // children are free
+      const reference  = generateTicketReference(t.eventId)
+
+      // Build a success URL that carries booking details so the success page
+      // can render a confirmation without a separate API call.
+      const successUrl =
+        `${origin}/ticket-success` +
+        `?ref=${encodeURIComponent(reference)}` +
+        `&name=${encodeURIComponent(`${t.firstName} ${t.lastName}`)}` +
+        `&event=${encodeURIComponent(evt.title)}` +
+        `&adults=${t.numAdults}` +
+        `&children=${t.numChildren ?? 0}` +
+        `&amount=${amountEur}` +
+        `&session_id={CHECKOUT_SESSION_ID}`
+
+      const ticketSession = await ctx.stripe.checkout.sessions.create({
+        mode:           'payment',
+        customer_email: t.email,
+        line_items: [{
+          quantity: t.numAdults,
+          price_data: {
+            currency:     'eur',
+            unit_amount:  Math.round(adultPrice * 100),
+            product_data: {
+              name:        `Ticket – ${evt.title}`,
+              description: `Adult ticket · children free`,
+            },
+          },
+        }],
+        success_url: successUrl,
+        cancel_url:  `${origin}/events?ticket_cancelled=1`,
+        metadata: {
+          kind:        'ticket',
+          reference,
+          eventId:     t.eventId,
+          firstName:   t.firstName,
+          lastName:    t.lastName,
+          phone:       t.phone,
+          email:       t.email,
+          numAdults:   String(t.numAdults),
+          numChildren: String(t.numChildren ?? 0),
+          amountEur:   String(amountEur),
+        },
+        payment_intent_data: {
+          metadata: {
+            kind:      'ticket',
+            reference,
+            eventId:   t.eventId,
+          },
+        },
+      })
+
+      console.log('[create-checkout-session] ticket ref', reference, '→ session', ticketSession.id, 'mode:', ctx.mode)
+
+      return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ url: ticketSession.url, sessionId: ticketSession.id, mode: ctx.mode }) }
     }
 
     // ─────────────────────────────────────────────────────────────────────

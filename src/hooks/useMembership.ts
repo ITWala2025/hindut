@@ -114,74 +114,6 @@ export function useMembership() {
     [plans],
   )
 
-  /**
-   * Purchase a membership.
-   * Creates a `members` record (with null user_id for unauthenticated) and
-   * a linked `memberships` record.
-   */
-  const purchase = useCallback(
-    async (input: {
-      planId: MembershipPlanId
-      fullName: string
-      email: string
-      phone?: string
-      paymentMethod: MembershipRecord['paymentMethod']
-    }): Promise<MembershipRecord> => {
-      const plan = plans.find((p) => p.id === input.planId)
-      if (!plan) throw new Error(`Unknown plan: ${input.planId}`)
-
-      // Upsert member record by email
-      const { data: memberData, error: memberErr } = await supabase
-        .from('members')
-        .insert({
-          full_name: input.fullName,
-          email: input.email,
-          phone: input.phone ?? null,
-          user_id: null,
-        })
-        .select('id')
-        .single()
-      if (memberErr) throw new Error(memberErr.message)
-
-      const now = new Date()
-      const expires = new Date(now)
-      expires.setMonth(expires.getMonth() + plan.durationMonths)
-
-      const reference = `HAI-${input.paymentMethod.toUpperCase()}-${Date.now().toString(36).toUpperCase().slice(-6)}`
-
-      const { data: memData, error: memErr } = await supabase
-        .from('memberships')
-        .insert({
-          member_id: (memberData as { id: string }).id,
-          plan: input.planId,
-          status: 'active',
-          started_at: now.toISOString(),
-          expires_at: expires.toISOString(),
-          gateway: input.paymentMethod,
-          reference,
-        })
-        .select('id')
-        .single()
-      if (memErr) throw new Error(memErr.message)
-
-      const record: MembershipRecord = {
-        id: (memData as { id: string }).id,
-        planId: input.planId,
-        fullName: input.fullName,
-        email: input.email,
-        phone: input.phone,
-        startDate: now.toISOString().slice(0, 10),
-        expiresOn: expires.toISOString().slice(0, 10),
-        status: 'active',
-        paymentMethod: input.paymentMethod,
-        reference,
-      }
-      setMemberships((prev) => [record, ...prev])
-      return record
-    },
-    [plans],
-  )
-
   const cancel = useCallback(async (id: string) => {
     const { error: err } = await supabase
       .from('memberships')
@@ -222,7 +154,6 @@ export function useMembership() {
     loading,
     error,
     getPlan,
-    purchase,
     cancel,
     setStatus,
     remove,

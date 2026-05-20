@@ -300,7 +300,7 @@ export function MembershipPage() {
             {annualPlan && (
               <Button
                 onClick={() => openFor(annualPlan)}
-                className="h-12 px-8 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-full shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all"
+                className="h-12 px-8 bg-linear-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-full shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all"
               >
                 <Heart weight="fill" className="mr-2" />
                 Join Now — €{annualPlan.price}/year
@@ -319,7 +319,7 @@ export function MembershipPage() {
       </HeroCarousel>
 
       {/* ── Membership Plans + Monthly Giving (side-by-side) ─────────────── */}
-      <section id="monthly-giving" className="py-8 md:py-12 bg-gradient-to-br from-slate-50 via-orange-50/40 to-amber-50/30 relative overflow-hidden">
+      <section id="monthly-giving" className="py-8 md:py-12 bg-linear-to-br from-slate-50 via-orange-50/40 to-amber-50/30 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-orange-100/40 blur-3xl" />
           <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-amber-100/40 blur-3xl" />
@@ -345,21 +345,21 @@ export function MembershipPage() {
             {/* ── Left: Annual Membership ── */}
             <div className="flex flex-col">
               <div className="flex items-center gap-3 mb-6">
-                <div className="flex-1 h-px bg-gradient-to-r from-orange-200 to-transparent" />
+                <div className="flex-1 h-px bg-linear-to-r from-orange-200 to-transparent" />
                 <span className="text-xs font-semibold text-orange-600 uppercase tracking-widest bg-orange-50 border border-orange-200 rounded-full px-3 py-1">
                   Annual Membership
                 </span>
-                <div className="flex-1 h-px bg-gradient-to-l from-orange-200 to-transparent" />
+                <div className="flex-1 h-px bg-linear-to-l from-orange-200 to-transparent" />
               </div>
               {annualPlan && (
                 <div className="relative flex-1 flex flex-col">
-                  <div className="absolute -inset-px rounded-3xl bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600 opacity-60 blur-sm" />
+                  <div className="absolute -inset-px rounded-3xl bg-linear-to-r from-orange-500 via-amber-400 to-orange-600 opacity-60 blur-sm" />
                   <Card className="relative rounded-3xl border-0 bg-white shadow-2xl overflow-hidden flex-1 flex flex-col">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600" />
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-orange-500 via-amber-400 to-orange-600" />
                     <CardContent className="p-8 flex flex-col flex-1">
                       <div className="flex items-start justify-between gap-4 mb-5">
                         <div className="flex items-start gap-4">
-                          <div className="rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 p-3.5 shrink-0">
+                          <div className="rounded-2xl bg-linear-to-br from-orange-100 to-amber-100 p-3.5 shrink-0">
                             <Crown size={28} weight="duotone" className="text-orange-600" />
                           </div>
                           <div>
@@ -370,7 +370,7 @@ export function MembershipPage() {
                               >
                                 {annualPlan.name}
                               </h3>
-                              <Badge className="bg-gradient-to-r from-orange-600 to-amber-600 text-white border-0 text-xs">
+                              <Badge className="bg-linear-to-r from-orange-600 to-amber-600 text-white border-0 text-xs">
                                 <Sparkle size={10} weight="fill" className="mr-1" />
                                 Most Popular
                               </Badge>
@@ -396,7 +396,7 @@ export function MembershipPage() {
                         <Button
                           onClick={() => openFor(annualPlan)}
                           size="lg"
-                          className="flex-1 h-12 text-base font-bold bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all"
+                          className="flex-1 h-12 text-base font-bold bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all"
                         >
                           <Heart weight="fill" className="mr-2" />
                           Join Annual Membership
@@ -415,11 +415,11 @@ export function MembershipPage() {
             {/* ── Right: Monthly Giving ── */}
             <div className="flex flex-col">
               <div className="flex items-center gap-3 mb-6">
-                <div className="flex-1 h-px bg-gradient-to-r from-amber-200 to-transparent" />
+                <div className="flex-1 h-px bg-linear-to-r from-amber-200 to-transparent" />
                 <span className="text-xs font-semibold text-amber-700 uppercase tracking-widest bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
                   Monthly Giving
                 </span>
-                <div className="flex-1 h-px bg-gradient-to-l from-amber-200 to-transparent" />
+                <div className="flex-1 h-px bg-linear-to-l from-amber-200 to-transparent" />
               </div>
               <p className="text-sm text-slate-500 text-center mb-5 leading-relaxed">
                 Choose a recurring tier for dedicated spiritual benefits. Cancel any time.
@@ -432,7 +432,7 @@ export function MembershipPage() {
                       key={tier.id}
                       className={cn(
                         'relative rounded-2xl border-2 p-5 flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition-all',
-                        `bg-gradient-to-br ${tier.bg}`,
+                        `bg-linear-to-br ${tier.bg}`,
                         tier.border,
                         tier.popular && 'ring-2 ring-offset-2 ring-emerald-400',
                       )}
@@ -448,7 +448,7 @@ export function MembershipPage() {
                       <div className="flex items-center gap-3 mb-3">
                         <div
                           className={cn(
-                            'w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm shrink-0',
+                            'w-10 h-10 rounded-xl bg-linear-to-br flex items-center justify-center shadow-sm shrink-0',
                             tier.gradient,
                           )}
                         >
@@ -506,7 +506,7 @@ export function MembershipPage() {
       </section>
 
       {/* ── Benefits ─────────────────────────────────────────────────────── */}
-      <section className="py-8 md:py-12 bg-gradient-to-br from-orange-950 via-amber-900 to-orange-900 relative overflow-hidden">
+      <section className="py-8 md:py-12 bg-linear-to-br from-orange-950 via-amber-900 to-orange-900 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none select-none opacity-5">
           <div className="absolute top-8 left-8 text-white text-[12rem] font-serif leading-none">ॐ</div>
           <div className="absolute bottom-8 right-8 text-white text-[12rem] font-serif leading-none">ॐ</div>
@@ -545,7 +545,7 @@ export function MembershipPage() {
                 key={title}
                 className="rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-8 text-center hover:bg-white/15 transition-all"
               >
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-orange-900/40">
+                <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-orange-400 to-amber-400 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-orange-900/40">
                   <BIcon size={32} weight="duotone" className="text-white" />
                 </div>
                 <h3
@@ -617,7 +617,7 @@ export function MembershipPage() {
       </section>
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
-      <section className="py-16 bg-gradient-to-r from-orange-600 to-amber-600">
+      <section className="py-16 bg-linear-to-r from-orange-600 to-amber-600">
         <div className="container mx-auto px-6 text-center">
           <h2
             className="text-3xl md:text-4xl font-bold text-white mb-4"
@@ -656,7 +656,7 @@ export function MembershipPage() {
       {/* ── Membership Checkout Dialog ───────────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) closeDialog() }}>
         <DialogContent className="sm:max-w-[540px] bg-white p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
-          <div className="h-1.5 bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600" />
+          <div className="h-1.5 bg-linear-to-r from-orange-500 via-amber-400 to-orange-600" />
           <div className="p-8">
 
             {/* Step 1: Details */}
@@ -664,7 +664,7 @@ export function MembershipPage() {
               <>
                 <DialogHeader className="mb-6">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0">
                       <Crown size={22} weight="duotone" className="text-orange-600" />
                     </div>
                     <div>
@@ -825,7 +825,7 @@ export function MembershipPage() {
                   <Button
                     type="submit"
                     size="lg"
-                    className="w-full h-12 text-base font-bold bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-2xl shadow-lg"
+                    className="w-full h-12 text-base font-bold bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-2xl shadow-lg"
                   >
                     Continue to payment
                     <ArrowRight className="ml-2" size={18} />
@@ -839,7 +839,7 @@ export function MembershipPage() {
               <>
                 <DialogHeader className="mb-6">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0">
                       <CreditCard size={22} weight="duotone" className="text-orange-600" />
                     </div>
                     <div>
@@ -913,7 +913,7 @@ export function MembershipPage() {
                     onClick={pay}
                     disabled={processing}
                     size="lg"
-                    className="flex-1 h-12 font-bold bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-2xl"
+                    className="flex-1 h-12 font-bold bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-2xl"
                   >
                     {processing ? (
                       <>
@@ -942,13 +942,13 @@ export function MembershipPage() {
             const { Icon } = givingTier
             return (
               <>
-                <div className={cn('h-2 bg-gradient-to-r', givingTier.gradient)} />
+                <div className={cn('h-2 bg-linear-to-r', givingTier.gradient)} />
                 <div className="p-8">
                   <DialogHeader className="mb-6">
                     <div className="flex items-center gap-3">
                       <div
                         className={cn(
-                          'w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-sm shrink-0',
+                          'w-12 h-12 rounded-2xl bg-linear-to-br flex items-center justify-center shadow-sm shrink-0',
                           givingTier.gradient,
                         )}
                       >
@@ -1040,7 +1040,7 @@ export function MembershipPage() {
                       size="lg"
                       disabled={givingProcessing}
                       className={cn(
-                        'w-full h-12 font-bold text-white rounded-2xl bg-gradient-to-r',
+                        'w-full h-12 font-bold text-white rounded-2xl bg-linear-to-r',
                         givingTier.gradient,
                       )}
                     >

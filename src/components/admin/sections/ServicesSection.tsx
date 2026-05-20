@@ -860,7 +860,7 @@ export function ServicesSection() {
             <Button
               disabled={saving || !form.title.trim()}
               onClick={handleSave}
-              className="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+              className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
             >
               {saving ? 'Saving...' : editingId ? 'Save changes' : 'Create service'}
             </Button>

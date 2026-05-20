@@ -66,11 +66,11 @@ export function Header({ onDonateClick }: HeaderProps) {
         )}
       >
         {/* ── Top-lit gloss sheen ── */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full bg-gradient-to-b from-white/55 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full bg-linear-to-b from-white/55 to-transparent" />
         {/* ── Top highlight edge ── */}
-        <div className="pointer-events-none absolute inset-x-10 top-0 h-px rounded-full bg-gradient-to-r from-transparent via-white/95 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px rounded-full bg-linear-to-r from-transparent via-white/95 to-transparent" />
         {/* ── Bottom inner rim ── */}
-        <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px rounded-full bg-gradient-to-r from-transparent via-orange-200/40 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px rounded-full bg-linear-to-r from-transparent via-orange-200/40 to-transparent" />
 
         <div className="relative px-4 md:px-6 lg:px-8">
           <div className="flex h-[60px] md:h-[68px] items-center justify-between gap-4">
@@ -101,7 +101,7 @@ export function Header({ onDonateClick }: HeaderProps) {
                   >
                     {item.label}
                     {active && (
-                      <span className="absolute bottom-[5px] left-1/2 -translate-x-1/2 h-[3px] w-3 rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
+                      <span className="absolute bottom-[5px] left-1/2 -translate-x-1/2 h-[3px] w-3 rounded-full bg-linear-to-r from-orange-500 to-amber-400" />
                     )}
                   </Link>
                 )
@@ -114,7 +114,7 @@ export function Header({ onDonateClick }: HeaderProps) {
                 onClick={onDonateClick}
                 className={cn(
                   'rounded-full h-9 lg:h-10 px-5 lg:px-6 text-sm font-semibold',
-                  'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
+                  'bg-linear-to-r from-orange-500 to-amber-500 text-white',
                   'shadow-[0_4px_14px_-2px_rgba(234,88,12,0.45),0_1px_0_0_rgba(255,255,255,0.30)_inset]',
                   'hover:from-orange-600 hover:to-amber-600 hover:shadow-[0_6px_20px_-2px_rgba(234,88,12,0.55)]',
                   'transition-all duration-200 active:scale-[0.97]',
@@ -147,9 +147,9 @@ export function Header({ onDonateClick }: HeaderProps) {
 
                 {/* Drawer branded header */}
                 <div className="relative overflow-hidden shrink-0">
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500" />
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-white/5 to-transparent pointer-events-none" />
-                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-br from-orange-600 via-orange-500 to-amber-500" />
+                  <div className="absolute inset-0 bg-linear-to-b from-white/30 via-white/5 to-transparent pointer-events-none" />
+                  <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-white/70 to-transparent" />
                   <div className="absolute -top-12 -right-12 h-44 w-44 rounded-full bg-amber-300/20 blur-3xl" />
                   <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-orange-700/20 blur-2xl" />
 
@@ -177,7 +177,7 @@ export function Header({ onDonateClick }: HeaderProps) {
                       </button>
                     </SheetClose>
                   </div>
-                  <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  <div className="absolute bottom-0 inset-x-0 h-px bg-linear-to-r from-transparent via-white/20 to-transparent" />
                 </div>
 
                 {/* Nav items */}
@@ -191,7 +191,7 @@ export function Header({ onDonateClick }: HeaderProps) {
                         className={cn(
                           'group w-full flex items-center gap-3 rounded-xl px-3 py-[11px] text-sm font-semibold transition-all duration-150',
                           active
-                            ? 'bg-gradient-to-r from-orange-500/12 to-amber-400/8 text-orange-800 ring-1 ring-orange-300/40'
+                            ? 'bg-linear-to-r from-orange-500/12 to-amber-400/8 text-orange-800 ring-1 ring-orange-300/40'
                             : 'text-slate-600 hover:bg-orange-50 hover:text-orange-800',
                         )}
                       >
@@ -219,7 +219,7 @@ export function Header({ onDonateClick }: HeaderProps) {
                     onClick={() => { onDonateClick(); setIsOpen(false) }}
                     className={cn(
                       'w-full rounded-xl h-11 font-semibold text-white',
-                      'bg-gradient-to-r from-orange-500 to-amber-500',
+                      'bg-linear-to-r from-orange-500 to-amber-500',
                       'shadow-[0_4px_14px_-2px_rgba(234,88,12,0.35),0_1px_0_0_rgba(255,255,255,0.20)_inset]',
                       'hover:from-orange-600 hover:to-amber-600 hover:shadow-[0_6px_20px_-2px_rgba(234,88,12,0.45)]',
                       'transition-all duration-200 active:scale-[0.98]',

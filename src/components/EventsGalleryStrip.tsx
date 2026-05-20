@@ -100,16 +100,16 @@ function GlossyCard({ item, tabIndex, onFocus }: GlossyCardProps) {
             }}
           />
         ) : isAlbum ? (
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/80 to-purple-700/80" />
+          <div className="absolute inset-0 bg-linear-to-br from-indigo-500/80 to-purple-700/80" />
         ) : null}
 
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none"
+          className="absolute inset-0 bg-linear-to-br from-white/20 via-transparent to-transparent pointer-events-none"
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none"
+          className="absolute inset-0 bg-linear-to-t from-black/70 via-black/10 to-transparent pointer-events-none"
         />
 
         {isAlbum && (
@@ -131,7 +131,7 @@ function GlossyCard({ item, tabIndex, onFocus }: GlossyCardProps) {
 
       <div
         aria-hidden="true"
-        className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent pointer-events-none"
+        className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-white/55 to-transparent pointer-events-none"
       />
     </>
   )
