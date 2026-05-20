@@ -16,6 +16,8 @@ import {
 } from '@phosphor-icons/react'
 import { useAuth } from '@/lib/auth'
 import { useDonations, type DonationRow, type NewDonation } from '@/hooks/useDonations'
+import { useReceiptFlags } from '@/hooks/useReceipts'
+import { downloadReceiptPdf } from '@/lib/receiptPdf'
 import { KpiCard, SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -116,6 +118,16 @@ export function DonationsSection() {
       status:   statusFilter  !== 'all' ? statusFilter  : undefined,
       gateway:  gatewayFilter !== 'all' ? gatewayFilter : undefined,
     })
+
+  const { flags: receiptFlags, refetch: refetchFlags, fetchReceiptById } = useReceiptFlags('donation')
+
+  const handleDownloadReceipt = async (donationId: string) => {
+    const flag = receiptFlags.get(donationId)
+    if (!flag) { toast.error('No receipt generated yet for this donation.'); return }
+    const r = await fetchReceiptById(flag.id)
+    if (!r) { toast.error('Could not load receipt.'); return }
+    downloadReceiptPdf(r)
+  }
 
   const filtered = useMemo(() => {
     if (!search.trim()) return donations
@@ -263,7 +275,7 @@ export function DonationsSection() {
             <Button
               variant="outline"
               size="sm"
-              onClick={refetch}
+              onClick={() => { refetch(); refetchFlags() }}
               className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
             >
               <ArrowsClockwise size={15} className="mr-1.5" />
@@ -372,6 +384,7 @@ export function DonationsSection() {
                   <Th>Gateway</Th>
                   <Th>Recurring</Th>
                   <Th>Status</Th>
+                  <Th>Receipt</Th>
                   <Th>Description</Th>
                   <Th>Date</Th>
                   <Th className="text-right">Actions</Th>
@@ -407,6 +420,15 @@ export function DonationsSection() {
                     </Td>
                     <Td><StatusBadge status={d.status} /></Td>
                     <Td>
+                      {receiptFlags.has(d.id) ? (
+                        <Badge className="bg-emerald-600 text-white font-mono text-[10px]" title={receiptFlags.get(d.id)?.receiptNumber}>
+                          ✓ {receiptFlags.get(d.id)?.receiptNumber}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">—</span>
+                      )}
+                    </Td>
+                    <Td>
                       <span className="text-xs text-muted-foreground max-w-[140px] line-clamp-2 block">
                         {d.description || '—'}
                       </span>
@@ -426,6 +448,17 @@ export function DonationsSection() {
                       >
                         <Eye size={15} />
                       </Button>
+                      {receiptFlags.has(d.id) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadReceipt(d.id)}
+                          className="text-indigo-600 hover:bg-indigo-50"
+                          title="Download receipt PDF"
+                        >
+                          <DownloadSimple size={15} />
+                        </Button>
+                      )}
                       {canWrite && (
                         <Button
                           variant="ghost"

@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Plus,
   MagnifyingGlass,
   DownloadSimple,
   Receipt as ReceiptIcon,
-  PaperPlaneTilt,
   FileText,
   FloppyDisk,
+  PencilSimple,
+  Trash,
+  ArrowsClockwise,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,15 +30,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
   type ReceiptRecord,
-  type ReceiptTemplate,
   type ReceiptType,
 } from '@/lib/types'
 import { useReceipts } from '@/hooks/useReceipts'
 import { useAuth } from '@/lib/auth'
+import { downloadReceiptPdf } from '@/lib/receiptPdf'
 import {
   KpiCard,
   SectionCard,
@@ -47,43 +59,92 @@ import {
 } from '@/components/admin/adminUi'
 
 type TypeFilter = 'all' | ReceiptType
+type SourceFilter = 'all' | 'auto' | 'manual'
 
-const PAGE_SIZE = 8
+const PAGE_SIZE = 20
+
+interface ReceiptFormState {
+  recipientName: string
+  recipientEmail: string
+  amount: number
+  description: string
+  type: ReceiptType
+  templateId: string
+  paymentReference: string
+  issuedDate: string
+}
+
+const TODAY = () => new Date().toISOString().slice(0, 10)
+
+const EMPTY_FORM: ReceiptFormState = {
+  recipientName: '',
+  recipientEmail: '',
+  amount: 0,
+  description: '',
+  type: 'donation',
+  templateId: 'tmpl-donation',
+  paymentReference: '',
+  issuedDate: TODAY(),
+}
 
 export function ReceiptsSection() {
   const { can } = useAuth()
   const canWrite = can('manageReceipts')
-  const { receipts, templates, loading, error, issueReceipt: createReceipt, saveTemplate: saveTemplateToDb } = useReceipts()
+  const {
+    receipts,
+    templates,
+    loading,
+    error,
+    createManualReceipt,
+    updateReceipt,
+    deleteReceipt,
+    saveTemplate,
+    refetch,
+  } = useReceipts()
+
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [page, setPage] = useState(1)
-  const [issueOpen, setIssueOpen] = useState(false)
-  const [issueForm, setIssueForm] = useState({
-    recipientName: '',
-    recipientEmail: '',
-    amount: 0,
-    description: '',
-    type: 'donation' as ReceiptType,
-    templateId: 'tmpl-donation',
-  })
 
-  const [activeTemplateId, setActiveTemplateId] = useState<string>(templates[0]?.id ?? '')
-  const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? templates[0]
-  const [templateDraft, setTemplateDraft] = useState<string>(activeTemplate?.body ?? '')
+  // Create / edit dialog state
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<ReceiptRecord | null>(null)
+  const [form, setForm] = useState<ReceiptFormState>(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<ReceiptRecord | null>(null)
+
+  // Template editing
+  const [activeTemplateId, setActiveTemplateId] = useState<string>('')
+  const [templateDraft, setTemplateDraft] = useState<string>('')
+
+  useEffect(() => {
+    if (templates.length && !activeTemplateId) {
+      setActiveTemplateId(templates[0].id)
+      setTemplateDraft(templates[0].body)
+    }
+  }, [templates, activeTemplateId])
+
+  const activeTemplate = templates.find((t) => t.id === activeTemplateId)
 
   const filtered = useMemo(() => {
     return receipts.filter((r) => {
       if (typeFilter !== 'all' && r.type !== typeFilter) return false
+      if (sourceFilter === 'manual' && !r.isManual) return false
+      if (sourceFilter === 'auto' && r.isManual) return false
       if (!search.trim()) return true
       const q = search.toLowerCase()
       return (
-        r.id.toLowerCase().includes(q) ||
+        r.receiptNumber.toLowerCase().includes(q) ||
         r.recipientName.toLowerCase().includes(q) ||
         r.recipientEmail.toLowerCase().includes(q) ||
-        r.description.toLowerCase().includes(q)
+        r.description.toLowerCase().includes(q) ||
+        (r.paymentReference ?? '').toLowerCase().includes(q)
       )
     })
-  }, [receipts, search, typeFilter])
+  }, [receipts, search, typeFilter, sourceFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -93,77 +154,110 @@ export function ReceiptsSection() {
     return {
       issued: receipts.length,
       euro: receipts.reduce((s, r) => s + r.amount, 0),
-      donation: receipts.filter((r) => r.type === 'donation').length,
-      membership: receipts.filter((r) => r.type === 'membership').length,
+      manual: receipts.filter((r) => r.isManual).length,
+      auto: receipts.filter((r) => !r.isManual).length,
     }
   }, [receipts])
 
-  const renderTemplate = (body: string, r: ReceiptRecord) =>
-    body
-      .replace(/\{\{receiptId\}\}/g, r.id)
-      .replace(/\{\{recipientName\}\}/g, r.recipientName)
-      .replace(/\{\{amount\}\}/g, String(r.amount))
-      .replace(/\{\{date\}\}/g, r.date)
-      .replace(/\{\{description\}\}/g, r.description)
-
-  const downloadReceipt = (r: ReceiptRecord) => {
-    const tmpl =
-      templates.find(
-        (t) =>
-          (r.type === 'donation' && t.id === 'tmpl-donation') ||
-          (r.type === 'membership' && t.id === 'tmpl-membership') ||
-          (r.type === 'event' && t.id === 'tmpl-event'),
-      ) ?? templates[0]
-    const html = renderTemplate(tmpl?.body ?? '', r)
-    // Mock "PDF" — a text file containing the rendered HTML.
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${r.id}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success(`Mock PDF generated for ${r.id}.`)
+  const openCreate = () => {
+    setEditing(null)
+    setForm({ ...EMPTY_FORM, issuedDate: TODAY() })
+    setFormOpen(true)
   }
 
-  const issueReceipt = async (ev: React.FormEvent) => {
+  const openEdit = (r: ReceiptRecord) => {
+    setEditing(r)
+    setForm({
+      recipientName: r.recipientName,
+      recipientEmail: r.recipientEmail,
+      amount: r.amount,
+      description: r.description,
+      type: r.type,
+      templateId: r.templateId ?? `tmpl-${r.type}`,
+      paymentReference: r.paymentReference ?? '',
+      issuedDate: r.issuedDate || TODAY(),
+    })
+    setFormOpen(true)
+  }
+
+  const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault()
     if (
-      !issueForm.recipientName.trim() ||
-      !issueForm.recipientEmail.trim() ||
-      !issueForm.description.trim() ||
-      issueForm.amount <= 0
+      !form.recipientName.trim() ||
+      !form.recipientEmail.trim() ||
+      !form.description.trim() ||
+      form.amount <= 0
     ) {
       toast.error('All fields are required and amount must be positive.')
       return
     }
-    const newReceipt = await createReceipt({
-      recipientName: issueForm.recipientName.trim(),
-      recipientEmail: issueForm.recipientEmail.trim(),
-      amount: issueForm.amount,
-      type: issueForm.type,
-      description: issueForm.description.trim(),
-      templateId: issueForm.templateId,
-    })
-    toast.success(`Receipt ${newReceipt.id} issued.`)
-    setIssueOpen(false)
-    setIssueForm({
-      recipientName: '',
-      recipientEmail: '',
-      amount: 0,
-      description: '',
-      type: 'donation',
-      templateId: 'tmpl-donation',
-    })
+    setSaving(true)
+    try {
+      if (editing) {
+        await updateReceipt(editing.id, {
+          recipientName: form.recipientName.trim(),
+          recipientEmail: form.recipientEmail.trim(),
+          amount: form.amount,
+          type: form.type,
+          description: form.description.trim(),
+          paymentReference: form.paymentReference.trim() || undefined,
+          issuedDate: form.issuedDate || undefined,
+          templateId: form.templateId,
+        })
+        toast.success(`Receipt ${editing.receiptNumber} updated.`)
+      } else {
+        const newReceipt = await createManualReceipt({
+          recipientName: form.recipientName.trim(),
+          recipientEmail: form.recipientEmail.trim(),
+          amount: form.amount,
+          type: form.type,
+          description: form.description.trim(),
+          paymentReference: form.paymentReference.trim() || undefined,
+          issuedDate: form.issuedDate || undefined,
+          templateId: form.templateId,
+        })
+        toast.success(`Receipt ${newReceipt.receiptNumber} issued.`)
+      }
+      setFormOpen(false)
+      setEditing(null)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to save receipt.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const saveTemplate = async () => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    try {
+      await deleteReceipt(deleteTarget.id)
+      toast.success(`Receipt ${deleteTarget.receiptNumber} deleted.`)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to delete receipt.')
+    } finally {
+      setDeleteTarget(null)
+    }
+  }
+
+  const handleDownload = (r: ReceiptRecord) => {
+    try {
+      downloadReceiptPdf(r)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'PDF generation failed.')
+    }
+  }
+
+  const handleSaveTemplate = async () => {
     if (!activeTemplate) return
     try {
-      await saveTemplateToDb({ name: activeTemplate.name, body: templateDraft })
+      await saveTemplate({
+        id: activeTemplate.id,
+        name: activeTemplate.name,
+        body: templateDraft,
+      })
       toast.success(`Template "${activeTemplate.name}" saved.`)
     } catch (err) {
-      toast.error((err as Error).message)
+      toast.error((err as Error).message ?? 'Failed to save template.')
     }
   }
 
@@ -187,21 +281,21 @@ export function ReceiptsSection() {
         />
         <KpiCard
           label="Total amount"
-          value={`€${totals.euro.toLocaleString()}`}
+          value={`€${totals.euro.toLocaleString('en-IE', { minimumFractionDigits: 2 })}`}
           icon={<FileText size={24} weight="duotone" />}
           accent="green"
         />
         <KpiCard
-          label="Donations"
-          value={String(totals.donation)}
-          icon={<ReceiptIcon size={24} weight="duotone" />}
-          accent="amber"
-        />
-        <KpiCard
-          label="Memberships"
-          value={String(totals.membership)}
+          label="Auto-generated"
+          value={String(totals.auto)}
           icon={<ReceiptIcon size={24} weight="duotone" />}
           accent="blue"
+        />
+        <KpiCard
+          label="Manual / offline"
+          value={String(totals.manual)}
+          icon={<ReceiptIcon size={24} weight="duotone" />}
+          accent="amber"
         />
       </div>
 
@@ -214,16 +308,27 @@ export function ReceiptsSection() {
         <TabsContent value="list" className="mt-4">
           <SectionCard
             title="Receipts"
-            description="Search, issue and download receipts. PDF generation is mocked."
+            description="Receipts are auto-generated for ticket bookings, paid memberships and successful donations. You can also manually issue receipts for offline / cash transactions."
             actions={
-              canWrite && (
+              <>
                 <Button
-                  onClick={() => setIssueOpen(true)}
-                  className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                  variant="outline"
+                  size="sm"
+                  onClick={refetch}
+                  className="border-orange-200 text-orange-700 hover:bg-orange-50"
                 >
-                  <Plus className="mr-2" weight="bold" /> Issue receipt
+                  <ArrowsClockwise size={15} className="mr-1.5" />
+                  Refresh
                 </Button>
-              )
+                {canWrite && (
+                  <Button
+                    onClick={openCreate}
+                    className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                  >
+                    <Plus className="mr-2" weight="bold" /> Manual receipt
+                  </Button>
+                )}
+              </>
             }
           >
             <div className="flex flex-col md:flex-row gap-3 mb-4">
@@ -233,7 +338,7 @@ export function ReceiptsSection() {
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 />
                 <Input
-                  placeholder="Search by receipt ID, name, email, description…"
+                  placeholder="Search by receipt #, name, email, description, payment ref…"
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value)
@@ -249,14 +354,30 @@ export function ReceiptsSection() {
                   setPage(1)
                 }}
               >
-                <SelectTrigger className="md:w-56">
+                <SelectTrigger className="md:w-44">
                   <SelectValue placeholder="All types" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All types</SelectItem>
                   <SelectItem value="donation">Donation</SelectItem>
                   <SelectItem value="membership">Membership</SelectItem>
-                  <SelectItem value="event">Event</SelectItem>
+                  <SelectItem value="event">Event ticket</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={sourceFilter}
+                onValueChange={(v) => {
+                  setSourceFilter(v as SourceFilter)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="md:w-44">
+                  <SelectValue placeholder="All sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sources</SelectItem>
+                  <SelectItem value="auto">Auto-generated</SelectItem>
+                  <SelectItem value="manual">Manual / offline</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -264,16 +385,17 @@ export function ReceiptsSection() {
             {filtered.length === 0 ? (
               <EmptyState
                 title="No receipts found"
-                description="Adjust your filters or issue a new receipt."
+                description="Adjust your filters or issue a new manual receipt."
               />
             ) : (
               <>
                 <DataTable>
                   <thead>
                     <tr>
-                      <Th>Receipt ID</Th>
+                      <Th>Receipt #</Th>
                       <Th>Recipient</Th>
                       <Th>Type</Th>
+                      <Th>Source</Th>
                       <Th>Description</Th>
                       <Th>Date</Th>
                       <Th>Amount</Th>
@@ -283,7 +405,9 @@ export function ReceiptsSection() {
                   <tbody>
                     {pageRows.map((r) => (
                       <tr key={r.id} className="border-t border-slate-100">
-                        <Td className="font-mono text-xs">{r.id}</Td>
+                        <Td className="font-mono text-xs font-semibold text-slate-900">
+                          {r.receiptNumber}
+                        </Td>
                         <Td>
                           <div className="font-semibold text-slate-900">{r.recipientName}</div>
                           <div className="text-xs text-muted-foreground">
@@ -303,20 +427,50 @@ export function ReceiptsSection() {
                             {r.type}
                           </Badge>
                         </Td>
+                        <Td>
+                          {r.isManual ? (
+                            <Badge className="bg-amber-500 text-white">Manual</Badge>
+                          ) : (
+                            <Badge className="bg-slate-500 text-white">Auto</Badge>
+                          )}
+                        </Td>
                         <Td className="text-slate-700 max-w-xs truncate">{r.description}</Td>
-                        <Td>{r.date}</Td>
+                        <Td>{r.issuedDate}</Td>
                         <Td className="font-semibold text-emerald-700">
-                          €{r.amount.toLocaleString()}
+                          €{r.amount.toLocaleString('en-IE', { minimumFractionDigits: 2 })}
                         </Td>
                         <Td className="text-right whitespace-nowrap">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => downloadReceipt(r)}
+                            onClick={() => handleDownload(r)}
                             className="text-indigo-700 hover:bg-indigo-50"
+                            title="Download PDF"
                           >
-                            <DownloadSimple size={16} className="mr-1" /> PDF
+                            <DownloadSimple size={16} />
                           </Button>
+                          {canWrite && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEdit(r)}
+                              className="text-slate-600 hover:bg-slate-100"
+                              title="Edit"
+                            >
+                              <PencilSimple size={16} />
+                            </Button>
+                          )}
+                          {canWrite && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteTarget(r)}
+                              className="text-red-600 hover:bg-red-50"
+                              title="Delete"
+                            >
+                              <Trash size={16} />
+                            </Button>
+                          )}
                         </Td>
                       </tr>
                     ))}
@@ -358,11 +512,11 @@ export function ReceiptsSection() {
         <TabsContent value="templates" className="mt-4">
           <SectionCard
             title="Receipt templates"
-            description="Edit the HTML used to render receipt PDFs. Supports {{receiptId}}, {{recipientName}}, {{amount}}, {{date}}, {{description}}."
+            description="Edit the HTML used by the legacy email templates. PDF generation uses a built-in branded layout; templates are still used for email previews. Supports {{receiptId}}, {{recipientName}}, {{amount}}, {{date}}, {{description}}."
             actions={
               canWrite && (
                 <Button
-                  onClick={saveTemplate}
+                  onClick={handleSaveTemplate}
                   className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
                 >
                   <FloppyDisk className="mr-2" weight="bold" /> Save template
@@ -396,50 +550,56 @@ export function ReceiptsSection() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={issueOpen} onOpenChange={setIssueOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Create / edit dialog */}
+      <Dialog open={formOpen} onOpenChange={(o) => { if (!o) { setFormOpen(false); setEditing(null) } }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ReceiptIcon weight="duotone" size={24} className="text-orange-600" />
-              Issue receipt
+              {editing ? `Edit receipt ${editing.receiptNumber}` : 'Manual receipt'}
             </DialogTitle>
             <DialogDescription>
-              Generates a mock PDF and queues an email to the recipient.
+              {editing
+                ? 'Update the receipt details. Changes are saved immediately.'
+                : 'Issue a receipt for an offline / cash transaction. A receipt number is generated automatically.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={issueReceipt} className="space-y-4">
-            <div>
-              <Label className="text-sm font-semibold">Recipient name</Label>
-              <Input
-                value={issueForm.recipientName}
-                onChange={(e) =>
-                  setIssueForm({ ...issueForm, recipientName: e.target.value })
-                }
-                className="mt-1.5"
-                required
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-semibold">Recipient email</Label>
-              <Input
-                type="email"
-                value={issueForm.recipientEmail}
-                onChange={(e) =>
-                  setIssueForm({ ...issueForm, recipientEmail: e.target.value })
-                }
-                className="mt-1.5"
-                required
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-semibold">Recipient name</Label>
+                <Input
+                  value={form.recipientName}
+                  onChange={(e) =>
+                    setForm({ ...form, recipientName: e.target.value })
+                  }
+                  className="mt-1.5"
+                  required
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">Recipient email</Label>
+                <Input
+                  type="email"
+                  value={form.recipientEmail}
+                  onChange={(e) =>
+                    setForm({ ...form, recipientEmail: e.target.value })
+                  }
+                  className="mt-1.5"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-sm font-semibold">Amount (EUR)</Label>
                 <Input
                   type="number"
-                  min={1}
-                  value={issueForm.amount || ''}
+                  min={0}
+                  step={0.01}
+                  value={form.amount || ''}
                   onChange={(e) =>
-                    setIssueForm({ ...issueForm, amount: Number(e.target.value) })
+                    setForm({ ...form, amount: Number(e.target.value) })
                   }
                   className="mt-1.5"
                   required
@@ -448,10 +608,10 @@ export function ReceiptsSection() {
               <div>
                 <Label className="text-sm font-semibold">Type</Label>
                 <Select
-                  value={issueForm.type}
+                  value={form.type}
                   onValueChange={(v) =>
-                    setIssueForm({
-                      ...issueForm,
+                    setForm({
+                      ...form,
                       type: v as ReceiptType,
                       templateId: `tmpl-${v}`,
                     })
@@ -463,56 +623,95 @@ export function ReceiptsSection() {
                   <SelectContent>
                     <SelectItem value="donation">Donation</SelectItem>
                     <SelectItem value="membership">Membership</SelectItem>
-                    <SelectItem value="event">Event</SelectItem>
+                    <SelectItem value="event">Event ticket</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">Issue date</Label>
+                <Input
+                  type="date"
+                  value={form.issuedDate}
+                  onChange={(e) =>
+                    setForm({ ...form, issuedDate: e.target.value })
+                  }
+                  className="mt-1.5"
+                />
               </div>
             </div>
             <div>
               <Label className="text-sm font-semibold">Description</Label>
               <Textarea
-                value={issueForm.description}
+                value={form.description}
                 onChange={(e) =>
-                  setIssueForm({ ...issueForm, description: e.target.value })
+                  setForm({ ...form, description: e.target.value })
                 }
                 rows={2}
                 className="mt-1.5"
                 required
+                placeholder="e.g. Cash donation for Diwali event, received in temple office"
               />
             </div>
             <div>
-              <Label className="text-sm font-semibold">Template</Label>
-              <Select
-                value={issueForm.templateId}
-                onValueChange={(v) => setIssueForm({ ...issueForm, templateId: v })}
-              >
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-semibold">
+                Payment reference (optional)
+              </Label>
+              <Input
+                value={form.paymentReference}
+                onChange={(e) =>
+                  setForm({ ...form, paymentReference: e.target.value })
+                }
+                className="mt-1.5"
+                placeholder="e.g. Cash, Cheque #12345, Bank transfer ref…"
+              />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIssueOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setFormOpen(false); setEditing(null) }}
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
+                disabled={saving}
                 className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
               >
-                <PaperPlaneTilt className="mr-2" weight="bold" />
-                Issue & email
+                <FloppyDisk className="mr-2" weight="bold" />
+                {editing ? 'Save changes' : 'Issue receipt'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null) }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this receipt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Receipt <strong>{deleteTarget?.receiptNumber}</strong> for{' '}
+              <strong>{deleteTarget?.recipientName}</strong> (€
+              {deleteTarget?.amount.toLocaleString('en-IE', { minimumFractionDigits: 2 })}) will
+              be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete receipt
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

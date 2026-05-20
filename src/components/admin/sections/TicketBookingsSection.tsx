@@ -17,6 +17,8 @@ import {
 import { useAuth } from '@/lib/auth'
 import { useTicketBookings, type TicketBookingRow } from '@/hooks/useTicketBookings'
 import { useEvents, sortByDate } from '@/hooks/useEvents'
+import { useReceiptFlags } from '@/hooks/useReceipts'
+import { downloadReceiptPdf } from '@/lib/receiptPdf'
 import { KpiCard, SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -92,6 +94,16 @@ export function TicketBookingsSection() {
     toDate:   toDate      || undefined,
     status:   statusFilter !== 'all' ? statusFilter : undefined,
   })
+
+  const { flags: receiptFlags, refetch: refetchFlags, fetchReceiptById } = useReceiptFlags('event')
+
+  const handleDownloadReceipt = async (bookingId: string) => {
+    const flag = receiptFlags.get(bookingId)
+    if (!flag) { toast.error('No receipt generated yet for this booking.'); return }
+    const r = await fetchReceiptById(flag.id)
+    if (!r) { toast.error('Could not load receipt.'); return }
+    downloadReceiptPdf(r)
+  }
 
   const { events } = useEvents()
   const paidEvents = useMemo(
@@ -233,7 +245,7 @@ export function TicketBookingsSection() {
             <Button
               variant="outline"
               size="sm"
-              onClick={refetch}
+              onClick={() => { refetch(); refetchFlags() }}
               className="border-violet-200 text-violet-700 hover:bg-violet-50"
             >
               <ArrowsClockwise size={15} className="mr-1.5" />
@@ -345,6 +357,7 @@ export function TicketBookingsSection() {
                   <Th>Amount</Th>
                   <Th>Contact (masked)</Th>
                   <Th>Status</Th>
+                  <Th>Receipt</Th>
                   <Th>Submitted</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
@@ -385,6 +398,15 @@ export function TicketBookingsSection() {
                     </Td>
                     <Td><StatusBadge status={b.status} /></Td>
                     <Td>
+                      {receiptFlags.has(b.id) ? (
+                        <Badge className="bg-emerald-600 text-white font-mono text-[10px]" title={receiptFlags.get(b.id)?.receiptNumber}>
+                          ✓ {receiptFlags.get(b.id)?.receiptNumber}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">—</span>
+                      )}
+                    </Td>
+                    <Td>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
                         {formatDate(b.created_at)}
                       </span>
@@ -399,6 +421,17 @@ export function TicketBookingsSection() {
                       >
                         <Eye size={15} />
                       </Button>
+                      {receiptFlags.has(b.id) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadReceipt(b.id)}
+                          className="text-indigo-600 hover:bg-indigo-50"
+                          title="Download receipt PDF"
+                        >
+                          <DownloadSimple size={15} />
+                        </Button>
+                      )}
                       {canWrite && b.status === 'confirmed' && (
                         <Button
                           variant="ghost"

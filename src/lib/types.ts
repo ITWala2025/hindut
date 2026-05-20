@@ -2,14 +2,21 @@ export type ReceiptType = 'membership' | 'donation' | 'event'
 
 export interface ReceiptRecord {
   id: string
+  receiptNumber: string
+  relatedId: string | null
   recipientName: string
   recipientEmail: string
   amount: number
   currency: 'EUR'
   date: string
+  issuedDate: string
   type: ReceiptType
   description: string
-  pdfMock?: string
+  paymentReference?: string
+  templateId?: string
+  isManual: boolean
+  metadata?: Record<string, unknown>
+  pdfUrl?: string
 }
 
 export interface ReceiptTemplate {

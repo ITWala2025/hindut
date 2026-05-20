@@ -50,6 +50,8 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useMembership } from '@/hooks/useMembership'
+import { useReceiptFlags } from '@/hooks/useReceipts'
+import { downloadReceiptPdf } from '@/lib/receiptPdf'
 import { useAuth } from '@/lib/auth'
 import { type MembershipPlanId, type MembershipRecord } from '@/data/membership'
 import { KpiCard, SectionCard, EmptyState } from '@/components/admin/adminUi'
@@ -293,7 +295,16 @@ function MemberDetailSheet({
 export function MembersSection() {
   const { can } = useAuth()
   const { memberships, plans, cancel, remove, setStatus, syncStripe } = useMembership()
+  const { flags: receiptFlags, fetchReceiptById } = useReceiptFlags('membership')
   const canWrite = can('manageMemberships')
+
+  const handleDownloadReceipt = async (membershipId: string) => {
+    const flag = receiptFlags.get(membershipId)
+    if (!flag) { toast.error('No receipt generated yet for this membership.'); return }
+    const r = await fetchReceiptById(flag.id)
+    if (!r) { toast.error('Could not load receipt.'); return }
+    downloadReceiptPdf(r)
+  }
 
   const [search, setSearch] = useState('')
   const [status, setStatusFilter] = useState<StatusFilter>('all')
@@ -653,6 +664,9 @@ export function MembersSection() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       Status
                     </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">
+                      Receipt
+                    </th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -722,6 +736,22 @@ export function MembersSection() {
                         >
                           {m.status}
                         </span>
+                      </td>
+
+                      {/* Receipt */}
+                      <td className="px-4 py-3.5 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
+                        {receiptFlags.has(m.id) ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadReceipt(m.id)}
+                            className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white px-2 py-0.5 text-[10px] font-mono font-semibold hover:bg-emerald-700"
+                            title="Download receipt PDF"
+                          >
+                            <DownloadSimple size={11} weight="bold" /> {receiptFlags.get(m.id)?.receiptNumber}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">—</span>
+                        )}
                       </td>
 
                       {/* Actions */}
