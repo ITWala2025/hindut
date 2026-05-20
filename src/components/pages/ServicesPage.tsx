@@ -119,7 +119,7 @@ export function ServicesPage() {
 
             <TabsContent value="daily" className="space-y-8">
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
+                <h2 className="text-3xl font-bold mb-3 text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
                   Daily Worship Schedule
                 </h2>
                 <p className="text-muted-foreground">
@@ -130,13 +130,13 @@ export function ServicesPage() {
                 {loading
                   ? Array.from({ length: 4 }).map((_, i) => <ServiceCardSkeleton key={i} />)
                   : grouped.daily.map((s: ServiceRecord) => (
-                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-l-4 border-l-orange-500 hover-glow-saffron cursor-pointer">
+                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
                         <CardHeader>
                           <CardTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-3">
                           {s.imageUrl && (
-                            <img src={s.imageUrl} alt={s.title} className="w-full h-36 object-cover rounded-lg mb-3"
+                            <img src={s.imageUrl} alt={s.title} className="w-full h-36 object-cover rounded-lg"
                               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                           )}
                           <p className="text-muted-foreground">{s.excerpt}</p>
@@ -160,7 +160,7 @@ export function ServicesPage() {
                 {loading
                   ? Array.from({ length: 4 }).map((_, i) => <ServiceCardSkeleton key={i} />)
                   : grouped.special.map((s: ServiceRecord) => (
-                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-orange-200/50 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
+                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
                         <CardHeader>
                           <CardTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</CardTitle>
                         </CardHeader>
@@ -190,7 +190,7 @@ export function ServicesPage() {
                 {loading
                   ? Array.from({ length: 4 }).map((_, i) => <ServiceCardSkeleton key={i} />)
                   : grouped.education.map((s: ServiceRecord) => (
-                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-orange-200/50 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
+                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
                         <CardHeader>
                           <CardTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</CardTitle>
                         </CardHeader>
@@ -224,9 +224,9 @@ export function ServicesPage() {
                         <CardHeader>
                           <CardTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-3">
                           {s.imageUrl && (
-                            <img src={s.imageUrl} alt={s.title} className="w-full h-36 object-cover rounded-lg mb-3"
+                            <img src={s.imageUrl} alt={s.title} className="w-full h-36 object-cover rounded-lg"
                               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                           )}
                           <p className="text-muted-foreground">{s.excerpt}</p>
