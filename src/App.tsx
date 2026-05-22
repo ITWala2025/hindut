@@ -17,12 +17,28 @@ import { TermsAndConditionsPage } from '@/components/pages/TermsAndConditionsPag
 import { RefundPolicyPage } from '@/components/pages/RefundPolicyPage'
 import { PaymentSuccessPage } from '@/components/pages/PaymentSuccessPage'
 import { Toaster } from '@/components/ui/sonner'
+import { initAnalytics, trackPageView } from '@/lib/analytics'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [pathname])
+  return null
+}
+
+/**
+ * Fires a page-view (and time-on-page flush for the previous route) on every
+ * route change for the public site. Skips /admin/* routes — we only track
+ * public-facing traffic.
+ */
+function AnalyticsTracker() {
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    if (pathname.startsWith('/admin')) return
+    initAnalytics()
+    trackPageView(pathname + search)
+  }, [pathname, search])
   return null
 }
 
@@ -48,6 +64,7 @@ function AppShell() {
   return (
     <div className="flex flex-col min-h-screen relative">
       <ScrollToTop />
+      <AnalyticsTracker />
       <Header onDonateClick={openDonation} />
       <main className="flex-1">
         <Routes>

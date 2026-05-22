@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   House,
   CalendarBlank,
+  ChartLineUp,
   ClipboardText,
   Users,
   Receipt,
@@ -30,6 +31,7 @@ import { Logo } from '@/components/Logo'
 
 export type AdminSectionId =
   | 'dashboard'
+  | 'analytics'
   | 'membership'
   | 'receipts'
   | 'events'
@@ -52,6 +54,12 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Overview', icon: <House size={20} weight="duotone" /> },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: <ChartLineUp size={20} weight="duotone" />,
+    capability: 'viewAnalytics',
+  },
   {
     id: 'membership',
     label: 'Membership',

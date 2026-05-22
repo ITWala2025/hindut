@@ -45,6 +45,7 @@ export const ROLE_PERMISSIONS: Record<
     manageMedia: boolean
     manageServices: boolean
     manageSettings: boolean
+    viewAnalytics: boolean
   }
 > = {
   admin: {
@@ -55,6 +56,7 @@ export const ROLE_PERMISSIONS: Record<
     manageMedia: true,
     manageServices: true,
     manageSettings: true,
+    viewAnalytics: true,
   },
   editor: {
     manageUsers: false,
@@ -64,6 +66,7 @@ export const ROLE_PERMISSIONS: Record<
     manageMedia: true,
     manageServices: true,
     manageSettings: false,
+    viewAnalytics: true,
   },
 }
 
@@ -129,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const adminUser = await fetchAdminUser(session)
         if (adminUser) {
           setUser(adminUser)
-          setLoggedInAt(session.created_at)
+          setLoggedInAt(session.user.created_at ?? new Date().toISOString())
           setMethod('password')
         }
       }

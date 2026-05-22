@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/lib/auth'
 import { LoginScreen } from '@/components/admin/LoginScreen'
 import { AdminLayout, type AdminSectionId } from '@/components/admin/AdminLayout'
 import { DashboardSection } from '@/components/admin/sections/DashboardSection'
+import { AnalyticsSection } from '@/components/admin/sections/AnalyticsSection'
 import { EventsSection } from '@/components/admin/sections/EventsSection'
 import { RsvpsSection } from '@/components/admin/sections/RsvpsSection'
 import { TicketBookingsSection } from '@/components/admin/sections/TicketBookingsSection'
@@ -55,6 +56,8 @@ function renderSection(
   switch (section) {
     case 'dashboard':
       return <DashboardSection onNavigate={navigate} />
+    case 'analytics':
+      return <AnalyticsSection />
     case 'membership':
       return <MembersSection />
     case 'receipts':
