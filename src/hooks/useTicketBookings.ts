@@ -36,10 +36,16 @@ export function useTicketBookings(filters?: TicketBookingFilters) {
   filtersRef.current = filters
 
   const fetchBookings = useCallback(async () => {
+    const f = filtersRef.current
+    // If a caller passes a filter object but no eventId (and no other filter),
+    // skip fetching to avoid loading all bookings unnecessarily.
+    if (f !== undefined && !f.eventId && !f.fromDate && !f.toDate && !f.status) {
+      setBookings([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
-
-    const f = filtersRef.current
 
     let query = supabase
       .from('ticket_bookings')
@@ -72,7 +78,7 @@ export function useTicketBookings(filters?: TicketBookingFilters) {
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchBookings() }, [fetchBookings])
+  useEffect(() => { fetchBookings() }, [fetchBookings, filters?.eventId, filters?.fromDate, filters?.toDate, filters?.status])
 
   const updateStatus = useCallback(
     async (id: string, status: TicketBookingRow['status']) => {

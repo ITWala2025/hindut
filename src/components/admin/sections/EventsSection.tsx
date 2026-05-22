@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   Plus,
   Pencil,
@@ -14,6 +14,8 @@ import {
   MapPin,
   CurrencyEur,
   Tag,
+  Spinner,
+  Users,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -67,6 +69,7 @@ import { useAuth } from '@/lib/auth'
 import { SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 import { cn } from '@/lib/utils'
 import type { MediaItem } from '@/lib/types'
+import { useTicketBookings, type TicketBookingRow } from '@/hooks/useTicketBookings'
 
 const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
   title: '',
@@ -99,6 +102,10 @@ export function EventsSection() {
   const [form, setForm] = useState<Omit<TempleEvent, 'id'>>(EMPTY_FORM)
   const [confirmDelete, setConfirmDelete] = useState<TempleEvent | null>(null)
   const [attendeesFor, setAttendeesFor] = useState<TempleEvent | null>(null)
+  const [attendeeEventId, setAttendeeEventId] = useState<string | null>(null)
+  const { bookings: attendees, loading: attendeesLoading } = useTicketBookings(
+    attendeeEventId ? { eventId: attendeeEventId } : undefined,
+  )
   const [imagePickerOpen, setImagePickerOpen] = useState(false)
   const [imageSearch, setImageSearch] = useState('')
 
@@ -215,8 +222,32 @@ export function EventsSection() {
     }))
   }
 
-  const exportAttendeeCsv = (_e: TempleEvent) => {
-    toast.info('Attendee export is available once tickets are synced from the database.')
+  const exportAttendeeCsv = (e: TempleEvent) => {
+    const rows = attendees.filter((b) => b.event_id === e.id)
+    if (rows.length === 0) {
+      toast.info('No bookings found for this event.')
+      return
+    }
+    const header = ['Reference', 'First name', 'Last name', 'Email', 'Phone', 'Adults', 'Children', 'Amount (EUR)', 'Status', 'Booked at']
+    const lines = rows.map((b: TicketBookingRow) => [
+      b.reference_number,
+      b.first_name,
+      b.last_name,
+      b.email_masked,
+      b.phone_masked,
+      b.num_adults,
+      b.num_children,
+      b.amount_eur.toFixed(2),
+      b.status,
+      new Date(b.created_at).toLocaleDateString('en-IE'),
+    ].map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+    const csv = [header.join(','), ...lines].join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `attendees-${e.title.replace(/\s+/g, '-').toLowerCase()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -348,7 +379,7 @@ export function EventsSection() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setAttendeesFor(e)}
+                        onClick={() => { setAttendeesFor(e); setAttendeeEventId(e.id) }}
                         className="text-indigo-700 hover:bg-indigo-50"
                       >
                         <Ticket size={16} className="mr-1" />
@@ -697,38 +728,82 @@ export function EventsSection() {
         </SheetContent>
       </Sheet>
 
-      {/* Attendees drawer */}
-      <Sheet open={!!attendeesFor} onOpenChange={(o) => (!o ? setAttendeesFor(null) : null)}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+      <Sheet open={!!attendeesFor} onOpenChange={(o) => { if (!o) { setAttendeesFor(null); setAttendeeEventId(null) } }}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>{attendeesFor?.title}</SheetTitle>
-            <SheetDescription>Ticket sales and attendee list for this event.</SheetDescription>
+            <SheetTitle className="flex items-center gap-2">
+              <Users size={18} weight="duotone" className="text-indigo-600" />
+              {attendeesFor?.title}
+            </SheetTitle>
+            <SheetDescription>Ticket bookings for this event.</SheetDescription>
           </SheetHeader>
           {attendeesFor && (
             <div className="mt-4 space-y-4">
+              {/* Summary bar */}
+              {!attendeesLoading && attendees.length > 0 && (
+                <div className="flex gap-4 text-sm">
+                  <span className="text-slate-500">Bookings: <span className="font-semibold text-slate-800">{attendees.length}</span></span>
+                  <span className="text-slate-500">Adults: <span className="font-semibold text-slate-800">{attendees.reduce((s, b) => s + b.num_adults, 0)}</span></span>
+                  <span className="text-slate-500">Children: <span className="font-semibold text-slate-800">{attendees.reduce((s, b) => s + b.num_children, 0)}</span></span>
+                  <span className="text-slate-500">Revenue: <span className="font-semibold text-emerald-700">€{attendees.reduce((s, b) => s + b.amount_eur, 0).toFixed(2)}</span></span>
+                </div>
+              )}
+
               <Button
                 variant="outline"
                 onClick={() => exportAttendeeCsv(attendeesFor)}
                 className="w-full"
+                disabled={attendeesLoading || attendees.length === 0}
               >
                 <DownloadSimple className="mr-2" />
                 Export attendees CSV
               </Button>
-              <DataTable>
-                <thead>
-                  <tr>
-                    <Th>Name</Th>
-                    <Th>Tier</Th>
-                    <Th>Qty</Th>
-                    <Th>Paid</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendeesFor && (
-                    <p className="text-sm text-muted-foreground italic text-center py-4">Ticket data available in the database — connect attendees query to view here.</p>
-                  )}
-                </tbody>
-              </DataTable>
+
+              {attendeesLoading ? (
+                <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
+                  <Spinner size={20} className="animate-spin" />
+                  Loading bookings…
+                </div>
+              ) : attendees.length === 0 ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  No ticket bookings found for this event.
+                </div>
+              ) : (
+                <DataTable>
+                  <thead>
+                    <tr>
+                      <Th>Name</Th>
+                      <Th>Ref</Th>
+                      <Th>Adults</Th>
+                      <Th>Children</Th>
+                      <Th>Paid</Th>
+                      <Th>Status</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendees.map((b) => (
+                      <tr key={b.id} className="border-t border-slate-100 text-sm">
+                        <Td>{b.first_name} {b.last_name}</Td>
+                        <Td className="font-mono text-xs">{b.reference_number}</Td>
+                        <Td>{b.num_adults}</Td>
+                        <Td>{b.num_children}</Td>
+                        <Td>€{b.amount_eur.toFixed(2)}</Td>
+                        <Td>
+                          <span className={cn(
+                            'inline-flex px-2 py-0.5 rounded-full text-xs font-medium',
+                            b.status === 'confirmed'  && 'bg-emerald-100 text-emerald-700',
+                            b.status === 'pending'    && 'bg-amber-100 text-amber-700',
+                            b.status === 'cancelled'  && 'bg-rose-100 text-rose-700',
+                            b.status === 'refunded'   && 'bg-slate-100 text-slate-600',
+                          )}>
+                            {b.status}
+                          </span>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </DataTable>
+              )}
             </div>
           )}
         </SheetContent>
