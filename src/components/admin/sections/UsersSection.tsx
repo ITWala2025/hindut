@@ -240,7 +240,7 @@ export function UsersSection() {
               Invite user
             </DialogTitle>
             <DialogDescription>
-              They'll receive a mock email invitation to join the admin portal.
+              They'll receive an email invitation to join the admin portal.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={invite} className="space-y-4">

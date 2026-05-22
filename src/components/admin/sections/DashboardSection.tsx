@@ -181,7 +181,7 @@ export function DashboardSection({ onNavigate }: DashboardProps) {
       {/* Recent members */}
       <SectionCard
         title="Latest memberships"
-        description="People who joined via the mock payment workflow."
+        description="People who recently purchased a membership."
         actions={
           <Button variant="outline" size="sm" onClick={() => onNavigate('membership')}>
             All members

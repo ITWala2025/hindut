@@ -702,7 +702,7 @@ export function EventsSection() {
         <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{attendeesFor?.title}</SheetTitle>
-            <SheetDescription>Ticket sales and attendee list (mock data).</SheetDescription>
+            <SheetDescription>Ticket sales and attendee list for this event.</SheetDescription>
           </SheetHeader>
           {attendeesFor && (
             <div className="mt-4 space-y-4">

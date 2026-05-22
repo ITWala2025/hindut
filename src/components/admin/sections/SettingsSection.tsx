@@ -197,7 +197,7 @@ export function SettingsSection() {
               Role: {user?.role.replace('_', ' ')}
             </div>
           </div>
-          <Button variant="outline" onClick={() => toast.info('Password change is mocked in Phase 1.')}>
+          <Button variant="outline" onClick={() => toast.info('Password change coming soon.')}>
             Change password
           </Button>
         </div>
