@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,69 +37,65 @@ import {
   Leaf,
   Flame,
 } from '@phosphor-icons/react'
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useMembership } from '@/hooks/useMembership'
 import type { MembershipPlan } from '@/data/membership'
 
-// ── Monthly giving tiers (spec §1.3) ─────────────────────────────────────────
-const GIVING_TIERS = [
-  {
-    id: 'shraddha' as const,
-    name: 'Shraddha',
-    subtitle: 'Faith',
-    amount: 22 as number | null,
-    Icon: Flame,
-    gradient: 'from-orange-500 to-amber-500',
-    bg: 'from-orange-50 to-amber-50',
-    border: 'border-orange-200',
-    description: 'Support weekly prayers and monthly community satsang.',
-    perks: ['Monthly Nama-Nakshatra Archana', 'Community newsletter', 'Satsang invitations'],
-    popular: false,
-  },
-  {
-    id: 'seva' as const,
-    name: 'Seva',
-    subtitle: 'Service',
-    amount: 35 as number | null,
-    Icon: Leaf,
-    gradient: 'from-emerald-500 to-teal-500',
-    bg: 'from-emerald-50 to-teal-50',
-    border: 'border-emerald-200',
-    description: 'Fund seva activities and temple upkeep initiatives.',
-    perks: ['Monthly Nama-Nakshatra Archana', 'Annual special Archana', 'Temple seva recognition'],
-    popular: true,
-  },
-  {
-    id: 'bhakti' as const,
-    name: 'Bhakti',
-    subtitle: 'Devotion',
-    amount: 50 as number | null,
-    Icon: Crown,
-    gradient: 'from-violet-500 to-purple-600',
-    bg: 'from-violet-50 to-purple-50',
-    border: 'border-violet-200',
-    description: "Champion our mission to build Limerick's permanent temple.",
-    perks: ['All Seva perks', 'Karpaga Vriksham leaf entry', 'Patron recognition'],
-    popular: false,
-  },
-  {
-    id: 'custom' as const,
-    name: 'Custom',
-    subtitle: 'Your Choice',
-    amount: null as number | null,
-    Icon: HandCoins,
-    gradient: 'from-slate-600 to-slate-700',
-    bg: 'from-slate-50 to-gray-50',
-    border: 'border-slate-200',
-    description: 'Give the amount that feels right for you, every month.',
-    perks: ['Benefits based on contribution', 'Flexible giving', 'Cancel any time'],
-    popular: false,
-  },
-] as const
+// ── Icon resolver: maps DB-stored icon names to phosphor components ───────────
+const ICON_MAP: Record<string, PhosphorIcon> = {
+  Flame, Leaf, Crown, HandCoins, Star, Heart, Sparkle,
+}
+function resolveIcon(name: string | undefined): PhosphorIcon {
+  return (name && ICON_MAP[name]) || HandCoins
+}
 
-type GivingTier = (typeof GIVING_TIERS)[number]
+// ── Giving tile shape (DB-driven + a hard-coded “Custom” fallback) ──────────────
+interface GivingTile {
+  id: string
+  name: string
+  subtitle: string
+  amount: number | null
+  Icon: PhosphorIcon
+  gradient: string
+  bg: string
+  border: string
+  description: string
+  perks: string[]
+  popular: boolean
+}
+
+const CUSTOM_TILE: GivingTile = {
+  id: 'custom',
+  name: 'Custom',
+  subtitle: 'Your Choice',
+  amount: null,
+  Icon: HandCoins,
+  gradient: 'from-slate-600 to-slate-700',
+  bg: 'from-slate-50 to-gray-50',
+  border: 'border-slate-200',
+  description: 'Give the amount that feels right for you, every month.',
+  perks: ['Benefits based on contribution', 'Flexible giving', 'Cancel any time'],
+  popular: false,
+}
+
+function planToTile(plan: MembershipPlan): GivingTile {
+  return {
+    id: plan.id,
+    name: plan.name,
+    subtitle: plan.subtitle ?? '',
+    amount: plan.price,
+    Icon: resolveIcon(plan.icon),
+    gradient: plan.gradient ?? 'from-orange-500 to-amber-500',
+    bg: plan.bgGradient ?? 'from-orange-50 to-amber-50',
+    border: plan.borderColor ?? 'border-orange-200',
+    description: plan.description,
+    perks: plan.benefits,
+    popular: !!plan.popular,
+  }
+}
 
 // ── FAQ content ───────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
@@ -147,7 +143,7 @@ export function MembershipPage() {
 
   // ── Monthly giving dialog state ───────────────────────────────────────────
   const [givingOpen, setGivingOpen] = useState(false)
-  const [givingTier, setGivingTier] = useState<GivingTier | null>(null)
+  const [givingTier, setGivingTier] = useState<GivingTile | null>(null)
   const [givingCustom, setGivingCustom] = useState('')
   const [givingName, setGivingName] = useState('')
   const [givingEmail, setGivingEmail] = useState('')
@@ -155,7 +151,20 @@ export function MembershipPage() {
   const [givingProcessing, setGivingProcessing] = useState(false)
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const annualPlan = plans.find((p) => p.id === 'annual')
+  const annualPlan = useMemo(
+    () =>
+      plans.find((p) => p.category === 'membership' && p.active && p.id === 'annual')
+      ?? plans.find((p) => p.category === 'membership' && p.active),
+    [plans],
+  )
+
+  const givingTiles = useMemo<GivingTile[]>(() => {
+    const dbTiles = plans
+      .filter((p) => p.category === 'giving' && p.active)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map(planToTile)
+    return [...dbTiles, CUSTOM_TILE]
+  }, [plans])
 
   const openFor = (plan: MembershipPlan) => {
     setSelected(plan)
@@ -215,7 +224,7 @@ export function MembershipPage() {
     }
   }
 
-  const openGiving = (tier: GivingTier) => {
+  const openGiving = (tier: GivingTile) => {
     setGivingTier(tier)
     setGivingName('')
     setGivingEmail('')
@@ -241,19 +250,33 @@ export function MembershipPage() {
     if (!amount || amount < 1) { toast.error('Please enter a valid amount (min €1).'); return }
     setGivingProcessing(true)
     try {
+      // Tiers backed by a DB plan (shraddha/seva/bhakti) go through the membership
+      // flow so they land in `memberships`, not `donations`. The free-form
+      // CUSTOM_TILE has no plan id and still uses the recurring donation flow.
+      const isPlanTier = givingTier.id !== 'custom' && givingTier.amount !== null
+      const body = isPlanTier
+        ? {
+            kind: 'membership' as const,
+            planId: givingTier.id,
+            fullName: givingName.trim(),
+            email: givingEmail.trim(),
+            successUrl: `${window.location.origin}/membership-success`,
+            cancelUrl: `${window.location.origin}/membership?cancelled=1`,
+          }
+        : {
+            kind: 'donation' as const,
+            amountEur: amount,
+            donorName: givingName.trim(),
+            donorEmail: givingEmail.trim(),
+            recurring: true,
+            description: `Monthly giving – ${givingTier.name} tier`,
+            successUrl: `${window.location.origin}/donation-success`,
+            cancelUrl: `${window.location.origin}/membership?cancelled=1`,
+          }
       const res = await fetch('/.netlify/functions/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'donation',
-          amountEur: amount,
-          donorName: givingName.trim(),
-          donorEmail: givingEmail.trim(),
-          recurring: true,
-          description: `Monthly giving – ${givingTier.name} tier`,
-          successUrl: `${window.location.origin}/donation-success`,
-          cancelUrl: `${window.location.origin}/membership?cancelled=1`,
-        }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok || !json.url) {
@@ -425,7 +448,7 @@ export function MembershipPage() {
                 Choose a recurring tier for dedicated spiritual benefits. Cancel any time.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {GIVING_TIERS.map((tier) => {
+                {givingTiles.map((tier) => {
                   const { Icon } = tier
                   return (
                     <div

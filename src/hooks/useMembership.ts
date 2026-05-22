@@ -4,6 +4,8 @@ import type {
   MembershipPlan,
   MembershipPlanId,
   MembershipRecord,
+  PlanCadence,
+  PlanCategory,
 } from '@/data/membership'
 
 // ─── DB row shapes ──────────────────────────────────────────────────────────
@@ -13,11 +15,19 @@ interface PlanRow {
   name: string
   duration_label: string
   duration_months: number
-  price_eur: number
+  price_eur: number | string
   description: string | null
-  benefits: string[]
+  benefits: string[] | null
   popular: boolean
   sort_order: number
+  cadence: string | null
+  category: string | null
+  subtitle: string | null
+  icon: string | null
+  gradient: string | null
+  bg_gradient: string | null
+  border_color: string | null
+  active: boolean | null
 }
 
 interface MembershipRow {
@@ -50,6 +60,59 @@ function toPlan(row: PlanRow): MembershipPlan {
     description: row.description ?? '',
     benefits: row.benefits ?? [],
     popular: row.popular,
+    sortOrder: row.sort_order ?? 0,
+    cadence: (row.cadence ?? 'annual') as PlanCadence,
+    category: (row.category ?? 'membership') as PlanCategory,
+    subtitle: row.subtitle ?? undefined,
+    icon: row.icon ?? undefined,
+    gradient: row.gradient ?? undefined,
+    bgGradient: row.bg_gradient ?? undefined,
+    borderColor: row.border_color ?? undefined,
+    active: row.active ?? true,
+  }
+}
+
+// ─── Plan input shape used by admin CRUD ────────────────────────────────────
+
+export interface PlanInput {
+  id: string
+  name: string
+  durationLabel: string
+  durationMonths: number
+  price: number
+  description?: string
+  benefits: string[]
+  popular?: boolean
+  sortOrder?: number
+  cadence: PlanCadence
+  category: PlanCategory
+  subtitle?: string
+  icon?: string
+  gradient?: string
+  bgGradient?: string
+  borderColor?: string
+  active?: boolean
+}
+
+function planInputToRow(input: PlanInput) {
+  return {
+    id: input.id,
+    name: input.name,
+    duration_label: input.durationLabel,
+    duration_months: input.durationMonths,
+    price_eur: input.price,
+    description: input.description ?? null,
+    benefits: input.benefits,
+    popular: input.popular ?? false,
+    sort_order: input.sortOrder ?? 0,
+    cadence: input.cadence,
+    category: input.category,
+    subtitle: input.subtitle ?? null,
+    icon: input.icon ?? null,
+    gradient: input.gradient ?? null,
+    bg_gradient: input.bgGradient ?? null,
+    border_color: input.borderColor ?? null,
+    active: input.active ?? true,
   }
 }
 
@@ -82,15 +145,15 @@ export function useMembership() {
   const [error, setError] = useState<string | null>(null)
 
   // ── Fetch plans (public) ──────────────────────────────────────────────────
-  useEffect(() => {
-    supabase
+  const fetchPlans = useCallback(async () => {
+    const { data, error: err } = await supabase
       .from('membership_plans')
       .select('*')
       .order('sort_order', { ascending: true })
-      .then(({ data, error: err }) => {
-        if (!err && data) setPlans((data as PlanRow[]).map(toPlan))
-      })
+    if (!err && data) setPlans((data as PlanRow[]).map(toPlan))
   }, [])
+
+  useEffect(() => { fetchPlans() }, [fetchPlans])
 
   // ── Fetch memberships (admin-only via RLS) ────────────────────────────────
   const fetchMemberships = useCallback(async () => {
@@ -148,6 +211,33 @@ export function useMembership() {
     await fetchMemberships()
   }, [fetchMemberships])
 
+  // ── Plan CRUD (admin-only via RLS) ────────────────────────────────────────
+  const createPlan = useCallback(async (input: PlanInput) => {
+    const { error: err } = await supabase
+      .from('membership_plans')
+      .insert(planInputToRow(input))
+    if (err) throw new Error(err.message)
+    await fetchPlans()
+  }, [fetchPlans])
+
+  const updatePlan = useCallback(async (id: string, input: PlanInput) => {
+    const { error: err } = await supabase
+      .from('membership_plans')
+      .update(planInputToRow(input))
+      .eq('id', id)
+    if (err) throw new Error(err.message)
+    await fetchPlans()
+  }, [fetchPlans])
+
+  const deletePlan = useCallback(async (id: string) => {
+    const { error: err } = await supabase
+      .from('membership_plans')
+      .delete()
+      .eq('id', id)
+    if (err) throw new Error(err.message)
+    await fetchPlans()
+  }, [fetchPlans])
+
   return {
     memberships,
     plans,
@@ -158,6 +248,10 @@ export function useMembership() {
     setStatus,
     remove,
     syncStripe,
+    createPlan,
+    updatePlan,
+    deletePlan,
+    refreshPlans: fetchPlans,
   }
 }
 

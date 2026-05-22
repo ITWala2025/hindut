@@ -3,7 +3,12 @@
  * Plans are fetched from `public.membership_plans` via the `useMembership` hook.
  */
 
-export type MembershipPlanId = 'monthly' | 'semi-annual' | 'annual'
+// Plan ids are free-form strings (admin can create new plans). Well-known
+// ids include 'annual', 'shraddha', 'seva', 'bhakti'.
+export type MembershipPlanId = string
+
+export type PlanCadence = 'monthly' | 'semi_annual' | 'annual'
+export type PlanCategory = 'membership' | 'giving'
 
 export interface MembershipPlan {
   id: MembershipPlanId
@@ -14,6 +19,15 @@ export interface MembershipPlan {
   description: string
   benefits: string[]
   popular?: boolean
+  sortOrder: number
+  cadence: PlanCadence
+  category: PlanCategory
+  subtitle?: string
+  icon?: string
+  gradient?: string
+  bgGradient?: string
+  borderColor?: string
+  active: boolean
 }
 
 export interface MembershipRecord {

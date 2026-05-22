@@ -42,7 +42,7 @@ const DonationSchema = z.object({
 
 const MembershipSchema = z.object({
   kind:        z.literal('membership'),
-  planId:      z.enum(['monthly', 'semi-annual', 'annual']),
+  planId:      z.string().min(1).max(64),
   fullName:    z.string().min(1).max(120),
   email:       z.string().email().max(254),
   phone:       z.string().max(40).optional(),
@@ -87,18 +87,21 @@ function maskTicketPhone(phone: string): string {
   return phone.length < 5 ? '***' : phone.slice(0, 3) + ' *** *** ' + phone.slice(-4)
 }
 
-// Map UI plan id → DB plan id (memberships.plan check constraint uses underscores).
-const PLAN_ID_TO_DB: Record<string, string> = {
-  'monthly':     'monthly',
-  'semi-annual': 'semi_annual',
-  'annual':      'annual',
-}
-
-// Map plan id → { interval, intervalCount } for Stripe subscriptions.
-const PLAN_TO_STRIPE: Record<string, { interval: 'month' | 'year'; intervalCount: number }> = {
-  'monthly':     { interval: 'month', intervalCount: 1  },
-  'semi-annual': { interval: 'month', intervalCount: 6  },
-  'annual':      { interval: 'year',  intervalCount: 1  },
+// Map a plan cadence (from membership_plans.cadence) to Stripe billing interval.
+function cadenceToStripe(
+  cadence: string | null | undefined,
+  durationMonths: number,
+): { interval: 'month' | 'year'; intervalCount: number } {
+  switch (cadence) {
+    case 'annual':       return { interval: 'year',  intervalCount: 1 }
+    case 'semi_annual':  return { interval: 'month', intervalCount: 6 }
+    case 'monthly':      return { interval: 'month', intervalCount: 1 }
+    default: {
+      // Fallback: derive from duration_months column.
+      if (durationMonths >= 12) return { interval: 'year',  intervalCount: Math.max(1, Math.round(durationMonths / 12)) }
+      return { interval: 'month', intervalCount: Math.max(1, durationMonths) }
+    }
+  }
 }
 
 function originFrom(event: Parameters<Handler>[0]): string {
@@ -310,14 +313,14 @@ export const handler: Handler = async (event) => {
     // Fetch plan row for price + duration metadata
     const { data: planRow, error: planErr } = await supabase
       .from('membership_plans')
-      .select('id, name, price_eur, duration_months')
+      .select('id, name, price_eur, duration_months, cadence')
       .eq('id', m.planId)
       .maybeSingle()
 
     if (planErr || !planRow) {
       return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Membership plan not found' }) }
     }
-    const plan = planRow as { id: string; name: string; price_eur: number; duration_months: number }
+    const plan = planRow as { id: string; name: string; price_eur: number; duration_months: number; cadence: string | null }
 
     // Upsert member by email (members table has unique constraint on email? let's just insert).
     let memberId: string | null = null
@@ -356,12 +359,11 @@ export const handler: Handler = async (event) => {
     }
 
     // Create pending membership row
-    const dbPlanId = PLAN_ID_TO_DB[m.planId]
     const { data: memRow, error: memErr } = await supabase
       .from('memberships')
       .insert({
         member_id: memberId,
-        plan:      dbPlanId,
+        plan:      plan.id,
         status:    'pending',
       })
       .select('id')
@@ -377,7 +379,7 @@ export const handler: Handler = async (event) => {
     }
     const membershipId = (memRow as { id: string }).id
 
-    const cadence = PLAN_TO_STRIPE[m.planId]
+    const cadence = cadenceToStripe(plan.cadence, plan.duration_months)
     const session = await ctx.stripe.checkout.sessions.create({
       mode:             'subscription',
       // Omitting payment_method_types lets the Stripe Dashboard control which

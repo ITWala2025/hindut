@@ -177,13 +177,16 @@ export const handler: Handler = async (event) => {
           const memberEmail   = session.metadata?.email      ?? null
           const planId        = session.metadata?.planId     ?? 'annual'
 
-          // Map plan id to human-readable name
-          const PLAN_NAMES: Record<string, string> = {
-            'monthly':     'Monthly',
-            'semi-annual': 'Semi-Annual',
-            'annual':      'Annual',
+          // Resolve the human-readable plan name from membership_plans.
+          let planName = 'Membership'
+          {
+            const { data: planRow } = await supabase
+              .from('membership_plans')
+              .select('name')
+              .eq('id', planId)
+              .maybeSingle()
+            planName = (planRow as { name?: string } | null)?.name ?? planId
           }
-          const planName = PLAN_NAMES[planId] ?? 'Annual'
 
           const subscriptionId =
             typeof session.subscription === 'string'

@@ -9,6 +9,7 @@ import { RsvpsSection } from '@/components/admin/sections/RsvpsSection'
 import { TicketBookingsSection } from '@/components/admin/sections/TicketBookingsSection'
 import { DonationsSection } from '@/components/admin/sections/DonationsSection'
 import { MembersSection } from '@/components/admin/sections/MembersSection'
+import { MembershipManagement } from '@/components/admin/sections/MembershipManagement'
 import { ReceiptsSection } from '@/components/admin/sections/ReceiptsSection'
 import { MediaSection } from '@/components/admin/sections/MediaSection'
 import { ServicesSection } from '@/components/admin/sections/ServicesSection'
@@ -108,7 +109,7 @@ function renderSection(
     case 'analytics':
       return <AnalyticsSection />
     case 'membership':
-      return <MembersSection />
+      return <MembershipManagement />
     case 'receipts':
       return <ReceiptsSection />
     case 'events':
