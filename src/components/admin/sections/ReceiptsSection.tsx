@@ -89,7 +89,10 @@ const EMPTY_FORM: ReceiptFormState = {
 
 export function ReceiptsSection() {
   const { can } = useAuth()
-  const canWrite = can('manageReceipts')
+  const canCreate = can('receipts:create')
+  const canUpdate = can('receipts:update')
+  const canDelete = can('receipts:delete')
+  const canWrite = canCreate || canUpdate || canDelete
   const {
     receipts,
     templates,
@@ -320,7 +323,7 @@ export function ReceiptsSection() {
                   <ArrowsClockwise size={15} className="mr-1.5" />
                   Refresh
                 </Button>
-                {canWrite && (
+                {canCreate && (
                   <Button
                     onClick={openCreate}
                     className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
@@ -449,7 +452,7 @@ export function ReceiptsSection() {
                           >
                             <DownloadSimple size={16} />
                           </Button>
-                          {canWrite && (
+                          {canUpdate && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -460,7 +463,7 @@ export function ReceiptsSection() {
                               <PencilSimple size={16} />
                             </Button>
                           )}
-                          {canWrite && (
+                          {canDelete && (
                             <Button
                               variant="ghost"
                               size="sm"

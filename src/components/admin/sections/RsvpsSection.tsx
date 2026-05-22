@@ -58,7 +58,10 @@ function formatDate(iso: string) {
 
 export function RsvpsSection() {
   const { can } = useAuth()
-  const canWrite = can('manageEvents')
+  const canCreate = can('rsvps:create')
+  const canUpdate = can('rsvps:update')
+  const canDelete = can('rsvps:delete')
+  const canWrite = canCreate || canUpdate || canDelete
 
   // Filters
   const [search,         setSearch]     = useState('')

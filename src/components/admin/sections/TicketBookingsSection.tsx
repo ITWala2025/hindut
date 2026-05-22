@@ -72,7 +72,10 @@ function StatusBadge({ status }: { status: TicketBookingRow['status'] }) {
 export function TicketBookingsSection() {
   const { can, user } = useAuth()
   const isAdmin  = user?.role === 'admin'
-  const canWrite = can('manageEvents')
+  const canCreate = can('tickets:create')
+  const canUpdate = can('tickets:update')
+  const canDelete = can('tickets:delete')
+  const canWrite = canCreate || canUpdate || canDelete
 
   // Filters
   const [search, setSearch]               = useState('')

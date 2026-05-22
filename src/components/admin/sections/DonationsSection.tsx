@@ -90,9 +90,11 @@ const EMPTY_FORM: NewDonation = {
 }
 
 export function DonationsSection() {
-  const { can, user } = useAuth()
-  const isAdmin  = user?.role === 'admin'
-  const canWrite = can('manageReceipts')
+  const { can } = useAuth()
+  const canCreate = can('donations:create')
+  const canUpdate = can('donations:update')
+  const canDelete = can('donations:delete')
+  const canWrite = canCreate || canUpdate || canDelete
 
   // Filters
   const [search, setSearch]             = useState('')
@@ -261,7 +263,7 @@ export function DonationsSection() {
         description="View, filter, and manage all donations. Add manual cash donations or update payment status."
         actions={
           <>
-            {isAdmin && (
+            {canCreate && (
               <Button
                 variant="outline"
                 size="sm"
@@ -470,7 +472,7 @@ export function DonationsSection() {
                           <Prohibit size={15} />
                         </Button>
                       )}
-                      {isAdmin && (
+                      {canDelete && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -601,7 +603,7 @@ export function DonationsSection() {
                 >
                   Update Status
                 </Button>
-                {isAdmin && (
+                {canDelete && (
                   <Button
                     variant="outline"
                     size="sm"

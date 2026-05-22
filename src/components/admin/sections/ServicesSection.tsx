@@ -100,7 +100,10 @@ function slugify(text: string): string {
 
 export function ServicesSection() {
   const { can } = useAuth()
-  const canWrite = can('manageServices')
+  const canCreate = can('services:create')
+  const canUpdate = can('services:update')
+  const canDelete = can('services:delete')
+  const canWrite = canCreate || canUpdate || canDelete
   const { services, loading, error, create, update, remove, reorder } = useServices()
   const { categories, create: createCat, rename: renameCat, remove: removeCat } = useServiceCategories()
   const { media } = useMedia()
@@ -390,7 +393,7 @@ export function ServicesSection() {
         title="Services"
         description="Manage the services displayed on the public site."
         actions={
-          canWrite && (
+          canCreate && (
             <Button
               onClick={openCreate}
               className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
@@ -496,6 +499,7 @@ export function ServicesSection() {
                             className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100"
                             onClick={() => openEdit(s)}
                             title="Edit"
+                            disabled={!canUpdate}
                           >
                             <PencilSimple size={14} />
                           </Button>
@@ -505,6 +509,7 @@ export function ServicesSection() {
                             className="h-8 w-8 p-0 text-red-500 hover:bg-red-50"
                             onClick={() => setDeleteItem(s)}
                             title="Delete"
+                            disabled={!canDelete}
                           >
                             <Trash size={14} />
                           </Button>

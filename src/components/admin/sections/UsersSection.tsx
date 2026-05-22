@@ -30,8 +30,10 @@ interface DisplayUser extends AdminUser {
 }
 
 export function UsersSection() {
-  const { user, can } = useAuth()
-  const canManage = can('manageUsers')
+  const { user, can, isSuperAdmin } = useAuth()
+  const canCreate = can('users:create')
+  const canUpdate = can('users:update')
+  const canDelete = can('users:delete')
 
   const [users, setUsers] = useState<DisplayUser[]>([])
   const [open, setOpen] = useState(false)
@@ -41,7 +43,7 @@ export function UsersSection() {
     role: 'editor',
   })
 
-  useEffect(() => {
+  const reload = () => {
     supabase.rpc('list_admin_users').then(({ data, error }) => {
       if (!error && data) {
         const rows = data as Array<{ id: string; email: string; full_name: string | null; role: string }>
@@ -55,6 +57,10 @@ export function UsersSection() {
         })))
       }
     })
+  }
+
+  useEffect(() => {
+    reload()
   }, [])
 
   const invite = (ev: React.FormEvent) => {
@@ -82,9 +88,21 @@ export function UsersSection() {
     setForm({ name: '', email: '', role: 'editor' })
   }
 
-  const changeRole = (id: string, role: AdminRole) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role } : u)))
+  const changeRole = async (id: string, role: AdminRole) => {
+    if (!isSuperAdmin) {
+      toast.error('Only Super Admins can change user roles.')
+      return
+    }
+    const { error } = await supabase.rpc('set_user_role', {
+      target_user_id: id,
+      new_role: role,
+    })
+    if (error) {
+      toast.error(error.message)
+      return
+    }
     toast.success('Role updated.')
+    reload()
   }
 
   const removeUser = (id: string) => {
@@ -102,7 +120,7 @@ export function UsersSection() {
         title="Team & access"
         description="Manage who can sign in to the admin portal and their permissions."
         actions={
-          canManage && (
+          canCreate && (
             <Button
               onClick={() => setOpen(true)}
               className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
@@ -113,10 +131,10 @@ export function UsersSection() {
           )
         }
       >
-        {!canManage && (
+        {!canCreate && !canUpdate && !canDelete && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            You're viewing this page in read-only mode. Only Admins can invite or
-            remove users.
+            You're viewing this page in read-only mode. Ask a Super Admin to
+            grant you additional permissions.
           </div>
         )}
 
@@ -161,7 +179,7 @@ export function UsersSection() {
                     </div>
                   </Td>
                   <Td>
-                    {canManage && u.id !== user?.id ? (
+                    {isSuperAdmin && u.id !== user?.id ? (
                       <Select
                         value={u.role}
                         onValueChange={(v) => changeRole(u.id, v as AdminRole)}
@@ -180,7 +198,9 @@ export function UsersSection() {
                     ) : (
                       <Badge
                         className={
-                          u.role === 'admin'
+                          u.role === 'super_admin'
+                            ? 'bg-rose-600 text-white'
+                            : u.role === 'admin'
                             ? 'bg-orange-600 text-white'
                             : 'bg-amber-500 text-white'
                         }
@@ -193,7 +213,7 @@ export function UsersSection() {
                   <Td className="text-xs text-muted-foreground">{u.invitedBy ?? '—'}</Td>
                   <Td className="text-xs">{u.lastActive ?? '—'}</Td>
                   <Td className="text-right">
-                    {canManage && (
+                    {canDelete && (
                       <Button
                         variant="ghost"
                         size="sm"

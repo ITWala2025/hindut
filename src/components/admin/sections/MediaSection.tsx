@@ -58,7 +58,10 @@ function formatBytes(kb: number): string {
 
 export function MediaSection() {
   const { can } = useAuth()
-  const canWrite = can('manageMedia')
+  const canCreate = can('media:create')
+  const canUpdate = can('media:update')
+  const canDelete = can('media:delete')
+  const canWrite = canCreate || canUpdate || canDelete
 
   const { media, loading, error, upload, addExternal, addAlbum, update, remove: removeMedia } = useMedia()
 
@@ -293,7 +296,7 @@ export function MediaSection() {
         title="Media library"
         description="Upload and manage images used on the public site and in events."
         actions={
-          canWrite && (
+          canCreate && (
             <>
               <input
                 ref={fileInputRef}
@@ -488,6 +491,7 @@ export function MediaSection() {
                           className="h-7 text-slate-600 hover:bg-slate-100"
                           onClick={() => openEdit(m)}
                           title="Edit title / alt"
+                          disabled={!canUpdate}
                         >
                           <PencilSimple size={12} />
                         </Button>
@@ -497,6 +501,7 @@ export function MediaSection() {
                           className="h-7 text-red-600 hover:bg-red-50"
                           onClick={() => setDeleteItem(m)}
                           title="Delete"
+                          disabled={!canDelete}
                         >
                           <Trash size={12} />
                         </Button>

@@ -19,6 +19,7 @@ import {
   Sparkle,
   Ticket,
   HandCoins,
+  Lock,
 } from '@phosphor-icons/react'
 import type { Capability } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
@@ -41,6 +42,7 @@ export type AdminSectionId =
   | 'media'
   | 'services'
   | 'users'
+  | 'roles'
   | 'settings'
 
 interface NavItem {
@@ -50,6 +52,8 @@ interface NavItem {
   badge?: string
   /** Capability required to even see this nav entry. */
   capability?: Capability
+  /** Restrict to super_admin only (regardless of capability map). */
+  superAdminOnly?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -58,67 +62,73 @@ const NAV_ITEMS: NavItem[] = [
     id: 'analytics',
     label: 'Analytics',
     icon: <ChartLineUp size={20} weight="duotone" />,
-    capability: 'viewAnalytics',
+    capability: 'analytics:view',
   },
   {
     id: 'membership',
     label: 'Membership',
     icon: <Users size={20} weight="duotone" />,
-    capability: 'manageMemberships',
+    capability: 'members:view',
   },
   {
     id: 'receipts',
     label: 'Receipts',
     icon: <Receipt size={20} weight="duotone" />,
-    capability: 'manageReceipts',
+    capability: 'receipts:view',
   },
   {
     id: 'events',
     label: 'Events',
     icon: <CalendarBlank size={20} weight="duotone" />,
-    capability: 'manageEvents',
+    capability: 'events:view',
   },
   {
     id: 'media',
     label: 'Media Library',
     icon: <ImageIcon size={20} weight="duotone" />,
-    capability: 'manageMedia',
+    capability: 'media:view',
   },
   {
     id: 'rsvps',
     label: 'RSVPs',
     icon: <ClipboardText size={20} weight="duotone" />,
-    capability: 'manageEvents',
+    capability: 'rsvps:view',
   },
   {
     id: 'tickets',
     label: 'Ticket Bookings',
     icon: <Ticket size={20} weight="duotone" />,
-    capability: 'manageEvents',
+    capability: 'tickets:view',
   },
   {
     id: 'donations',
     label: 'Donations',
     icon: <HandCoins size={20} weight="duotone" />,
-    capability: 'manageReceipts',
+    capability: 'donations:view',
   },
   {
     id: 'services',
     label: 'Services',
     icon: <Sparkle size={20} weight="duotone" />,
-    capability: 'manageServices',
+    capability: 'services:view',
   },
   {
     id: 'users',
     label: 'Team & Access',
     icon: <UserCircleGear size={20} weight="duotone" />,
-    capability: 'manageUsers',
+    capability: 'users:view',
+  },
+  {
+    id: 'roles',
+    label: 'Roles & Permissions',
+    icon: <Lock size={20} weight="duotone" />,
+    superAdminOnly: true,
   },
   {
     id: 'settings',
     label: 'Settings',
     icon: <Gear size={20} weight="duotone" />,
-    capability: 'manageSettings',
+    capability: 'settings:view',
   },
 ]
 
@@ -129,13 +139,17 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) {
-  const { user, logout, can } = useAuth()
+  const { user, logout, can, isSuperAdmin } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   if (!user) return null
 
-  const visibleItems = NAV_ITEMS.filter((i) => !i.capability || can(i.capability))
+  const visibleItems = NAV_ITEMS.filter((i) => {
+    if (i.superAdminOnly) return isSuperAdmin
+    if (!i.capability) return true
+    return can(i.capability)
+  })
 
   const handleNavigate = (id: AdminSectionId) => {
     onNavigate(id)

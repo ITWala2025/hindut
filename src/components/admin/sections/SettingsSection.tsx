@@ -12,7 +12,10 @@ import { useAuth } from '@/lib/auth'
 
 export function SettingsSection() {
   const { user, can } = useAuth()
-  const canWrite = can('manageSettings')
+  const canCreate = can('settings:create')
+  const canUpdate = can('settings:update')
+  const canDelete = can('settings:delete')
+  const canWrite = canCreate || canUpdate || canDelete
 
   const [org, setOrg] = useState({
     name: 'Hindu Association of Ireland',

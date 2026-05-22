@@ -87,7 +87,10 @@ export function EventsSection() {
   const { can } = useAuth()
   const { events, addEvent, updateEvent, deleteEvent } = useEvents()
   const { media } = useMedia()
-  const canWrite = can('manageEvents')
+  const canCreate = can('events:create')
+  const canUpdate = can('events:update')
+  const canDelete = can('events:delete')
+  const canWrite = canCreate || canUpdate || canDelete
 
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState<EventCategory | 'all'>('all')
@@ -223,7 +226,7 @@ export function EventsSection() {
         description="Create, edit and remove events from the public calendar. Paid events sync to Stripe via a product ID."
         actions={
           <>
-            {canWrite && (
+            {canCreate && (
               <Button
                 onClick={openCreate}
                 className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
@@ -356,7 +359,7 @@ export function EventsSection() {
                       variant="ghost"
                       size="sm"
                       onClick={() => openEdit(e)}
-                      disabled={!canWrite}
+                      disabled={!canUpdate}
                       className="text-orange-700 hover:bg-orange-50"
                     >
                       <Pencil size={16} className="mr-1" />
@@ -366,7 +369,7 @@ export function EventsSection() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setConfirmDelete(e)}
-                      disabled={!canWrite}
+                      disabled={!canDelete}
                       className="text-red-600 hover:bg-red-50"
                     >
                       <Trash size={16} className="mr-1" />

@@ -1,9 +1,24 @@
 /**
- * Authentication layer backed by Supabase Auth.
+ * Authentication + RBAC layer backed by Supabase.
  *
- * Roles are stored in `public.user_roles`. On sign-in the provider fetches
- * the user's role and builds an `AdminUser` object consumed by all admin
- * sections. Only users with a row in `user_roles` can access the admin portal.
+ * Roles
+ * -----
+ *   - super_admin : always has every capability; cannot be downgraded by
+ *                   anyone other than another super_admin.
+ *   - admin       : capabilities controlled by `public.role_permissions`.
+ *   - editor      : capabilities controlled by `public.role_permissions`.
+ *
+ * Capabilities are expressed as `<module>:<action>` strings — e.g.
+ * `'events:create'`, `'media:delete'`. Older `manage*` / `viewAnalytics`
+ * strings are still accepted by `can()` (mapped to the closest
+ * `<module>:update` capability) so existing call-sites keep working.
+ *
+ * On sign-in the provider:
+ *   1. Loads the row from `user_roles` for the current user (raw role).
+ *   2. Loads every row from `role_permissions` (full map).
+ *   3. Builds the effective permission map.
+ * The map is re-fetched whenever Supabase emits a SIGNED_IN / TOKEN_REFRESHED
+ * event so super-admin edits propagate within one auth tick.
  */
 import {
   createContext,
@@ -17,7 +32,95 @@ import {
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
-export type AdminRole = 'admin' | 'editor'
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+export type AdminRole = 'super_admin' | 'admin' | 'editor'
+
+export const ROLE_LABELS: Record<AdminRole, string> = {
+  super_admin: 'Super Admin',
+  admin:       'Administrator',
+  editor:      'Editor',
+}
+
+export type AdminModule =
+  | 'analytics'
+  | 'members'
+  | 'receipts'
+  | 'events'
+  | 'rsvps'
+  | 'tickets'
+  | 'donations'
+  | 'media'
+  | 'services'
+  | 'users'
+  | 'settings'
+
+export const MODULE_LABELS: Record<AdminModule, string> = {
+  analytics: 'Analytics',
+  members:   'Membership',
+  receipts:  'Receipts',
+  events:    'Events',
+  rsvps:     'RSVPs',
+  tickets:   'Ticket Bookings',
+  donations: 'Donations',
+  media:     'Media Library',
+  services:  'Services',
+  users:     'Team & Access',
+  settings:  'Settings',
+}
+
+export const ADMIN_MODULES: AdminModule[] = [
+  'analytics',
+  'members',
+  'receipts',
+  'events',
+  'rsvps',
+  'tickets',
+  'donations',
+  'media',
+  'services',
+  'users',
+  'settings',
+]
+
+export type ActionId = 'view' | 'create' | 'update' | 'delete'
+
+export const ACTION_LABELS: Record<ActionId, string> = {
+  view:   'View',
+  create: 'Create',
+  update: 'Update',
+  delete: 'Delete',
+}
+
+export const ACTIONS: ActionId[] = ['view', 'create', 'update', 'delete']
+
+export type Capability = `${AdminModule}:${ActionId}`
+
+/** Legacy capability names still in use across older sections. */
+type LegacyCapability =
+  | 'manageUsers'
+  | 'manageMemberships'
+  | 'manageReceipts'
+  | 'manageEvents'
+  | 'manageMedia'
+  | 'manageServices'
+  | 'manageSettings'
+  | 'viewAnalytics'
+
+const LEGACY_MAP: Record<LegacyCapability, Capability> = {
+  manageUsers:       'users:update',
+  manageMemberships: 'members:update',
+  manageReceipts:    'receipts:update',
+  manageEvents:      'events:update',
+  manageMedia:       'media:update',
+  manageServices:    'services:update',
+  manageSettings:    'settings:update',
+  viewAnalytics:     'analytics:view',
+}
+
+export type ModulePermissions = Record<ActionId, boolean>
+export type RolePermissionMap = Record<AdminModule, ModulePermissions>
 
 export interface AdminUser {
   id: string
@@ -27,51 +130,64 @@ export interface AdminUser {
   avatarColor: string
 }
 
-export const ROLE_LABELS: Record<AdminRole, string> = {
-  admin: 'Administrator',
-  editor: 'Editor',
+// ---------------------------------------------------------------------------
+// Defaults — used when DB hasn't loaded yet OR the role_permissions row is
+// missing. super_admin is implicit "everything true" and never looked up.
+// ---------------------------------------------------------------------------
+function blank(): ModulePermissions {
+  return { view: false, create: false, update: false, delete: false }
 }
 
-/**
- * Capability matrix — mirrors the role matrix in `ADMIN_PORTAL.md`.
- */
-export const ROLE_PERMISSIONS: Record<
-  AdminRole,
-  {
-    manageUsers: boolean
-    manageMemberships: boolean
-    manageReceipts: boolean
-    manageEvents: boolean
-    manageMedia: boolean
-    manageServices: boolean
-    manageSettings: boolean
-    viewAnalytics: boolean
-  }
-> = {
+function all(): ModulePermissions {
+  return { view: true, create: true, update: true, delete: true }
+}
+
+function blankMap(): RolePermissionMap {
+  return ADMIN_MODULES.reduce((acc, m) => {
+    acc[m] = blank()
+    return acc
+  }, {} as RolePermissionMap)
+}
+
+function fullMap(): RolePermissionMap {
+  return ADMIN_MODULES.reduce((acc, m) => {
+    acc[m] = all()
+    return acc
+  }, {} as RolePermissionMap)
+}
+
+export const SUPER_ADMIN_PERMISSIONS: RolePermissionMap = fullMap()
+
+const DEFAULT_PERMISSIONS: Record<AdminRole, RolePermissionMap> = {
+  super_admin: SUPER_ADMIN_PERMISSIONS,
   admin: {
-    manageUsers: true,
-    manageMemberships: true,
-    manageReceipts: true,
-    manageEvents: true,
-    manageMedia: true,
-    manageServices: true,
-    manageSettings: true,
-    viewAnalytics: true,
+    ...blankMap(),
+    analytics: { view: true,  create: false, update: false, delete: false },
+    members:   { view: true,  create: true,  update: true,  delete: true  },
+    receipts:  { view: true,  create: true,  update: true,  delete: true  },
+    events:    { view: true,  create: true,  update: true,  delete: true  },
+    rsvps:     { view: true,  create: false, update: true,  delete: true  },
+    tickets:   { view: true,  create: false, update: true,  delete: true  },
+    donations: { view: true,  create: false, update: true,  delete: true  },
+    media:     { view: true,  create: true,  update: true,  delete: true  },
+    services:  { view: true,  create: true,  update: true,  delete: true  },
+    users:     { view: true,  create: true,  update: true,  delete: true  },
+    settings:  { view: true,  create: false, update: true,  delete: false },
   },
   editor: {
-    manageUsers: false,
-    manageMemberships: false,
-    manageReceipts: false,
-    manageEvents: true,
-    manageMedia: true,
-    manageServices: true,
-    manageSettings: false,
-    viewAnalytics: true,
+    ...blankMap(),
+    analytics: { view: true,  create: false, update: false, delete: false },
+    events:    { view: true,  create: true,  update: true,  delete: false },
+    rsvps:     { view: true,  create: false, update: false, delete: false },
+    tickets:   { view: true,  create: false, update: false, delete: false },
+    media:     { view: true,  create: true,  update: true,  delete: false },
+    services:  { view: true,  create: true,  update: true,  delete: false },
   },
 }
 
-export type Capability = keyof (typeof ROLE_PERMISSIONS)[AdminRole]
-
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 const AVATAR_COLORS = [
   'from-orange-600 to-amber-600',
   'from-blue-600 to-indigo-600',
@@ -86,35 +202,116 @@ function pickAvatarColor(id: string): string {
   return AVATAR_COLORS[sum % AVATAR_COLORS.length]
 }
 
+function parseCapability(input: Capability | LegacyCapability): { module: AdminModule; action: ActionId } | null {
+  const raw: string = input in LEGACY_MAP ? LEGACY_MAP[input as LegacyCapability] : input
+  const [m, a] = raw.split(':')
+  if (!m || !a) return null
+  if (!ADMIN_MODULES.includes(m as AdminModule)) return null
+  if (!ACTIONS.includes(a as ActionId)) return null
+  return { module: m as AdminModule, action: a as ActionId }
+}
+
+/**
+ * Merge a permissions blob loaded from the DB (which may be missing modules
+ * after a future schema change) into the full map of modules so callers can
+ * blindly index by any module.
+ */
+export function normalisePermissions(input: unknown): RolePermissionMap {
+  const base = blankMap()
+  if (!input || typeof input !== 'object') return base
+  for (const mod of ADMIN_MODULES) {
+    const incoming = (input as Record<string, unknown>)[mod]
+    if (!incoming || typeof incoming !== 'object') continue
+    const src = incoming as Record<string, unknown>
+    base[mod] = {
+      view:   !!src.view,
+      create: !!src.create,
+      update: !!src.update,
+      delete: !!src.delete,
+    }
+  }
+  return base
+}
+
+// ---------------------------------------------------------------------------
+// Session bootstrap
+// ---------------------------------------------------------------------------
 async function fetchAdminUser(session: Session): Promise<AdminUser | null> {
-  // Role comes from Supabase Auth app_metadata (set via dashboard or service_role).
-  // Falls back to 'admin' so any authenticated user can access the portal.
-  const role = (
-    (session.user.app_metadata?.role as AdminRole | undefined) ?? 'admin'
-  )
+  // Prefer the role stored in public.user_roles (the source of truth);
+  // fall back to app_metadata.role for legacy compatibility.
+  let role: AdminRole | null = null
+  try {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+    if (data?.role && (data.role === 'super_admin' || data.role === 'admin' || data.role === 'editor')) {
+      role = data.role
+    }
+  } catch {
+    /* fall through to metadata */
+  }
+
+  let resolvedRole: AdminRole
+  if (role) {
+    resolvedRole = role
+  } else {
+    const meta = session.user.app_metadata?.role
+    if (meta === 'super_admin' || meta === 'admin' || meta === 'editor') {
+      resolvedRole = meta
+    } else {
+      resolvedRole = 'admin' // historical fallback for accounts pre-dating user_roles
+    }
+  }
 
   return {
-    id: session.user.id,
+    id:    session.user.id,
     name:
       session.user.user_metadata?.full_name ??
       session.user.email?.split('@')[0] ??
       'Admin',
     email: session.user.email ?? '',
-    role,
+    role: resolvedRole,
     avatarColor: pickAvatarColor(session.user.id),
   }
 }
 
+async function fetchRolePermissions(): Promise<Partial<Record<AdminRole, RolePermissionMap>>> {
+  try {
+    const { data, error } = await supabase
+      .from('role_permissions')
+      .select('role, permissions')
+    if (error || !data) return {}
+    const out: Partial<Record<AdminRole, RolePermissionMap>> = {}
+    for (const row of data as Array<{ role: string; permissions: unknown }>) {
+      if (row.role === 'admin' || row.role === 'editor') {
+        out[row.role] = normalisePermissions(row.permissions)
+      }
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
 interface AuthContextValue {
   user: AdminUser | null
   loggedInAt: string | null
   method: 'password' | 'magic-link' | null
   isAuthenticated: boolean
   isLoading: boolean
+  permissions: RolePermissionMap
+  rolePermissions: Record<AdminRole, RolePermissionMap>
   login: (email: string, password: string) => Promise<AdminUser>
   loginWithMagicLink: (email: string) => Promise<void>
   logout: () => void
-  can: (action: Capability) => boolean
+  can: (capability: Capability | LegacyCapability) => boolean
+  isSuperAdmin: boolean
+  refreshPermissions: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -124,9 +321,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loggedInAt, setLoggedInAt] = useState<string | null>(null)
   const [method, setMethod] = useState<'password' | 'magic-link' | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [remotePerms, setRemotePerms] =
+    useState<Partial<Record<AdminRole, RolePermissionMap>>>({})
+
+  const refreshPermissions = useCallback(async () => {
+    const map = await fetchRolePermissions()
+    setRemotePerms(map)
+  }, [])
 
   useEffect(() => {
-    // Restore session on mount
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         const adminUser = await fetchAdminUser(session)
@@ -134,29 +337,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(adminUser)
           setLoggedInAt(session.user.created_at ?? new Date().toISOString())
           setMethod('password')
+          await refreshPermissions()
         }
       }
       setIsLoading(false)
     })
 
-    // Listen for auth state changes (magic-link callback, token refresh, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        // IMPORTANT: do NOT `await` Supabase queries directly inside this
+        // callback. The auth client holds an internal navigator lock during
+        // the callback and any `supabase.from(...)` call would deadlock the
+        // very sign-in / token-refresh that fired the event. Defer the work
+        // to a microtask so the lock is released first.
         if (session) {
-          const adminUser = await fetchAdminUser(session)
-          setUser(adminUser)
-          setLoggedInAt(new Date().toISOString())
-          if (event === 'SIGNED_IN') setMethod('password')
+          void (async () => {
+            const adminUser = await fetchAdminUser(session)
+            setUser(adminUser)
+            setLoggedInAt(new Date().toISOString())
+            if (event === 'SIGNED_IN') setMethod('password')
+            await refreshPermissions()
+          })()
         } else {
           setUser(null)
           setLoggedInAt(null)
           setMethod(null)
+          setRemotePerms({})
         }
       },
     )
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [refreshPermissions])
+
+  const rolePermissions = useMemo<Record<AdminRole, RolePermissionMap>>(() => ({
+    super_admin: SUPER_ADMIN_PERMISSIONS,
+    admin:  remotePerms.admin  ?? DEFAULT_PERMISSIONS.admin,
+    editor: remotePerms.editor ?? DEFAULT_PERMISSIONS.editor,
+  }), [remotePerms])
+
+  const permissions = useMemo<RolePermissionMap>(() => {
+    if (!user) return blankMap()
+    return rolePermissions[user.role]
+  }, [user, rolePermissions])
+
+  const isSuperAdmin = user?.role === 'super_admin'
 
   const login = useCallback(async (email: string, password: string): Promise<AdminUser> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -169,8 +394,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(adminUser)
     setLoggedInAt(new Date().toISOString())
     setMethod('password')
+    await refreshPermissions()
     return adminUser
-  }, [])
+  }, [refreshPermissions])
 
   const loginWithMagicLink = useCallback(async (email: string): Promise<void> => {
     const { error } = await supabase.auth.signInWithOtp({
@@ -186,14 +412,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
     setLoggedInAt(null)
     setMethod(null)
+    setRemotePerms({})
   }, [])
 
   const can = useCallback(
-    (action: Capability) => {
+    (capability: Capability | LegacyCapability) => {
       if (!user) return false
-      return ROLE_PERMISSIONS[user.role][action]
+      if (user.role === 'super_admin') return true
+      const parsed = parseCapability(capability)
+      if (!parsed) return false
+      return !!rolePermissions[user.role]?.[parsed.module]?.[parsed.action]
     },
-    [user],
+    [user, rolePermissions],
   )
 
   const value = useMemo<AuthContextValue>(
@@ -203,12 +433,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method,
       isAuthenticated: !!user,
       isLoading,
+      permissions,
+      rolePermissions,
       login,
       loginWithMagicLink,
       logout,
       can,
+      isSuperAdmin,
+      refreshPermissions,
     }),
-    [user, loggedInAt, method, isLoading, login, loginWithMagicLink, logout, can],
+    [
+      user,
+      loggedInAt,
+      method,
+      isLoading,
+      permissions,
+      rolePermissions,
+      login,
+      loginWithMagicLink,
+      logout,
+      can,
+      isSuperAdmin,
+      refreshPermissions,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -220,3 +467,9 @@ export function useAuth(): AuthContextValue {
   return ctx
 }
 
+/** Convenience for the default editor permissions (used by the matrix UI). */
+export function getDefaultRolePermissions(role: AdminRole): RolePermissionMap {
+  return role === 'super_admin'
+    ? SUPER_ADMIN_PERMISSIONS
+    : DEFAULT_PERMISSIONS[role]
+}

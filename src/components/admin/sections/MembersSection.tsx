@@ -296,7 +296,10 @@ export function MembersSection() {
   const { can } = useAuth()
   const { memberships, plans, cancel, remove, setStatus, syncStripe } = useMembership()
   const { flags: receiptFlags, fetchReceiptById } = useReceiptFlags('membership')
-  const canWrite = can('manageMemberships')
+  const canCreate = can('members:create')
+  const canUpdate = can('members:update')
+  const canDelete = can('members:delete')
+  const canWrite = canCreate || canUpdate || canDelete
 
   const handleDownloadReceipt = async (membershipId: string) => {
     const flag = receiptFlags.get(membershipId)
