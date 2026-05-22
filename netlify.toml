@@ -2,6 +2,14 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  # The Supabase project URL is *not* a secret — it is required in the client
+  # bundle (VITE_SUPABASE_URL is used by src/lib/supabase.ts) and is also
+  # hard-coded in image URLs served from Supabase Storage. Tell Netlify's
+  # secret scanner to ignore these keys so builds don't fail when the URL
+  # appears in compiled output.
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,STRIPE_PUBLISHABLE_KEY_TEST"
+
 [functions]
   directory       = "netlify/functions"
   node_bundler    = "esbuild"
