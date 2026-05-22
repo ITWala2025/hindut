@@ -64,8 +64,25 @@ export const handler: Handler = async (event) => {
       .eq('user_id', user.id)
       .single()
 
-    if (!roleRow || roleRow.role !== 'admin') {
-      return { statusCode: 403, headers: jsonHeaders, body: JSON.stringify({ error: 'Forbidden: admin role required' }) }
+    const role = roleRow?.role as string | undefined
+    if (!role) {
+      return { statusCode: 403, headers: jsonHeaders, body: JSON.stringify({ error: 'Forbidden' }) }
+    }
+
+    // super_admin bypasses permission lookup; admin/editor must have rsvps:view.
+    if (role !== 'super_admin') {
+      if (role !== 'admin' && role !== 'editor') {
+        return { statusCode: 403, headers: jsonHeaders, body: JSON.stringify({ error: 'Forbidden' }) }
+      }
+      const { data: permRow } = await supabaseAdmin
+        .from('role_permissions')
+        .select('permissions')
+        .eq('role', role)
+        .maybeSingle()
+      const perms = (permRow?.permissions ?? {}) as Record<string, Record<string, boolean>>
+      if (!perms.rsvps?.view) {
+        return { statusCode: 403, headers: jsonHeaders, body: JSON.stringify({ error: 'Permission denied: rsvps:view required' }) }
+      }
     }
 
     // -- Parse filter params

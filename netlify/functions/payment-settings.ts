@@ -25,14 +25,23 @@
  *
  * Authorisation:
  *   The browser sends the Supabase access token in the Authorization header.
- *   The function verifies the token and checks `public.user_roles` for
- *   role='admin'. Editors are rejected.
+ *   The function verifies the token and checks `public.role_permissions` for
+ *   the caller's role:
+ *     GET requires settings:view
+ *     PUT requires settings:update
+ *   super_admin always passes.
  */
 
 import type { Handler } from '@netlify/functions'
 import { resolveStripe, supabaseAdmin, jsonHeaders } from './lib/stripe.js'
 
-async function requireAdmin(authHeader: string | undefined): Promise<{ userId: string } | null> {
+type PermAction = 'view' | 'create' | 'update' | 'delete'
+
+async function requirePermission(
+  authHeader: string | undefined,
+  module: string,
+  action: PermAction,
+): Promise<{ userId: string } | null> {
   if (!authHeader) return null
   const token = authHeader.replace(/^Bearer\s+/i, '').trim()
   if (!token) return null
@@ -47,7 +56,24 @@ async function requireAdmin(authHeader: string | undefined): Promise<{ userId: s
     .eq('user_id', userData.user.id)
     .maybeSingle()
   if (roleErr) return null
-  if ((roleRow as { role?: string } | null)?.role !== 'admin') return null
+  const role = (roleRow as { role?: string } | null)?.role
+  if (!role) return null
+
+  // super_admin always has every permission.
+  if (role === 'super_admin') return { userId: userData.user.id }
+
+  if (role !== 'admin' && role !== 'editor') return null
+
+  const { data: permRow, error: permErr } = await supabase
+    .from('role_permissions')
+    .select('permissions')
+    .eq('role', role)
+    .maybeSingle()
+  if (permErr) return null
+
+  const perms = (permRow as { permissions?: Record<string, Record<string, boolean>> } | null)
+    ?.permissions
+  if (!perms?.[module]?.[action]) return null
 
   return { userId: userData.user.id }
 }
@@ -69,19 +95,24 @@ export const handler: Handler = async (event) => {
     return { statusCode: 204, headers: jsonHeaders, body: '' }
   }
 
-  const admin = await requireAdmin(
+  const host = event.headers.host ?? event.headers.Host ?? null
+  const supabase = supabaseAdmin()
+
+  const requiredAction: PermAction = event.httpMethod === 'PUT' ? 'update' : 'view'
+  const admin = await requirePermission(
     event.headers.authorization ?? event.headers.Authorization,
+    'settings',
+    requiredAction,
   )
   if (!admin) {
     return {
       statusCode: 403,
       headers:    jsonHeaders,
-      body:       JSON.stringify({ error: 'Admin authorisation required' }),
+      body:       JSON.stringify({
+        error: `Permission denied: settings:${requiredAction} required`,
+      }),
     }
   }
-
-  const host = event.headers.host ?? event.headers.Host ?? null
-  const supabase = supabaseAdmin()
 
   // -- GET -----------------------------------------------------------------
   if (event.httpMethod === 'GET') {
