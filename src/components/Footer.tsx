@@ -1,6 +1,7 @@
 import { MapPin, Phone, Envelope, Clock, InstagramLogo, FacebookLogo, TwitterLogo } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
+import { openCookiePreferences } from '@/components/CookieConsentBanner'
 
 export function Footer() {
   return (
@@ -134,6 +135,13 @@ export function Footer() {
               {item.label}
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={openCookiePreferences}
+            className="hover:text-orange-600 transition-colors"
+          >
+            Cookie Preferences
+          </button>
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-orange-700/80">

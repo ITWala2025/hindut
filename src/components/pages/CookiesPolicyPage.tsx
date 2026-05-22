@@ -1,4 +1,6 @@
 import { Cookie } from '@phosphor-icons/react'
+import { Button } from '@/components/ui/button'
+import { openCookiePreferences } from '@/components/CookieConsentBanner'
 
 export function CookiesPolicyPage() {
   return (
@@ -68,7 +70,20 @@ export function CookiesPolicyPage() {
         <section>
           <h2 className="text-2xl font-bold text-orange-800 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>5. Managing Cookies</h2>
           <p className="mb-3">
-            You can control and manage cookies in several ways. Most web browsers allow you to refuse or accept cookies through the browser settings. For guidance, refer to your browser's help documentation:
+            You can review and change your choice at any time using the button
+            below. Your preference is stored locally on your device for
+            <strong> 365 days</strong>, after which you will be asked again.
+          </p>
+          <div className="mb-4">
+            <Button
+              onClick={openCookiePreferences}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              Manage cookie preferences
+            </Button>
+          </div>
+          <p className="mb-3">
+            You can also control cookies through your browser settings. For guidance, refer to your browser's help documentation:
           </p>
           <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
             <li>Chrome: Settings → Privacy and security → Cookies and other site data</li>

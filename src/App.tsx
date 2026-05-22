@@ -17,6 +17,7 @@ import { TermsAndConditionsPage } from '@/components/pages/TermsAndConditionsPag
 import { RefundPolicyPage } from '@/components/pages/RefundPolicyPage'
 import { PaymentSuccessPage } from '@/components/pages/PaymentSuccessPage'
 import { Toaster } from '@/components/ui/sonner'
+import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
 
 function ScrollToTop() {
@@ -87,6 +88,7 @@ function AppShell() {
       <Footer />
       <WhatsAppButton />
       <DonationDialog open={isDonationOpen} onOpenChange={setIsDonationOpen} />
+      <CookieConsentBanner />
       <Toaster />
     </div>
   )

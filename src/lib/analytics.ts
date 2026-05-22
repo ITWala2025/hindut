@@ -21,10 +21,21 @@
  * from Netlify's `x-nf-geo` header, never persisting the raw IP.
  */
 
+import { isCategoryAllowed, subscribeConsent } from '@/lib/cookieConsent'
+
 const ENDPOINT      = '/.netlify/functions/analytics-track'
 const VISITOR_KEY   = 'hai_analytics_visitor'
 const SESSION_KEY   = 'hai_analytics_session'
 const ENGAGEMENT_INTERVAL_MS = 15_000
+
+/**
+ * Returns true only when the user has actively consented to the
+ * `analytics` cookie category. Visitors who have not yet made a choice, or
+ * who have rejected analytics, never have a single event sent.
+ */
+function isAnalyticsConsented(): boolean {
+  return isCategoryAllowed('analytics')
+}
 
 /**
  * Hosts on which analytics is allowed to run. All other hosts (local dev,
@@ -119,6 +130,11 @@ function getUtm() {
 // Send
 // ---------------------------------------------------------------------------
 function send(payload: TrackPayload, useBeacon = false): void {
+  // Central consent gate — every code path that reaches the network passes
+  // through here. If the user has withdrawn consent in another tab, this
+  // ensures no event is sent even if a listener is still wired up.
+  if (!isAnalyticsHostAllowed()) return
+  if (!isAnalyticsConsented()) return
   try {
     const body = JSON.stringify(payload)
     if (useBeacon && typeof navigator !== 'undefined' && navigator.sendBeacon) {
@@ -244,6 +260,7 @@ function startEngagementPings() {
 export function trackPageView(path: string): void {
   if (typeof window === 'undefined') return
   if (!isAnalyticsHostAllowed()) return
+  if (!isAnalyticsConsented()) return
   // Flush previous page's time before resetting.
   if (currentPath && currentPath !== path) {
     flushPageLeave(false)
@@ -265,6 +282,7 @@ export function trackEvent(
 ): void {
   if (typeof window === 'undefined') return
   if (!isAnalyticsHostAllowed()) return
+  if (!isAnalyticsConsented()) return
   send({
     ...basePayload(),
     eventType: type,
@@ -276,6 +294,14 @@ export function trackEvent(
 export function initAnalytics(): void {
   if (initialized || typeof window === 'undefined') return
   if (!isAnalyticsHostAllowed()) return
+  if (!isAnalyticsConsented()) {
+    // Listen for future consent — wire listeners the first time the user
+    // opts in. Until then we install absolutely no global handlers.
+    subscribeConsent((c) => {
+      if (c?.categories.analytics) initAnalytics()
+    })
+    return
+  }
   initialized = true
 
   // Skip on admin routes — we only care about the public site.
