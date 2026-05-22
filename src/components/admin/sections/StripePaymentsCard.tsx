@@ -31,6 +31,7 @@ import { SectionCard } from '@/components/admin/adminUi'
 import { supabase } from '@/lib/supabase'
 import { resetStripeCache } from '@/lib/stripeClient'
 import { cn } from '@/lib/utils'
+import { StripeProductCatalogue } from '@/components/admin/sections/StripeProductCatalogue'
 
 type Mode       = 'test' | 'live'
 type Source     = 'db-override' | 'env-override' | 'host'
@@ -357,6 +358,11 @@ export function StripePaymentsCard({ canWrite }: Props) {
               Last updated: {new Date(settings.updatedAt).toLocaleString()}
             </p>
           )}
+
+          {/* ── Product catalogue ──────────────────────────────────────── */}
+          <div className="border-t border-slate-100 pt-5">
+            <StripeProductCatalogue mode={settings.mode} />
+          </div>
         </div>
       ) : null}
     </SectionCard>
