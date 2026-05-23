@@ -197,6 +197,9 @@ export function MembershipPage() {
   const pay = async () => {
     if (!selected) return
     setProcessing(true)
+    const effectiveMonthly = addMonthly
+      ? (monthlyAmount > 0 ? monthlyAmount : parseFloat(monthlyCustom) || 0)
+      : 0
     try {
       const res = await fetch('/.netlify/functions/create-checkout-session', {
         method: 'POST',
@@ -207,6 +210,7 @@ export function MembershipPage() {
           fullName: fullName.trim(),
           email: email.trim(),
           phone: phone.trim() || undefined,
+          ...(effectiveMonthly >= 1 ? { monthlyContributionEur: effectiveMonthly } : {}),
           successUrl: `${window.location.origin}/membership-success`,
           cancelUrl: `${window.location.origin}/membership?cancelled=1`,
         }),
@@ -692,7 +696,7 @@ export function MembershipPage() {
                     </div>
                     <div>
                       <DialogTitle className="text-xl font-bold text-slate-900">
-                        {selected.name} Membership
+                        Annual Membership
                       </DialogTitle>
                       <DialogDescription className="text-sm text-slate-500">
                         €{selected.price} · {selected.durationLabel}
@@ -764,7 +768,7 @@ export function MembershipPage() {
                           className="data-[state=checked]:bg-amber-500"
                         />
                       </div>
-                      <p className="text-xs text-slate-500 mb-3">Optional- separate from your annual fee.</p>
+                      <p className="text-xs text-slate-500 mb-3">Optional — billed monthly from next month until cancelled. Not charged today.</p>
                       {addMonthly && (
                         <div className="grid grid-cols-4 gap-2 mt-2">
                           {[22, 35, 50].map((amt) => (
@@ -903,9 +907,12 @@ export function MembershipPage() {
                     <span className="truncate max-w-[180px]">{email}</span>
                   </div>
                   {addMonthly && (monthlyAmount > 0 || (monthlyAmount === 0 && !!monthlyCustom)) && (
-                    <div className="flex justify-between text-xs text-amber-700 pt-2 border-t border-amber-200">
-                      <span>Monthly contribution (noted)</span>
-                      <span>€{monthlyAmount > 0 ? monthlyAmount : monthlyCustom}/mo</span>
+                    <div className="pt-2 border-t border-amber-200 space-y-1">
+                      <div className="flex justify-between text-xs text-amber-700">
+                        <span>Monthly contribution</span>
+                        <span>€{monthlyAmount > 0 ? monthlyAmount : monthlyCustom}/mo</span>
+                      </div>
+                      <p className="text-xs text-slate-400">Starts next month · charged monthly until cancelled · not charged today</p>
                     </div>
                   )}
                   <Separator className="bg-slate-200" />

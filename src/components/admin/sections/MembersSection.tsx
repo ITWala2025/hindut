@@ -204,6 +204,30 @@ function MemberDetailSheet({
               </div>
             </div>
 
+            {member.monthlyContributionEur && (
+              <>
+                <Separator className="bg-slate-100" />
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+                    Monthly Contribution
+                  </h4>
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-amber-600">Amount</span>
+                      <span className="text-sm font-bold text-amber-800">€{member.monthlyContributionEur}/month</span>
+                    </div>
+                    {member.monthlyStripeSubId && (
+                      <div>
+                        <div className="text-xs text-amber-600 mb-0.5">Subscription ID</div>
+                        <div className="font-mono text-xs text-amber-700 truncate">{member.monthlyStripeSubId}</div>
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-500">Auto-charged monthly via Stripe until cancelled by member.</p>
+                  </div>
+                </div>
+              </>
+            )}
+
             {member.stripeCustomerId && (
               <>
                 <Separator className="bg-slate-100" />

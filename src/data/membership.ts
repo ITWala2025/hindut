@@ -43,4 +43,6 @@ export interface MembershipRecord {
   paymentMethod: 'stripe' | 'manual'
   reference: string
   stripeCustomerId?: string
+  monthlyContributionEur?: number
+  monthlyStripeSubId?: string
 }

@@ -40,6 +40,8 @@ interface MembershipRow {
   stripe_subscription_id: string | null
   gateway: string | null
   reference: string | null
+  monthly_contribution_eur: number | null
+  monthly_stripe_sub_id: string | null
   members: {
     full_name: string
     email: string | null
@@ -130,6 +132,8 @@ function toRecord(row: MembershipRow): MembershipRecord {
     paymentMethod: (row.gateway ?? 'manual') as MembershipRecord['paymentMethod'],
     reference: row.reference ?? row.id.slice(0, 8).toUpperCase(),
     stripeCustomerId: row.stripe_customer_id ?? undefined,
+    monthlyContributionEur: row.monthly_contribution_eur ?? undefined,
+    monthlyStripeSubId: row.monthly_stripe_sub_id ?? undefined,
   }
 }
 

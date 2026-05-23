@@ -41,13 +41,14 @@ const DonationSchema = z.object({
 })
 
 const MembershipSchema = z.object({
-  kind:        z.literal('membership'),
-  planId:      z.string().min(1).max(64),
-  fullName:    z.string().min(1).max(120),
-  email:       z.string().email().max(254),
-  phone:       z.string().max(40).optional(),
-  successUrl:  z.string().url().optional(),
-  cancelUrl:   z.string().url().optional(),
+  kind:                   z.literal('membership'),
+  planId:                 z.string().min(1).max(64),
+  fullName:               z.string().min(1).max(120),
+  email:                  z.string().email().max(254),
+  phone:                  z.string().max(40).optional(),
+  monthlyContributionEur: z.number().min(1).max(10000).optional(),
+  successUrl:             z.string().url().optional(),
+  cancelUrl:              z.string().url().optional(),
 })
 
 const TicketSchema = z.object({
@@ -409,6 +410,7 @@ export const handler: Handler = async (event) => {
         planId:       m.planId,
         fullName:     m.fullName,
         email:        m.email,
+        ...(m.monthlyContributionEur ? { monthlyContributionEur: String(m.monthlyContributionEur) } : {}),
       },
       subscription_data: {
         metadata: { kind: 'membership', membershipId, memberId, planId: m.planId },

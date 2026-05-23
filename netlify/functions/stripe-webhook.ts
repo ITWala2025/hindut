@@ -276,6 +276,82 @@ export const handler: Handler = async (event) => {
           } else if (!process.env.SMTP_HOST) {
             console.log('[dev] SMTP_HOST not set — skipping welcome email for', memberEmail)
           }
+
+          // ── Set up optional monthly contribution subscription ─────────────
+          const monthlyContributionEur = parseFloat(session.metadata?.monthlyContributionEur ?? '0')
+          if (monthlyContributionEur >= 1 && customerId) {
+            try {
+              // trial_end = first second of the first day of next month (UTC)
+              const now = new Date()
+              const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+              const trialEnd = Math.floor(nextMonthStart.getTime() / 1000)
+
+              // Pre-create a donation row so we have an id to link back
+              const { data: donRow } = await supabase
+                .from('donations')
+                .insert({
+                  donor_name:  memberName,
+                  donor_email: memberEmail,
+                  member_id:   memberId,
+                  gateway:     'stripe',
+                  amount_eur:  monthlyContributionEur,
+                  currency:    'EUR',
+                  recurring:   true,
+                  status:      'pending',
+                  description: `Monthly contribution — ${planName} member`,
+                })
+                .select('id')
+                .single()
+
+              const donationId = (donRow as { id: string } | null)?.id ?? null
+
+              // Create the Stripe subscription for the member's saved payment method
+              const monthlySub = await stripe.subscriptions.create({
+                customer: customerId,
+                items: [{
+                  price_data: {
+                    currency:    'eur',
+                    unit_amount: Math.round(monthlyContributionEur * 100),
+                    product_data: {
+                      name:        'Monthly Contribution – Hindu Association of Ireland',
+                      description: `Monthly contribution by ${memberName}`,
+                    },
+                    recurring: { interval: 'month' as const },
+                  },
+                }],
+                trial_end: trialEnd,
+                metadata: {
+                  kind:        'monthly_contribution',
+                  donationId:  donationId ?? '',
+                  memberId:    memberId ?? '',
+                  memberEmail: memberEmail ?? '',
+                  memberName,
+                  membershipId,
+                },
+              })
+
+              // Persist the subscription id on both the donation row and membership row
+              if (donationId) {
+                await supabase
+                  .from('donations')
+                  .update({ stripe_subscription_id: monthlySub.id })
+                  .eq('id', donationId)
+              }
+              await supabase
+                .from('memberships')
+                .update({
+                  monthly_contribution_eur: monthlyContributionEur,
+                  monthly_stripe_sub_id:   monthlySub.id,
+                })
+                .eq('id', membershipId)
+
+              console.log('[stripe-webhook] monthly contribution sub', monthlySub.id, 'created for', memberEmail,
+                'trial until', nextMonthStart.toISOString())
+            } catch (subErr) {
+              // Non-fatal: log but do not fail the webhook
+              console.error('[stripe-webhook] monthly contribution setup error:', (subErr as Error).message)
+            }
+          }
         } else if (kind === 'ticket') {
           // ── Ticket booking ──────────────────────────────────────────────
           const meta = session.metadata ?? {}
@@ -412,6 +488,28 @@ export const handler: Handler = async (event) => {
           .from('ticket_bookings')
           .update({ status: 'refunded', updated_at: new Date().toISOString() })
           .eq('payment_reference', piId)
+        break
+      }
+
+      // ─── Monthly invoice paid → mark donation succeeded ─────────────────
+      case 'invoice.paid': {
+        const invoice = stripeEvent.data.object as Stripe.Invoice
+        const subId =
+          typeof invoice.subscription === 'string'
+            ? invoice.subscription
+            : (invoice.subscription as Stripe.Subscription | null)?.id
+        if (!subId) break
+        // Only handle subscriptions we created for monthly contributions
+        const sub = await stripe.subscriptions.retrieve(subId).catch(() => null)
+        if (sub?.metadata?.kind !== 'monthly_contribution') break
+        const donationId = sub.metadata?.donationId
+        if (donationId) {
+          await supabase
+            .from('donations')
+            .update({ status: 'succeeded', updated_at: new Date().toISOString() })
+            .eq('id', donationId)
+          console.log('[stripe-webhook] monthly contribution donation', donationId, '→ succeeded')
+        }
         break
       }
 
