@@ -148,32 +148,35 @@ export const handler: Handler = async (event) => {
     if (parsed.data.kind === 'donation') {
       const d = parsed.data
 
-      // Pre-create donation row as pending so webhook can link it.
-      const { data: donationRow, error: insertErr } = await supabase
-        .from('donations')
-        .insert({
-          donor_name:  d.donorName,
-          donor_email: d.donorEmail,
-          gateway:     'stripe',
-          amount_eur:  d.amountEur,
-          currency:    'EUR',
-          recurring:   d.recurring,
-          status:      'pending',
-          description: d.description ?? (d.recurring ? 'Recurring donation' : 'One-time donation'),
-        })
-        .select('id')
-        .single()
+      // One-time donations: pre-create a pending row so checkout.session.completed can update it.
+      // Recurring donations: no pre-creation — invoice.paid creates a new row on each real charge.
+      let donationId: string | null = null
+      if (!d.recurring) {
+        const { data: donationRow, error: insertErr } = await supabase
+          .from('donations')
+          .insert({
+            donor_name:  d.donorName,
+            donor_email: d.donorEmail,
+            gateway:     'stripe',
+            amount_eur:  d.amountEur,
+            currency:    'EUR',
+            recurring:   false,
+            status:      'pending',
+            description: d.description ?? 'One-time donation',
+          })
+          .select('id')
+          .single()
 
-      if (insertErr || !donationRow) {
-        console.error('[create-checkout-session] donation insert error:', insertErr)
-        return {
-          statusCode: 500,
-          headers:    jsonHeaders,
-          body:       JSON.stringify({ error: 'Failed to create donation record' }),
+        if (insertErr || !donationRow) {
+          console.error('[create-checkout-session] donation insert error:', insertErr)
+          return {
+            statusCode: 500,
+            headers:    jsonHeaders,
+            body:       JSON.stringify({ error: 'Failed to create donation record' }),
+          }
         }
+        donationId = (donationRow as { id: string }).id
       }
-
-      const donationId = (donationRow as { id: string }).id
 
       const lineItem: import('stripe').Stripe.Checkout.SessionCreateParams.LineItem = {
         quantity: 1,
@@ -201,7 +204,7 @@ export const handler: Handler = async (event) => {
         cancel_url:        d.cancelUrl  ?? `${origin}/donate?cancelled=1`,
         metadata: {
           kind:        'donation',
-          donationId,
+          ...(donationId ? { donationId } : {}),
           donorName:   d.donorName,
           donorEmail:  d.donorEmail,
           recurring:   String(d.recurring),
@@ -209,17 +212,23 @@ export const handler: Handler = async (event) => {
         ...(d.recurring
           ? {
               subscription_data: {
-                metadata: { kind: 'donation', donationId, donorEmail: d.donorEmail },
+                // Carry donor info so invoice.paid can create a donation row per charge
+                metadata: {
+                  kind:      'donation',
+                  donorName: d.donorName,
+                  donorEmail: d.donorEmail,
+                  amountEur:  String(d.amountEur),
+                },
               },
             }
           : {
               payment_intent_data: {
-                metadata: { kind: 'donation', donationId, donorEmail: d.donorEmail },
+                metadata: { kind: 'donation', donationId: donationId ?? '', donorEmail: d.donorEmail },
               },
             }),
       })
 
-      console.log('[create-checkout-session] donation', donationId, '→ session', session.id, 'mode:', ctx.mode)
+      console.log('[create-checkout-session] donation', donationId ?? '(recurring-no-id)', '→ session', session.id, 'mode:', ctx.mode)
 
       return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ url: session.url, sessionId: session.id, mode: ctx.mode }) }
     }

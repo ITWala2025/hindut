@@ -492,40 +492,72 @@ export const handler: Handler = async (event) => {
             : (invoice.subscription as Stripe.Subscription | null)?.id
         if (!subId) break
 
-        // Only handle subscriptions we created for monthly contributions
+        // Handle subscriptions created by this app
         const sub = await stripe.subscriptions.retrieve(subId).catch(() => null)
-        if (sub?.metadata?.kind !== 'monthly_contribution') break
+        if (!sub) break
 
-        const amountEur  = (invoice.amount_paid ?? 0) / 100
-        const memberName  = sub.metadata?.memberName  ?? ''
-        const memberEmail = sub.metadata?.memberEmail ?? ''
-        const memberId    = sub.metadata?.memberId    || null
-        const planName    = sub.metadata?.planName    ?? ''
+        const subKind = sub.metadata?.kind
 
-        // Insert a fresh succeeded donation row for this charge.
-        // This gives the admin a complete per-payment history.
-        const { data: newDon, error: donErr } = await supabase
-          .from('donations')
-          .insert({
-            donor_name:              memberName,
-            donor_email:             memberEmail,
-            member_id:               memberId,
-            gateway:                 'stripe',
-            amount_eur:              amountEur,
-            currency:                invoice.currency?.toUpperCase() ?? 'EUR',
-            recurring:               true,
-            status:                  'succeeded',
-            description:             `Monthly contribution — ${planName} member`,
-            stripe_subscription_id:  subId,
-          })
-          .select('id')
-          .single()
+        if (subKind === 'monthly_contribution') {
+          // ── Monthly membership contribution ──────────────────────────
+          const amountEur   = (invoice.amount_paid ?? 0) / 100
+          const memberName  = sub.metadata?.memberName  ?? ''
+          const memberEmail = sub.metadata?.memberEmail ?? ''
+          const memberId    = sub.metadata?.memberId    || null
+          const planName    = sub.metadata?.planName    ?? ''
 
-        if (donErr) {
-          console.error('[stripe-webhook] failed to insert monthly donation row:', donErr.message)
-        } else {
-          console.log('[stripe-webhook] monthly contribution donation', (newDon as { id: string })?.id,
-            'created for', memberEmail, 'amount', amountEur)
+          const { data: newDon, error: donErr } = await supabase
+            .from('donations')
+            .insert({
+              donor_name:              memberName,
+              donor_email:             memberEmail,
+              member_id:               memberId,
+              gateway:                 'stripe',
+              amount_eur:              amountEur,
+              currency:                invoice.currency?.toUpperCase() ?? 'EUR',
+              recurring:               true,
+              status:                  'succeeded',
+              description:             `Monthly contribution — ${planName} member`,
+              stripe_subscription_id:  subId,
+            })
+            .select('id')
+            .single()
+
+          if (donErr) {
+            console.error('[stripe-webhook] failed to insert monthly donation row:', donErr.message)
+          } else {
+            console.log('[stripe-webhook] monthly contribution donation', (newDon as { id: string })?.id,
+              'created for', memberEmail, 'amount', amountEur)
+          }
+
+        } else if (subKind === 'donation') {
+          // ── Recurring donation (from public DonationDialog) ───────────
+          const amountEur  = (invoice.amount_paid ?? 0) / 100
+          const donorName  = sub.metadata?.donorName  ?? ''
+          const donorEmail = sub.metadata?.donorEmail ?? ''
+
+          const { data: newDon, error: donErr } = await supabase
+            .from('donations')
+            .insert({
+              donor_name:             donorName,
+              donor_email:            donorEmail,
+              gateway:                'stripe',
+              amount_eur:             amountEur,
+              currency:               invoice.currency?.toUpperCase() ?? 'EUR',
+              recurring:              true,
+              status:                 'succeeded',
+              description:            'Recurring donation',
+              stripe_subscription_id: subId,
+            })
+            .select('id')
+            .single()
+
+          if (donErr) {
+            console.error('[stripe-webhook] failed to insert recurring donation row:', donErr.message)
+          } else {
+            console.log('[stripe-webhook] recurring donation', (newDon as { id: string })?.id,
+              'created for', donorEmail, 'amount', amountEur)
+          }
         }
         break
       }
