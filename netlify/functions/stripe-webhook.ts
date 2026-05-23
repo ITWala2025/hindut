@@ -233,6 +233,12 @@ export const handler: Handler = async (event) => {
               ? session.customer
               : session.customer?.id ?? null
 
+          // Parse monthly contribution now so we can include it in the first UPDATE.
+          // The trigger auto_create_receipt_for_membership fires on that UPDATE; by
+          // including the value here the trigger can embed it in the receipt metadata
+          // directly, rather than requiring a separate receipt UPDATE later.
+          const monthlyContributionEurEarly = parseFloat(session.metadata?.monthlyContributionEur ?? '0')
+
           // Compute expiry: read subscription.current_period_end if available.
           let expiresAt: string | null = null
           if (subscriptionId) {
@@ -253,6 +259,8 @@ export const handler: Handler = async (event) => {
               started_at:              new Date().toISOString(),
               expires_at:              expiresAt,
               updated_at:              new Date().toISOString(),
+              // Include monthly contribution so the receipt trigger can embed it
+              ...(monthlyContributionEurEarly >= 1 ? { monthly_contribution_eur: monthlyContributionEurEarly } : {}),
             })
             .eq('id', membershipId)
           console.log('[stripe-webhook] membership', membershipId, '→ active')
@@ -314,12 +322,29 @@ export const handler: Handler = async (event) => {
           }
 
           // ── Set up optional monthly contribution subscription ─────────────
-          const monthlyContributionEur = parseFloat(session.metadata?.monthlyContributionEur ?? '0')
+          const monthlyContributionEur = monthlyContributionEurEarly
           if (monthlyContributionEur >= 1 && customerId) {
+            // trial_end = first second of the first day of next month (UTC)
+            const now = new Date()
+            const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+
+            // Ensure the receipt metadata is written before attempting Stripe setup,
+            // so it is visible even if the Stripe subscription creation fails.
+            const { error: receiptMetaErr } = await supabase
+              .from('receipts')
+              .update({
+                metadata: {
+                  monthly_contribution_eur: monthlyContributionEur,
+                  monthly_start_date:       nextMonthStart.toISOString(),
+                },
+              })
+              .eq('type', 'membership')
+              .eq('related_id', membershipId)
+            if (receiptMetaErr) {
+              console.error('[stripe-webhook] receipt metadata update error:', receiptMetaErr.message)
+            }
+
             try {
-              // trial_end = first second of the first day of next month (UTC)
-              const now = new Date()
-              const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
               const trialEnd = Math.floor(nextMonthStart.getTime() / 1000)
 
               // Create the Stripe subscription — NO donation row yet.
@@ -353,22 +378,9 @@ export const handler: Handler = async (event) => {
               await supabase
                 .from('memberships')
                 .update({
-                  monthly_contribution_eur: monthlyContributionEur,
-                  monthly_stripe_sub_id:   monthlySub.id,
+                  monthly_stripe_sub_id: monthlySub.id,
                 })
                 .eq('id', membershipId)
-
-              // Update the membership receipt metadata so the PDF can describe the monthly sub
-              await supabase
-                .from('receipts')
-                .update({
-                  metadata: {
-                    monthly_contribution_eur: monthlyContributionEur,
-                    monthly_start_date:       nextMonthStart.toISOString(),
-                  },
-                })
-                .eq('type', 'membership')
-                .eq('related_id', membershipId)
 
               console.log('[stripe-webhook] monthly contribution sub', monthlySub.id, 'created for', memberEmail,
                 'trial until', nextMonthStart.toISOString())
