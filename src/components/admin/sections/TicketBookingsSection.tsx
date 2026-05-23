@@ -91,12 +91,19 @@ export function TicketBookingsSection() {
   const [refundTarget, setRefundTarget]   = useState<TicketBookingRow | null>(null)
   const [deleteTarget, setDeleteTarget]   = useState<TicketBookingRow | null>(null)
 
-  const { bookings, loading, error, refetch, updateStatus, deleteBooking } = useTicketBookings({
-    eventId:  eventFilter !== 'all' ? eventFilter : undefined,
-    fromDate: fromDate    || undefined,
-    toDate:   toDate      || undefined,
-    status:   statusFilter !== 'all' ? statusFilter : undefined,
-  })
+  // Only pass a filter object when at least one filter is active; otherwise pass
+  // undefined so the hook loads all bookings (passing an empty object triggers
+  // the hook's "no eventId → return empty" guard).
+  const activeFilters = useMemo(() => {
+    const f: import('@/hooks/useTicketBookings').TicketBookingFilters = {}
+    if (eventFilter !== 'all') f.eventId  = eventFilter
+    if (fromDate)              f.fromDate = fromDate
+    if (toDate)                f.toDate   = toDate
+    if (statusFilter !== 'all') f.status  = statusFilter
+    return Object.keys(f).length > 0 ? f : undefined
+  }, [eventFilter, fromDate, toDate, statusFilter])
+
+  const { bookings, loading, error, refetch, updateStatus, deleteBooking } = useTicketBookings(activeFilters)
 
   const { flags: receiptFlags, refetch: refetchFlags, fetchReceiptById } = useReceiptFlags('event')
 
