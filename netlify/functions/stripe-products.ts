@@ -39,46 +39,65 @@ import { resolveStripe, supabaseAdmin, jsonHeaders } from './lib/stripe.js'
 
 type PermAction = 'view' | 'create' | 'update' | 'delete'
 
+type AuthResult =
+  | { ok: true;  userId: string }
+  | { ok: false; status: 401 | 403; reason: string }
+
 async function requirePermission(
   authHeader: string | undefined,
   module: string,
   action: PermAction,
-): Promise<{ userId: string } | null> {
-  if (!authHeader) return null
+): Promise<AuthResult> {
+  if (!authHeader) return { ok: false, status: 401, reason: 'No Authorization header' }
   const token = authHeader.replace(/^Bearer\s+/i, '').trim()
-  if (!token) return null
+  if (!token) return { ok: false, status: 401, reason: 'Empty bearer token' }
 
   const supabase = supabaseAdmin()
   const { data: userData, error: userErr } = await supabase.auth.getUser(token)
-  if (userErr || !userData?.user) return null
+  if (userErr || !userData?.user) {
+    console.error('[requirePermission] auth.getUser failed:', userErr?.message ?? 'no user')
+    return { ok: false, status: 401, reason: userErr?.message ?? 'Token validation failed' }
+  }
 
   const { data: roleRow, error: roleErr } = await supabase
     .from('user_roles')
     .select('role')
     .eq('user_id', userData.user.id)
     .maybeSingle()
+  if (roleErr) {
+    console.error('[requirePermission] user_roles query error:', roleErr.message)
+  }
   // Fall back to JWT app_metadata.role if the DB row is absent or the query errored.
   // app_metadata is set server-side and is safe to trust after JWT verification.
   const role: string | undefined =
     (!roleErr && (roleRow as { role?: string } | null)?.role) ||
     (userData.user.app_metadata?.role as string | undefined)
-  if (!role) return null
+  if (!role) {
+    return { ok: false, status: 403, reason: `No role found for user ${userData.user.id}` }
+  }
 
-  if (role === 'super_admin') return { userId: userData.user.id }
-  if (role !== 'admin' && role !== 'editor') return null
+  if (role === 'super_admin') return { ok: true, userId: userData.user.id }
+  if (role !== 'admin' && role !== 'editor') {
+    return { ok: false, status: 403, reason: `Unknown role: ${role}` }
+  }
 
   const { data: permRow, error: permErr } = await supabase
     .from('role_permissions')
     .select('permissions')
     .eq('role', role)
     .maybeSingle()
-  if (permErr) return null
+  if (permErr) {
+    console.error('[requirePermission] role_permissions query error:', permErr.message)
+    return { ok: false, status: 403, reason: `Permissions lookup failed: ${permErr.message}` }
+  }
 
   const perms = (permRow as { permissions?: Record<string, Record<string, boolean>> } | null)
     ?.permissions
-  if (!perms?.[module]?.[action]) return null
+  if (!perms?.[module]?.[action]) {
+    return { ok: false, status: 403, reason: `Role '${role}' lacks ${module}:${action}` }
+  }
 
-  return { userId: userData.user.id }
+  return { ok: true, userId: userData.user.id }
 }
 
 export const handler: Handler = async (event) => {
@@ -89,16 +108,24 @@ export const handler: Handler = async (event) => {
     return { statusCode: 405, headers: jsonHeaders, body: JSON.stringify({ error: 'Method not allowed' }) }
   }
 
-  const caller = await requirePermission(
-    event.headers.authorization ?? event.headers.Authorization,
-    'settings',
-    'view',
-  )
-  if (!caller) {
+  let caller: Awaited<ReturnType<typeof requirePermission>>
+  try {
+    caller = await requirePermission(
+      event.headers.authorization ?? event.headers.Authorization,
+      'settings',
+      'view',
+    )
+  } catch (authErr) {
+    const msg = authErr instanceof Error ? authErr.message : String(authErr)
+    console.error('[stripe-products] requirePermission threw:', msg)
+    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Internal auth error' }) }
+  }
+  if (!caller.ok) {
+    console.warn('[stripe-products] access denied:', caller.reason)
     return {
-      statusCode: 403,
+      statusCode: caller.status,
       headers:    jsonHeaders,
-      body:       JSON.stringify({ error: 'Permission denied: settings:view required' }),
+      body:       JSON.stringify({ error: caller.status === 401 ? 'Session expired – please sign in again.' : `Permission denied: settings:view required` }),
     }
   }
 
