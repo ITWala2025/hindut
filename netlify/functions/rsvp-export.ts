@@ -64,7 +64,10 @@ export const handler: Handler = async (event) => {
       .eq('user_id', user.id)
       .single()
 
-    const role = roleRow?.role as string | undefined
+    // Fall back to JWT app_metadata.role if no user_roles row exists.
+    const role: string | undefined =
+      (roleRow?.role as string | undefined) ||
+      (user.app_metadata?.role as string | undefined)
     if (!role) {
       return { statusCode: 403, headers: jsonHeaders, body: JSON.stringify({ error: 'Forbidden' }) }
     }

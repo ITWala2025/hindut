@@ -191,7 +191,6 @@ function MemberDetailSheet({
                   { label: 'Status', value: member.status },
                   { label: 'Start date', value: member.startDate || '—' },
                   { label: 'Expires', value: member.expiresOn || '—' },
-                  { label: 'Gateway', value: member.paymentMethod },
                   { label: 'Reference', value: member.reference },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 p-3">
@@ -228,22 +227,7 @@ function MemberDetailSheet({
               </>
             )}
 
-            {member.stripeCustomerId && (
-              <>
-                <Separator className="bg-slate-100" />
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
-                    Stripe
-                  </h4>
-                  <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
-                    <div className="text-xs text-slate-500 mb-0.5">Customer ID</div>
-                    <div className="font-mono text-xs text-slate-700 truncate">
-                      {member.stripeCustomerId}
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+
           </div>
 
           {/* Actions footer */}

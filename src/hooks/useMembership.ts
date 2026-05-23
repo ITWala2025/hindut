@@ -129,7 +129,7 @@ function toRecord(row: MembershipRow): MembershipRecord {
     startDate: row.started_at?.slice(0, 10) ?? '',
     expiresOn: row.expires_at?.slice(0, 10) ?? '',
     status: row.status as MembershipRecord['status'],
-    paymentMethod: (row.gateway ?? 'manual') as MembershipRecord['paymentMethod'],
+    paymentMethod: (row.stripe_customer_id ? 'stripe' : (row.gateway ?? 'manual')) as MembershipRecord['paymentMethod'],
     reference: row.reference ?? row.id.slice(0, 8).toUpperCase(),
     stripeCustomerId: row.stripe_customer_id ?? undefined,
     monthlyContributionEur: row.monthly_contribution_eur ?? undefined,

@@ -55,8 +55,11 @@ async function requirePermission(
     .select('role')
     .eq('user_id', userData.user.id)
     .maybeSingle()
-  if (roleErr) return null
-  const role = (roleRow as { role?: string } | null)?.role
+  // Fall back to JWT app_metadata.role if the DB row is absent or the query errored.
+  // app_metadata is set server-side and is safe to trust after JWT verification.
+  const role: string | undefined =
+    (!roleErr && (roleRow as { role?: string } | null)?.role) ||
+    (userData.user.app_metadata?.role as string | undefined)
   if (!role) return null
 
   // super_admin always has every permission.
