@@ -286,26 +286,9 @@ export const handler: Handler = async (event) => {
               const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
               const trialEnd = Math.floor(nextMonthStart.getTime() / 1000)
 
-              // Pre-create a donation row so we have an id to link back
-              const { data: donRow } = await supabase
-                .from('donations')
-                .insert({
-                  donor_name:  memberName,
-                  donor_email: memberEmail,
-                  member_id:   memberId,
-                  gateway:     'stripe',
-                  amount_eur:  monthlyContributionEur,
-                  currency:    'EUR',
-                  recurring:   true,
-                  status:      'pending',
-                  description: `Monthly contribution — ${planName} member`,
-                })
-                .select('id')
-                .single()
-
-              const donationId = (donRow as { id: string } | null)?.id ?? null
-
-              // Create the Stripe subscription for the member's saved payment method
+              // Create the Stripe subscription — NO donation row yet.
+              // A fresh 'succeeded' donation row is created by invoice.paid each
+              // time a real payment is charged (trial invoices are skipped).
               const monthlySub = await stripe.subscriptions.create({
                 customer: customerId,
                 items: [{
@@ -321,22 +304,16 @@ export const handler: Handler = async (event) => {
                 }],
                 trial_end: trialEnd,
                 metadata: {
-                  kind:        'monthly_contribution',
-                  donationId:  donationId ?? '',
-                  memberId:    memberId ?? '',
-                  memberEmail: memberEmail ?? '',
+                  kind:         'monthly_contribution',
+                  amountEur:    String(monthlyContributionEur),
+                  memberId:     memberId ?? '',
+                  memberEmail:  memberEmail ?? '',
                   memberName,
                   membershipId,
+                  planName,
                 },
               })
 
-              // Persist the subscription id on both the donation row and membership row
-              if (donationId) {
-                await supabase
-                  .from('donations')
-                  .update({ stripe_subscription_id: monthlySub.id })
-                  .eq('id', donationId)
-              }
               await supabase
                 .from('memberships')
                 .update({
@@ -491,24 +468,52 @@ export const handler: Handler = async (event) => {
         break
       }
 
-      // ─── Monthly invoice paid → mark donation succeeded ─────────────────
+      // ─── Monthly invoice paid → create a succeeded donation row ─────────
       case 'invoice.paid': {
         const invoice = stripeEvent.data.object as Stripe.Invoice
+        // Skip zero-amount trial invoices (no money was charged)
+        if ((invoice.amount_paid ?? 0) === 0) break
+
         const subId =
           typeof invoice.subscription === 'string'
             ? invoice.subscription
             : (invoice.subscription as Stripe.Subscription | null)?.id
         if (!subId) break
+
         // Only handle subscriptions we created for monthly contributions
         const sub = await stripe.subscriptions.retrieve(subId).catch(() => null)
         if (sub?.metadata?.kind !== 'monthly_contribution') break
-        const donationId = sub.metadata?.donationId
-        if (donationId) {
-          await supabase
-            .from('donations')
-            .update({ status: 'succeeded', updated_at: new Date().toISOString() })
-            .eq('id', donationId)
-          console.log('[stripe-webhook] monthly contribution donation', donationId, '→ succeeded')
+
+        const amountEur  = (invoice.amount_paid ?? 0) / 100
+        const memberName  = sub.metadata?.memberName  ?? ''
+        const memberEmail = sub.metadata?.memberEmail ?? ''
+        const memberId    = sub.metadata?.memberId    || null
+        const planName    = sub.metadata?.planName    ?? ''
+
+        // Insert a fresh succeeded donation row for this charge.
+        // This gives the admin a complete per-payment history.
+        const { data: newDon, error: donErr } = await supabase
+          .from('donations')
+          .insert({
+            donor_name:              memberName,
+            donor_email:             memberEmail,
+            member_id:               memberId,
+            gateway:                 'stripe',
+            amount_eur:              amountEur,
+            currency:                invoice.currency?.toUpperCase() ?? 'EUR',
+            recurring:               true,
+            status:                  'succeeded',
+            description:             `Monthly contribution — ${planName} member`,
+            stripe_subscription_id:  subId,
+          })
+          .select('id')
+          .single()
+
+        if (donErr) {
+          console.error('[stripe-webhook] failed to insert monthly donation row:', donErr.message)
+        } else {
+          console.log('[stripe-webhook] monthly contribution donation', (newDon as { id: string })?.id,
+            'created for', memberEmail, 'amount', amountEur)
         }
         break
       }
