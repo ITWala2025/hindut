@@ -41,6 +41,21 @@ export function useDonations(filters?: DonationFilters) {
   const filtersRef = useRef(filters)
   filtersRef.current = filters
 
+  // One-time cleanup: remove phantom "pending" rows that were pre-created during
+  // monthly-contribution subscription setup before the webhook fix (May 2026).
+  // These rows have recurring=true, status=pending and no payment_intent_id.
+  useEffect(() => {
+    supabase
+      .from('donations')
+      .delete()
+      .eq('recurring', true)
+      .eq('status', 'pending')
+      .is('stripe_payment_intent_id', null)
+      .then(({ error: e }) => {
+        if (e) console.warn('[useDonations] phantom-row cleanup skipped:', e.message)
+      })
+  }, [])
+
   const fetchDonations = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -53,6 +68,8 @@ export function useDonations(filters?: DonationFilters) {
         'id, donor_name, donor_email, stripe_payment_intent_id, gateway, amount_eur, currency, recurring, status, description, created_at, updated_at',
       )
       .order('created_at', { ascending: false })
+      // Exclude phantom pending recurring rows (no real payment taken yet)
+      .or('recurring.eq.false,status.neq.pending,stripe_payment_intent_id.not.is.null')
 
     if (f?.fromDate) query = query.gte('created_at', f.fromDate)
     if (f?.toDate)   query = query.lte('created_at', `${f.toDate}T23:59:59Z`)
