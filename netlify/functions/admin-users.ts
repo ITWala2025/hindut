@@ -313,8 +313,8 @@ export const handler: Handler = async (event) => {
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       })
       if (dbErr) {
-        console.error('[admin-users] assign-role insert error:', dbErr.message)
-        return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Failed to store role invitation. Has the role_invitations migration been run in Supabase?' }) }
+        console.error('[admin-users] assign-role insert error:', dbErr.message, dbErr.code)
+        return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: `DB error (${dbErr.code}): ${dbErr.message}` }) }
       }
 
       // Send verification email — wrap so a failed email doesn't crash the whole request

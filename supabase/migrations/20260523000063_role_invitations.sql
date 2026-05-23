@@ -35,3 +35,8 @@ create policy "no direct client access"
   on public.role_invitations
   using (false)
   with check (false);
+
+-- Explicitly grant table-level privileges to service_role.
+-- Supabase bypasses RLS for service_role but still requires GRANT on the table
+-- when the table is created via a SQL migration (not the Studio UI).
+grant select, insert, update, delete on public.role_invitations to service_role;
