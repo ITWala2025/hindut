@@ -154,20 +154,56 @@ export const handler: Handler = async (event) => {
 
         if (kind === 'donation') {
           const donationId = session.metadata?.donationId
-          if (!donationId) break
-          const paymentIntentId =
-            typeof session.payment_intent === 'string'
-              ? session.payment_intent
-              : session.payment_intent?.id ?? null
-          await supabase
-            .from('donations')
-            .update({
-              status:                    'succeeded',
-              stripe_payment_intent_id:  paymentIntentId,
-              updated_at:                new Date().toISOString(),
-            })
-            .eq('id', donationId)
-          console.log('[stripe-webhook] donation', donationId, '→ succeeded')
+
+          if (donationId) {
+            // ── One-time donation: update the pre-created pending row ────
+            const paymentIntentId =
+              typeof session.payment_intent === 'string'
+                ? session.payment_intent
+                : session.payment_intent?.id ?? null
+            await supabase
+              .from('donations')
+              .update({
+                status:                   'succeeded',
+                stripe_payment_intent_id: paymentIntentId,
+                updated_at:               new Date().toISOString(),
+              })
+              .eq('id', donationId)
+            console.log('[stripe-webhook] one-time donation', donationId, '→ succeeded')
+          } else {
+            // ── Recurring donation: create the first row immediately ─────
+            // Subsequent monthly charges are handled by invoice.paid.
+            const subscriptionId =
+              typeof session.subscription === 'string'
+                ? session.subscription
+                : (session.subscription as Stripe.Subscription | null)?.id ?? null
+            const amountEur  = (session.amount_total ?? 0) / 100
+            const donorName  = session.metadata?.donorName  ?? ''
+            const donorEmail = session.metadata?.donorEmail ?? ''
+
+            const { data: newDon, error: donErr } = await supabase
+              .from('donations')
+              .insert({
+                donor_name:             donorName,
+                donor_email:            donorEmail,
+                gateway:                'stripe',
+                amount_eur:             amountEur,
+                currency:               'EUR',
+                recurring:              true,
+                status:                 'succeeded',
+                description:            'Recurring donation',
+                stripe_subscription_id: subscriptionId,
+              })
+              .select('id')
+              .single()
+
+            if (donErr) {
+              console.error('[stripe-webhook] recurring donation insert error:', donErr.message)
+            } else {
+              console.log('[stripe-webhook] recurring donation', (newDon as { id: string })?.id,
+                'created for', donorEmail, 'stripe sub', subscriptionId)
+            }
+          }
         } else if (kind === 'membership') {
           const membershipId  = session.metadata?.membershipId
           if (!membershipId) break
@@ -500,6 +536,10 @@ export const handler: Handler = async (event) => {
 
         if (subKind === 'monthly_contribution') {
           // ── Monthly membership contribution ──────────────────────────
+          // First invoice (subscription_create) is already recorded by
+          // checkout.session.completed; only subsequent cycles need a new row.
+          // However, monthly contributions don't pre-create a row, so we create
+          // for every real invoice.
           const amountEur   = (invoice.amount_paid ?? 0) / 100
           const memberName  = sub.metadata?.memberName  ?? ''
           const memberEmail = sub.metadata?.memberEmail ?? ''
@@ -531,7 +571,11 @@ export const handler: Handler = async (event) => {
           }
 
         } else if (subKind === 'donation') {
-          // ── Recurring donation (from public DonationDialog) ───────────
+          // ── Recurring donation: only handle subsequent monthly charges ──
+          // The first charge row is created by checkout.session.completed.
+          // Subsequent cycle invoices (billing_reason='subscription_cycle') need a new row.
+          if ((invoice as Stripe.Invoice & { billing_reason?: string }).billing_reason !== 'subscription_cycle') break
+
           const amountEur  = (invoice.amount_paid ?? 0) / 100
           const donorName  = sub.metadata?.donorName  ?? ''
           const donorEmail = sub.metadata?.donorEmail ?? ''
