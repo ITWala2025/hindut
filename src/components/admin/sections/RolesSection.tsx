@@ -19,6 +19,8 @@ import {
 } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
+const ROLE_PERMISSIONS_URL = '/.netlify/functions/role-permissions'
+
 /**
  * Roles & Permissions — super-admin-only matrix UI.
  *
@@ -115,11 +117,20 @@ export function RolesSection() {
           onSave={async () => {
             setSaving(activeRole)
             try {
-              const { error } = await supabase.rpc('set_role_permissions', {
-                target_role:     activeRole,
-                new_permissions: drafts[activeRole],
+              const { data: { session } } = await supabase.auth.getSession()
+              const res = await fetch(ROLE_PERMISSIONS_URL, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session?.access_token ?? ''}`,
+                },
+                body: JSON.stringify({
+                  target_role:     activeRole,
+                  new_permissions: drafts[activeRole],
+                }),
               })
-              if (error) throw error
+              const data = await res.json()
+              if (!res.ok) throw new Error(data.error ?? 'Failed to save permissions.')
               toast.success(`Saved permissions for ${ROLE_LABELS[activeRole]}.`)
               await refreshPermissions()
             } catch (e) {
