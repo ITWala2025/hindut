@@ -134,18 +134,45 @@ export function downloadReceiptPdf(r: ReceiptRecord): void {
   doc.text(descLines, margin, y)
   y += descLines.length * 14 + 18
 
-  // Payment ref
-  if (r.paymentReference) {
+  // Monthly contribution (membership only)
+  const monthlyAmt = r.type === 'membership'
+    ? (r.metadata?.monthly_contribution_eur as number | undefined)
+    : undefined
+  const monthlyStartIso = r.type === 'membership'
+    ? (r.metadata?.monthly_start_date as string | undefined)
+    : undefined
+
+  if (monthlyAmt && monthlyAmt >= 1) {
+    // Decorative band
+    doc.setFillColor(240, 253, 244) // green-50
+    doc.roundedRect(margin, y, pageW - margin * 2, 72, 8, 8, 'F')
+    doc.setDrawColor(134, 239, 172) // green-300
+    doc.setLineWidth(1)
+    doc.roundedRect(margin, y, pageW - margin * 2, 72, 8, 8, 'S')
+
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
-    doc.setTextColor(100, 116, 139)
-    doc.text('PAYMENT REFERENCE', margin, y)
-    y += 14
-    doc.setFont('courier', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(30, 41, 59)
-    doc.text(r.paymentReference, margin, y)
-    y += 22
+    doc.setTextColor(22, 101, 52) // green-800
+    doc.text('MONTHLY CONTRIBUTION', margin + 16, y + 22)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    doc.setTextColor(21, 128, 61) // green-700
+    const monthlyEuro = `€${monthlyAmt.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / month`
+    doc.text(monthlyEuro, margin + 16, y + 40)
+
+    let startLabel = 'Billing begins on the 1st of next month.'
+    if (monthlyStartIso) {
+      const startDate = new Date(monthlyStartIso)
+      if (!Number.isNaN(startDate.getTime())) {
+        startLabel = `Billing begins on ${startDate.toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' })}, then on the 1st of each month.`
+      }
+    }
+    doc.setFontSize(9)
+    doc.setTextColor(22, 101, 52)
+    doc.text(startLabel, margin + 16, y + 57)
+
+    y += 72 + 22
   }
 
   // Footer

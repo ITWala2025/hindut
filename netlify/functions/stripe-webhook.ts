@@ -322,6 +322,18 @@ export const handler: Handler = async (event) => {
                 })
                 .eq('id', membershipId)
 
+              // Update the membership receipt metadata so the PDF can describe the monthly sub
+              await supabase
+                .from('receipts')
+                .update({
+                  metadata: {
+                    monthly_contribution_eur: monthlyContributionEur,
+                    monthly_start_date:       nextMonthStart.toISOString(),
+                  },
+                })
+                .eq('type', 'membership')
+                .eq('related_id', membershipId)
+
               console.log('[stripe-webhook] monthly contribution sub', monthlySub.id, 'created for', memberEmail,
                 'trial until', nextMonthStart.toISOString())
             } catch (subErr) {
