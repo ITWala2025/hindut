@@ -1,25 +1,36 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Header } from '@/components/Header'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
 import { Footer } from '@/components/Footer'
 import { DonationDialog } from '@/components/DonationDialog'
+// Core public pages — eagerly loaded (fast first-paint for common routes)
 import { HomePage } from '@/components/pages/HomePage'
 import { AboutPage } from '@/components/pages/AboutPage'
 import { ServicesPage } from '@/components/pages/ServicesPage'
-import { ContactPage } from '@/components/pages/ContactPage'
 import { EventsPage } from '@/components/pages/EventsPage'
 import { MembershipPage } from '@/components/pages/MembershipPage'
-import { AdminPage } from '@/components/pages/AdminPage'
-import { PrivacyPolicyPage } from '@/components/pages/PrivacyPolicyPage'
-import { CookiesPolicyPage } from '@/components/pages/CookiesPolicyPage'
-import { TermsAndConditionsPage } from '@/components/pages/TermsAndConditionsPage'
-import { RefundPolicyPage } from '@/components/pages/RefundPolicyPage'
-import { PaymentSuccessPage } from '@/components/pages/PaymentSuccessPage'
-import { ActivateRolePage } from '@/components/pages/ActivateRolePage'
+import { ContactPage } from '@/components/pages/ContactPage'
+// Admin + utility pages — lazily loaded (never needed for public visitors)
+const AdminPage            = lazy(() => import('@/components/pages/AdminPage').then(m => ({ default: m.AdminPage })))
+const PrivacyPolicyPage    = lazy(() => import('@/components/pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })))
+const CookiesPolicyPage    = lazy(() => import('@/components/pages/CookiesPolicyPage').then(m => ({ default: m.CookiesPolicyPage })))
+const TermsAndConditionsPage = lazy(() => import('@/components/pages/TermsAndConditionsPage').then(m => ({ default: m.TermsAndConditionsPage })))
+const RefundPolicyPage     = lazy(() => import('@/components/pages/RefundPolicyPage').then(m => ({ default: m.RefundPolicyPage })))
+const PaymentSuccessPage   = lazy(() => import('@/components/pages/PaymentSuccessPage').then(m => ({ default: m.PaymentSuccessPage })))
+const ActivateRolePage     = lazy(() => import('@/components/pages/ActivateRolePage').then(m => ({ default: m.ActivateRolePage })))
 import { Toaster } from '@/components/ui/sonner'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
+
+/** Minimal full-page spinner shown while lazy chunks are loading */
+function PageLoader() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="h-8 w-8 rounded-full border-4 border-orange-200 border-t-orange-600 animate-spin" />
+    </div>
+  )
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -52,14 +63,14 @@ function AppShell() {
 
   if (isAdminRoute) {
     return (
-      <>
+      <Suspense fallback={<PageLoader />}>
         <ScrollToTop />
         <Routes>
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/:section" element={<AdminPage />} />
         </Routes>
         <Toaster />
-      </>
+      </Suspense>
     )
   }
 
@@ -76,14 +87,14 @@ function AppShell() {
           <Route path="/events" element={<EventsPage />} />
           <Route path="/membership" element={<MembershipPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          <Route path="/cookies-policy" element={<CookiesPolicyPage />} />
-          <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
-          <Route path="/refund-policy" element={<RefundPolicyPage />} />
-          <Route path="/donation-success" element={<PaymentSuccessPage variant="donation" />} />
-          <Route path="/membership-success" element={<PaymentSuccessPage variant="membership" />} />
-          <Route path="/ticket-success" element={<PaymentSuccessPage variant="ticket" />} />
-          <Route path="/activate-role" element={<ActivateRolePage />} />
+          <Route path="/privacy-policy" element={<Suspense fallback={<PageLoader />}><PrivacyPolicyPage /></Suspense>} />
+          <Route path="/cookies-policy" element={<Suspense fallback={<PageLoader />}><CookiesPolicyPage /></Suspense>} />
+          <Route path="/terms-and-conditions" element={<Suspense fallback={<PageLoader />}><TermsAndConditionsPage /></Suspense>} />
+          <Route path="/refund-policy" element={<Suspense fallback={<PageLoader />}><RefundPolicyPage /></Suspense>} />
+          <Route path="/donation-success" element={<Suspense fallback={<PageLoader />}><PaymentSuccessPage variant="donation" /></Suspense>} />
+          <Route path="/membership-success" element={<Suspense fallback={<PageLoader />}><PaymentSuccessPage variant="membership" /></Suspense>} />
+          <Route path="/ticket-success" element={<Suspense fallback={<PageLoader />}><PaymentSuccessPage variant="ticket" /></Suspense>} />
+          <Route path="/activate-role" element={<Suspense fallback={<PageLoader />}><ActivateRolePage /></Suspense>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

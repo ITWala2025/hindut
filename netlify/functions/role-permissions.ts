@@ -62,64 +62,75 @@ export const handler: Handler = async (event) => {
     }
   }
 
-  const auth = await requireSuperAdmin(event.headers.authorization)
-  if (!auth.ok) {
-    return {
-      statusCode: auth.status,
-      headers: jsonHeaders,
-      body: JSON.stringify({ error: auth.reason }),
-    }
-  }
-
-  let body: { target_role?: string; new_permissions?: unknown }
   try {
-    body = JSON.parse(event.body ?? '{}')
-  } catch {
-    return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Invalid JSON body' }) }
-  }
-
-  const { target_role, new_permissions } = body
-
-  if (target_role !== 'admin' && target_role !== 'editor') {
-    return {
-      statusCode: 400,
-      headers: jsonHeaders,
-      body: JSON.stringify({ error: `Only 'admin' and 'editor' roles are configurable (got '${target_role}')` }),
+    const auth = await requireSuperAdmin(event.headers.authorization)
+    if (!auth.ok) {
+      return {
+        statusCode: auth.status,
+        headers: jsonHeaders,
+        body: JSON.stringify({ error: auth.reason }),
+      }
     }
-  }
 
-  if (!new_permissions || typeof new_permissions !== 'object') {
-    return {
-      statusCode: 400,
-      headers: jsonHeaders,
-      body: JSON.stringify({ error: 'new_permissions must be an object' }),
+    let body: { target_role?: string; new_permissions?: unknown }
+    try {
+      body = JSON.parse(event.body ?? '{}')
+    } catch {
+      return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Invalid JSON body' }) }
     }
-  }
 
-  const supabase = supabaseAdmin()
-  const { error } = await supabase
-    .from('role_permissions')
-    .upsert(
-      {
-        role:        target_role,
-        permissions: new_permissions,
-        updated_at:  new Date().toISOString(),
-        updated_by:  auth.userId,
-      },
-      { onConflict: 'role' },
-    )
+    const { target_role, new_permissions } = body
 
-  if (error) {
+    if (target_role !== 'admin' && target_role !== 'editor') {
+      return {
+        statusCode: 400,
+        headers: jsonHeaders,
+        body: JSON.stringify({ error: `Only 'admin' and 'editor' roles are configurable (got '${target_role}')` }),
+      }
+    }
+
+    if (!new_permissions || typeof new_permissions !== 'object') {
+      return {
+        statusCode: 400,
+        headers: jsonHeaders,
+        body: JSON.stringify({ error: 'new_permissions must be an object' }),
+      }
+    }
+
+    const supabase = supabaseAdmin()
+    const { error } = await supabase
+      .from('role_permissions')
+      .upsert(
+        {
+          role:        target_role,
+          permissions: new_permissions,
+          updated_at:  new Date().toISOString(),
+          updated_by:  auth.userId,
+        },
+        { onConflict: 'role' },
+      )
+
+    if (error) {
+      console.error('[role-permissions] upsert error:', error)
+      return {
+        statusCode: 500,
+        headers: jsonHeaders,
+        body: JSON.stringify({ error: `DB error (${error.code}): ${error.message}` }),
+      }
+    }
+
+    return {
+      statusCode: 200,
+      headers: jsonHeaders,
+      body: JSON.stringify({ ok: true }),
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[role-permissions] unexpected error:', message)
     return {
       statusCode: 500,
       headers: jsonHeaders,
-      body: JSON.stringify({ error: `DB error (${error.code}): ${error.message}` }),
+      body: JSON.stringify({ error: `Internal error: ${message}` }),
     }
-  }
-
-  return {
-    statusCode: 200,
-    headers: jsonHeaders,
-    body: JSON.stringify({ ok: true }),
   }
 }

@@ -1,21 +1,122 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-IE">
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hindu Temple — Hindu Association of Ireland</title>
-    <meta name="description" content="The Hindu Association of Ireland (HAI) is a united platform working to establish a permanent Hindu Temple in Limerick. Join us for events, prayers and community celebrations across Ahane, Pallaskenry and Mungret.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Primary meta -->
+    <title>Hindu Temple Limerick — Hindu Association of Ireland</title>
+    <meta name="description" content="The Hindu Association of Ireland (HAI) is building a permanent Hindu Temple in Limerick. Join our community for puja, festivals, yoga, cultural events and membership across Ahane, Pallaskenry and Mungret." />
+    <meta name="keywords" content="Hindu Temple Limerick, Hindu Association Ireland, HAI, puja Limerick, Hindu community Ireland, temple Limerick, yoga Limerick, Diwali Limerick, Navratri Ireland" />
+    <meta name="author" content="Hindu Association of Ireland" />
+    <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" />
+    <link rel="canonical" href="https://www.hindutemple.ie/" />
+
+    <!-- Theme / PWA -->
+    <meta name="theme-color" content="#c2410c" />
+    <meta name="color-scheme" content="light" />
+    <meta name="application-name" content="Hindu Association of Ireland" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/webp" href="/logo.webp" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/logo.webp" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Hindu Association of Ireland" />
+    <meta property="og:title" content="Hindu Temple Limerick — Hindu Association of Ireland" />
+    <meta property="og:description" content="The Hindu Association of Ireland (HAI) is building a permanent Hindu Temple in Limerick. Join our community for puja, festivals, yoga and cultural events." />
+    <meta property="og:url" content="https://www.hindutemple.ie/" />
+    <meta property="og:image" content="https://www.hindutemple.ie/logo.webp" />
+    <meta property="og:image:alt" content="Hindu Association of Ireland logo" />
+    <meta property="og:image:width" content="800" />
+    <meta property="og:image:height" content="800" />
+    <meta property="og:locale" content="en_IE" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Hindu Temple Limerick — Hindu Association of Ireland" />
+    <meta name="twitter:description" content="Building a permanent Hindu Temple in Limerick. Join for puja, festivals, yoga and community events." />
+    <meta name="twitter:image" content="https://www.hindutemple.ie/logo.webp" />
+
+    <!-- Preconnect for critical third-party origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://gsqfaguqsmnuoeuhpxro.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://js.stripe.com" />
+    <link rel="dns-prefetch" href="https://api.stripe.com" />
+
+    <!-- LCP: preload hero background image so the browser fetches it immediately -->
+    <link
+      rel="preload"
+      as="image"
+      href="https://gsqfaguqsmnuoeuhpxro.supabase.co/storage/v1/object/public/public-gallery/branding/Hindu_T.png"
+      crossorigin
+    />
+
+    <!-- Fonts (display=swap for LCP improvement) -->
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <!-- Styles -->
     <link href="/src/main.css" rel="stylesheet" />
+
+    <!-- Structured Data: Organization + WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "ReligiousOrganization",
+          "@id": "https://www.hindutemple.ie/#organization",
+          "name": "Hindu Association of Ireland",
+          "alternateName": "HAI",
+          "url": "https://www.hindutemple.ie",
+          "logo": "https://www.hindutemple.ie/logo.webp",
+          "image": "https://www.hindutemple.ie/logo.webp",
+          "description": "The Hindu Association of Ireland (HAI) is a united platform working to establish a permanent Hindu Temple in Limerick, Ireland.",
+          "foundingDate": "2018",
+          "areaServed": {
+            "@type": "AdministrativeArea",
+            "name": "Limerick, Ireland"
+          },
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Limerick",
+            "addressCountry": "IE"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "email": "info@hindutemple.ie",
+            "availableLanguage": ["English", "Hindi", "Tamil", "Malayalam"]
+          },
+          "sameAs": [
+            "https://www.facebook.com/hinduassociationofireland",
+            "https://www.instagram.com/hinduassociationofireland"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.hindutemple.ie/#website",
+          "url": "https://www.hindutemple.ie",
+          "name": "Hindu Association of Ireland",
+          "description": "Official website of the Hindu Association of Ireland — events, membership, services and community.",
+          "publisher": { "@id": "https://www.hindutemple.ie/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://www.hindutemple.ie/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 
 <body>

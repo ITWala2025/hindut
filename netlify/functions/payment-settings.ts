@@ -149,33 +149,41 @@ export const handler: Handler = async (event) => {
   // -- GET -----------------------------------------------------------------
   if (event.httpMethod === 'GET') {
     try {
-      const ctx = await resolveStripe({ host })
-
       const { data: rowData } = await supabase
         .from('payment_settings')
         .select('mode_override, updated_at, notes')
         .eq('id', 1)
         .maybeSingle()
 
+      // Try to resolve Stripe context — best-effort; returns null if keys are missing.
+      let ctx: Awaited<ReturnType<typeof resolveStripe>> | null = null
+      try {
+        ctx = await resolveStripe({ host })
+      } catch (stripeErr) {
+        console.warn('[payment-settings] Stripe not configured:', (stripeErr as Error).message)
+      }
+
       // Fetch the Stripe account display info (best-effort, never blocks).
       let account: { id: string; displayName: string | null; country: string | null } | null = null
-      try {
-        const acct = await ctx.stripe.accounts.retrieve()
-        account = {
-          id:          acct.id,
-          displayName: acct.business_profile?.name ?? acct.settings?.dashboard?.display_name ?? null,
-          country:     acct.country ?? null,
+      if (ctx) {
+        try {
+          const acct = await ctx.stripe.accounts.retrieve()
+          account = {
+            id:          acct.id,
+            displayName: acct.business_profile?.name ?? acct.settings?.dashboard?.display_name ?? null,
+            country:     acct.country ?? null,
+          }
+        } catch (err) {
+          console.warn('[payment-settings] accounts.retrieve failed:', (err as Error).message)
         }
-      } catch (err) {
-        console.warn('[payment-settings] accounts.retrieve failed:', (err as Error).message)
       }
 
       return {
         statusCode: 200,
         headers:    { ...jsonHeaders, 'Cache-Control': 'no-store' },
         body:       JSON.stringify({
-          mode:            ctx.mode,
-          source:          ctx.source,
+          mode:            ctx?.mode ?? null,
+          source:          ctx?.source ?? null,
           modeOverride:    (rowData as { mode_override?: string } | null)?.mode_override ?? 'auto',
           updatedAt:       (rowData as { updated_at?: string } | null)?.updated_at ?? null,
           notes:           (rowData as { notes?: string | null } | null)?.notes ?? null,

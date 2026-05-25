@@ -6,6 +6,7 @@ import { Heart, CalendarBlank, Users, HandsPraying, SpeakerHigh, SpeakerSlash, A
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { CircularText } from '@/components/CircularText'
 import { PhotoGallery } from '@/components/PhotoGallery'
+import { SeoMeta } from '@/lib/seo'
 
 interface HomePageProps {
   onDonateClick: () => void
@@ -119,6 +120,11 @@ export function HomePage({ onDonateClick }: HomePageProps) {
 
   return (
     <div className="flex flex-col relative">
+      <SeoMeta
+        title="Hindu Temple Limerick — Home"
+        description="The Hindu Association of Ireland is building a permanent Hindu Temple in Limerick. Join our community for puja, festivals, yoga, cultural events and membership."
+        canonical="/"
+      />
       {/* Background Music - Krishna Bhajan */}
       <audio
         ref={audioRef}

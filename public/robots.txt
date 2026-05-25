@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Admin section — not for indexing
+Disallow: /admin
+Disallow: /admin/
+
+# Transaction confirmation pages — no indexing value
+Disallow: /donation-success
+Disallow: /membership-success
+Disallow: /ticket-success
+
+# Role activation — private link
+Disallow: /activate-role
+
+# Netlify functions — not public content
+Disallow: /.netlify/
+
+# Sitemap
+Sitemap: https://www.hindutemple.ie/sitemap.xml

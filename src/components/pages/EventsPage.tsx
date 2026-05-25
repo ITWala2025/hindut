@@ -18,6 +18,7 @@ import { TicketBookingDialog } from '@/components/TicketBookingDialog'
 import { cn } from '@/lib/utils'
 import { useEvents, sortByDate, upcomingOnly } from '@/hooks/useEvents'
 import { CATEGORY_LABELS, type EventCategory, type TempleEvent } from '@/data/events'
+import { SeoMeta } from '@/lib/seo'
 
 type Filter = 'all' | 'free' | 'paid'
 
@@ -81,6 +82,11 @@ export function EventsPage() {
 
   return (
     <div className="flex flex-col">
+      <SeoMeta
+        title="Events — Hindu Festivals & Community Gatherings"
+        description="Upcoming Hindu festivals, pujas, yoga sessions and cultural events organised by the Hindu Association of Ireland in Limerick. Free and ticketed events for all."
+        canonical="/events"
+      />
       <HeroCarousel
         title="Temple Events & Calendar"
         subtitle={`${upcoming.length} upcoming celebrations across Ahane, Pallaskenry and Mungret`}

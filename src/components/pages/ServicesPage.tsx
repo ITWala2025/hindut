@@ -6,6 +6,7 @@ import { HandsPraying, CalendarBlank, GraduationCap, Users } from '@phosphor-ico
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { useServices } from '@/hooks/useServices'
 import type { ServiceRecord } from '@/lib/types'
+import { SeoMeta } from '@/lib/seo'
 
 function ServiceCardSkeleton() {
   return (
@@ -35,6 +36,11 @@ export function ServicesPage() {
 
   return (
     <div className="flex flex-col">
+      <SeoMeta
+        title="Temple Services — Puja, Yoga & Cultural Programs"
+        description="Explore sacred services at the Hindu Association of Ireland — daily puja, havan ceremonies, yoga classes, Vedic education and community programs in Limerick."
+        canonical="/services"
+      />
       <HeroCarousel
         title="Temple Services"
         subtitle="Spiritual services, educational programs, and community events for all"

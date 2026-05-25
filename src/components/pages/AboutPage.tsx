@@ -5,6 +5,7 @@ import { Heart, Users, BookOpen, Lightbulb, HandsPraying, MapPin } from '@phosph
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useTeam } from '@/hooks/useTeam'
+import { SeoMeta } from '@/lib/seo'
 
 type AboutTarget = 'story' | 'values' | 'team'
 
@@ -49,6 +50,11 @@ export function AboutPage() {
 
   return (
     <div className="flex flex-col">
+      <SeoMeta
+        title="About Us — Our Mission & Community"
+        description="Learn about the Hindu Association of Ireland — our mission to build a permanent Hindu Temple in Limerick, our values, history and dedicated community team."
+        canonical="/about"
+      />
       <HeroCarousel
         title="About the Hindu Association of Ireland"
         subtitle="A decade of cultural, religious and community service across Limerick"
@@ -274,82 +280,97 @@ export function AboutPage() {
               </p>
             </div>
 
-            {/* Team grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {teamLoading ? (
-                <p className="text-slate-500 col-span-full text-center py-8">Loading team…</p>
-              ) : teamMembers.map((member) => {
-                const initials = member.name
-                  .split(' ')
-                  .filter((p) => !p.endsWith('.'))
-                  .slice(0, 2)
-                  .map((p) => p[0])
-                  .join('')
-                  .toUpperCase()
-                return (
-                  <article
-                    key={member.id}
-                    className="group relative rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_24px_48px_-12px_rgba(194,65,12,0.18)] hover:border-orange-300 transition-all duration-300 overflow-hidden"
-                  >
-                    {/* Accent bar */}
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-orange-500 via-amber-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            {/* Team marquee */}
+            <div className="relative overflow-hidden">
+              {/* Fade edges */}
+              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-white to-transparent" />
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-white to-transparent" />
 
-                    {/* Avatar header — subtle saffron wash */}
-                    <div className="relative h-28 bg-linear-to-br from-orange-50 via-amber-50 to-orange-100/60 border-b border-slate-100">
-                      <div
-                        aria-hidden
-                        className="absolute inset-0 opacity-40"
-                        style={{
-                          backgroundImage:
-                            'radial-gradient(circle at 20% 30%, rgba(251,146,60,0.25), transparent 50%), radial-gradient(circle at 80% 60%, rgba(245,158,11,0.18), transparent 55%)',
-                        }}
-                      />
-                      <div className="absolute -bottom-9 left-6">
-                        <div className="relative">
-                          <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-orange-500 to-amber-600 blur-md opacity-40 group-hover:opacity-70 transition-opacity" />
-                          <div className="relative w-[72px] h-[72px] rounded-2xl bg-linear-to-br from-orange-500 to-amber-600 text-white font-bold text-xl flex items-center justify-center shadow-lg ring-4 ring-white">
-                            {initials}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Body */}
-                    <div className="pt-12 px-6 pb-6">
-                      <h3
-                        className="font-bold text-lg text-slate-900 leading-tight tracking-tight"
-                        style={{ fontFamily: 'var(--font-heading)' }}
+              <div className="team-marquee-track gap-6 py-4">
+                {teamLoading ? (
+                  <p className="text-slate-500 px-8 py-8">Loading team…</p>
+                ) : (
+                  [...teamMembers, ...teamMembers].map((member, idx) => {
+                    const initials = member.name
+                      .split(' ')
+                      .filter((p) => !p.endsWith('.'))
+                      .slice(0, 2)
+                      .map((p) => p[0])
+                      .join('')
+                      .toUpperCase()
+                    return (
+                      <article
+                        key={`${member.id}-${idx}`}
+                        className="group relative flex-shrink-0 w-60 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_24px_48px_-12px_rgba(194,65,12,0.18)] hover:border-orange-300 transition-all duration-300 overflow-hidden"
                       >
-                        {member.name}
-                      </h3>
-                      <p className="text-[13px] font-semibold text-orange-700 mt-1 leading-snug">
-                        {member.role}
-                      </p>
+                        {/* Accent bar */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-orange-500 via-amber-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                      <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-[11px] text-slate-600 font-medium">
-                        <MapPin size={12} weight="fill" className="text-orange-600" />
-                        {member.origin}
-                      </div>
+                        {/* Photo / avatar */}
+                        <div className="relative h-44 bg-linear-to-br from-orange-50 via-amber-50 to-orange-100/60 overflow-hidden">
+                          {member.image_url ? (
+                            <img
+                              src={member.image_url}
+                              alt={member.name}
+                              className="w-full h-full object-cover object-top"
+                            />
+                          ) : (
+                            <>
+                              <div
+                                aria-hidden
+                                className="absolute inset-0 opacity-40"
+                                style={{
+                                  backgroundImage:
+                                    'radial-gradient(circle at 20% 30%, rgba(251,146,60,0.25), transparent 50%), radial-gradient(circle at 80% 60%, rgba(245,158,11,0.18), transparent 55%)',
+                                }}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="relative">
+                                  <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-orange-500 to-amber-600 blur-md opacity-40 group-hover:opacity-70 transition-opacity" />
+                                  <div className="relative w-20 h-20 rounded-2xl bg-linear-to-br from-orange-500 to-amber-600 text-white font-bold text-2xl flex items-center justify-center shadow-lg ring-4 ring-white">
+                                    {initials}
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
 
-                      <Separator className="my-4 bg-slate-100" />
+                        {/* Body */}
+                        <div className="px-5 py-4">
+                          <h3
+                            className="font-bold text-base text-slate-900 leading-tight tracking-tight"
+                            style={{ fontFamily: 'var(--font-heading)' }}
+                          >
+                            {member.name}
+                          </h3>
+                          <p className="text-[13px] font-semibold text-orange-700 mt-0.5 leading-snug">
+                            {member.role}
+                          </p>
 
-                      <p className="text-[13.5px] text-slate-600 leading-relaxed line-clamp-5">
-                        {member.bio}
-                      </p>
-                    </div>
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-[11px] text-slate-600 font-medium">
+                            <MapPin size={11} weight="fill" className="text-orange-600" />
+                            {member.origin}
+                          </div>
 
-                    {/* Footer chip */}
-                    <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        HAI Volunteer
-                      </span>
-                      <span className="text-[11px] font-mono text-slate-400">
-                        #{member.id.slice(0, 8)}
-                      </span>
-                    </div>
-                  </article>
-                )
-              })}
+                          <Separator className="my-3 bg-slate-100" />
+
+                          <p className="text-[12.5px] text-slate-600 leading-relaxed line-clamp-4">
+                            {member.bio}
+                          </p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/60">
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                            HAI Volunteer
+                          </span>
+                        </div>
+                      </article>
+                    )
+                  })
+                )}
+              </div>
             </div>
 
             {/* Footnote */}

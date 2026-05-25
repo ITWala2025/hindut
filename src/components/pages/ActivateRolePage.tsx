@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, XCircle, Spinner } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { SeoMeta } from '@/lib/seo'
 
 type Status = 'loading' | 'success' | 'error'
 
@@ -62,6 +63,11 @@ export function ActivateRolePage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-orange-50 to-amber-50 flex items-center justify-center p-4">
+      <SeoMeta
+        title="Activate Account"
+        description="Activate your Hindu Association of Ireland admin account."
+        noIndex
+      />
       <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full text-center">
         {/* Logo / brand */}
         <p className="text-xs font-semibold tracking-widest text-orange-500 uppercase mb-6">

@@ -8,6 +8,7 @@ import { MapPin, Phone, Envelope, ArrowDown, InstagramLogo, FacebookLogo, Twitte
 import { toast } from 'sonner'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
+import { SeoMeta } from '@/lib/seo'
 
 type ContactTarget = 'address' | 'phone' | 'email' | 'form'
 
@@ -53,6 +54,11 @@ export function ContactPage() {
 
   return (
     <div className="flex flex-col overflow-x-hidden">
+      <SeoMeta
+        title="Contact Us — Get in Touch"
+        description="Contact the Hindu Association of Ireland. Find our address in Limerick, phone number, email, or send us a message to connect with our community."
+        canonical="/contact"
+      />
       <HeroCarousel
         title="Contact Us"
         subtitle="We'd love to hear from you. Reach out with any questions or visit us in person."

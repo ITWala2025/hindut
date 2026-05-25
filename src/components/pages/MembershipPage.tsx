@@ -43,6 +43,7 @@ import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useMembership } from '@/hooks/useMembership'
 import type { MembershipPlan } from '@/data/membership'
+import { SeoMeta } from '@/lib/seo'
 
 // ── Icon resolver: maps DB-stored icon names to phosphor components ───────────
 const ICON_MAP: Record<string, PhosphorIcon> = {
@@ -137,7 +138,7 @@ export function MembershipPage() {
   const [phone, setPhone] = useState('')
   const [gdprConsent, setGdprConsent] = useState(false)
   const [addMonthly, setAddMonthly] = useState(false)
-  const [monthlyAmount, setMonthlyAmount] = useState<number>(35)
+  const [monthlyAmount, setMonthlyAmount] = useState<number>(0)
   const [monthlyCustom, setMonthlyCustom] = useState('')
   const [processing, setProcessing] = useState(false)
 
@@ -166,6 +167,15 @@ export function MembershipPage() {
     return [...dbTiles, CUSTOM_TILE]
   }, [plans])
 
+  const monthlyGivingAmounts = useMemo(
+    () =>
+      plans
+        .filter((p) => p.category === 'giving' && p.active)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((p) => p.price),
+    [plans],
+  )
+
   const openFor = (plan: MembershipPlan) => {
     setSelected(plan)
     setStep('details')
@@ -174,7 +184,11 @@ export function MembershipPage() {
     setPhone('')
     setGdprConsent(false)
     setAddMonthly(true)
-    setMonthlyAmount(35)
+    const defaultAmt =
+      plans.find((p) => p.category === 'giving' && p.active && p.popular)?.price ??
+      plans.find((p) => p.category === 'giving' && p.active)?.price ??
+      0
+    setMonthlyAmount(defaultAmt)
     setMonthlyCustom('')
     setProcessing(false)
     setDialogOpen(true)
@@ -298,6 +312,11 @@ export function MembershipPage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col">
+      <SeoMeta
+        title="Membership — Support the Hindu Temple in Limerick"
+        description="Become a member of the Hindu Association of Ireland and help build a permanent Hindu Temple in Limerick. Enjoy monthly archana, community recognition and more."
+        canonical="/membership"
+      />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <HeroCarousel
@@ -765,13 +784,13 @@ export function MembershipPage() {
                         <Switch
                           checked={addMonthly}
                           onCheckedChange={setAddMonthly}
-                          className="data-[state=checked]:bg-amber-500"
+                          className="data-[state=checked]:bg-amber-500 h-4 w-7 [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-3"
                         />
                       </div>
                       <p className="text-xs text-slate-500 mb-3">Optional — billed monthly from next month until cancelled. Not charged today.</p>
                       {addMonthly && (
                         <div className="grid grid-cols-4 gap-2 mt-2">
-                          {[22, 35, 50].map((amt) => (
+                          {monthlyGivingAmounts.map((amt) => (
                             <button
                               key={amt}
                               type="button"

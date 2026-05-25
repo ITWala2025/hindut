@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { Dialog, DialogPortal, DialogOverlay, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Heart, CheckCircle, CreditCard, ArrowLeft, Spinner, ShieldCheck } from '@phosphor-icons/react'
+import { Heart, CheckCircle, CreditCard, ArrowLeft, Spinner, ShieldCheck, X } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -105,7 +106,52 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[550px] bg-linear-to-br from-orange-50 via-white to-amber-50">
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          className={cn(
+            // ── Shared ─────────────────────────────────────────────────────
+            'fixed z-50 bg-gradient-to-br from-orange-50 via-white to-amber-50',
+            'overflow-y-auto focus:outline-none',
+
+            // ── Mobile / tablet — full-screen overlay ──────────────────────
+            // Fill the entire viewport; extra top padding clears the close btn
+            'inset-0 rounded-none px-6 pb-8 pt-14',
+            // Open: slide up from below the viewport
+            'data-[state=open]:animate-in data-[state=open]:fade-in-0',
+            'data-[state=open]:slide-in-from-bottom-full',
+            // Close: slide back down
+            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+            'data-[state=closed]:slide-out-to-bottom-full',
+            'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+
+            // ── Desktop (lg+) — centered compact modal ─────────────────────
+            // Reset full-screen positioning; centre with translate
+            'lg:inset-auto lg:top-1/2 lg:left-1/2',
+            'lg:-translate-x-1/2 lg:-translate-y-1/2',
+            'lg:w-full lg:max-w-[550px] lg:max-h-[90vh]',
+            'lg:rounded-2xl lg:shadow-2xl',
+            'lg:border lg:border-orange-200/40',
+            'lg:px-6 lg:pb-6 lg:pt-6',
+            // Cancel the slide, use zoom + fade instead
+            'lg:data-[state=open]:slide-in-from-bottom-0 lg:data-[state=open]:zoom-in-95',
+            'lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=closed]:zoom-out-95',
+            'lg:duration-200',
+          )}
+        >
+          {/* Accessible close button — absolute so it never shifts content */}
+          <DialogPrimitive.Close
+            className={cn(
+              'absolute top-4 right-4 z-10 rounded-lg p-1.5',
+              'text-orange-600 opacity-70 transition-opacity',
+              'hover:opacity-100',
+              'focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2',
+              'disabled:pointer-events-none',
+            )}
+          >
+            <X size={20} />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
         {/* Amount Selection Step */}
         {step === 'amount' && (
           <>
@@ -347,12 +393,12 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
               </div>
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
+              <DialogTitle className="text-2xl font-bold mb-2 text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
                 Thank You for Your Generosity!
-              </h3>
-              <p className="text-muted-foreground text-lg mb-2">
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-lg mb-2">
                 Donation: €{getDonationAmount()}
-              </p>
+              </DialogDescription>
               <p className="text-sm text-muted-foreground">
                 Payment processed via Stripe. A receipt has been sent to {donorEmail}.
               </p>
@@ -368,7 +414,8 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
             </Button>
           </div>
         )}
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   )
 }

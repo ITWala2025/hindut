@@ -10,6 +10,7 @@ interface TeamRow {
   bio: string | null
   sort_order: number
   active: boolean
+  image_url: string | null
 }
 
 function toTeamMember(row: TeamRow): TeamMember {
@@ -19,6 +20,7 @@ function toTeamMember(row: TeamRow): TeamMember {
     origin: row.origin ?? '',
     role: row.role,
     bio: row.bio ?? '',
+    image_url: row.image_url ?? undefined,
   }
 }
 

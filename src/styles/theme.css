@@ -343,6 +343,17 @@
     }
   }
 
+  /* Team marquee — slow right-to-left scroll */
+  .team-marquee-track {
+    display: flex;
+    will-change: transform;
+    animation: scroll-left 70s linear infinite;
+  }
+
+  .team-marquee-track:hover {
+    animation-play-state: paused;
+  }
+
   /* Inside-out reveal animation for hero background */
   .hero-reveal {
     animation: reveal-inside-out 2s ease-out forwards;

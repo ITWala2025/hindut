@@ -30,3 +30,84 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# ── Security & caching headers ────────────────────────────────────────────────
+# Applied to all routes first (broadest rule), then overridden for specifics.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Prevent clickjacking
+    X-Frame-Options = "DENY"
+    # Prevent MIME-type sniffing
+    X-Content-Type-Options = "nosniff"
+    # Enable XSS filter in older browsers
+    X-XSS-Protection = "1; mode=block"
+    # Limit referrer information leakage
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Restrict powerful browser features
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(self https://js.stripe.com), usb=()"
+    # Enforce HTTPS for 1 year, include subdomains (add preload once tested)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    # Content-Security-Policy for public pages
+    # - unsafe-inline required: React inline style={} props + TinyMCE
+    # - unsafe-eval required: TinyMCE templating engine
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://gsqfaguqsmnuoeuhpxro.supabase.co https://*.stripe.com; connect-src 'self' https://gsqfaguqsmnuoeuhpxro.supabase.co wss://gsqfaguqsmnuoeuhpxro.supabase.co https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com;"
+    # Cross-origin policies
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    Cross-Origin-Resource-Policy = "same-site"
+
+# Cache Vite-hashed static assets forever (immutable)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache TinyMCE skins long-term (filename-versioned by tinymce itself)
+[[headers]]
+  for = "/tinymce/*"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000, stale-while-revalidate=86400"
+
+# Static assets in /public (logo, favicons, sitemap, robots)
+[[headers]]
+  for = "/*.webp"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=3600"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=3600"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=3600"
+
+# SPA entry point — always revalidate
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Sitemap & robots — short cache (updated when content changes)
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+    Content-Type = "application/xml; charset=UTF-8"
+
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Content-Type = "text/plain; charset=UTF-8"
+
+# Netlify functions — CORS for API responses
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://www.hindutemple.ie"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"

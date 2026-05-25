@@ -23,7 +23,7 @@ interface HeaderProps {
 
 const NAV_ITEMS = [
   { path: '/',           label: 'Home',       icon: <House             size={18} weight="duotone" /> },
-  { path: '/about',      label: 'About Us',   icon: <Info              size={18} weight="duotone" /> },
+  { path: '/about',      label: 'About',   icon: <Info              size={18} weight="duotone" /> },
   { path: '/services',   label: 'Services',   icon: <Sparkle           size={18} weight="duotone" /> },
   { path: '/events',     label: 'Events',     icon: <CalendarBlank     size={18} weight="duotone" /> },
   { path: '/membership', label: 'Membership', icon: <IdentificationCard size={18} weight="duotone" /> },

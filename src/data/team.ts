@@ -8,4 +8,5 @@ export interface TeamMember {
   origin: string
   role: string
   bio: string
+  image_url?: string
 }

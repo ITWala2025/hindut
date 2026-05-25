@@ -1,8 +1,14 @@
 import { Scroll } from '@phosphor-icons/react'
+import { SeoMeta } from '@/lib/seo'
 
 export function TermsAndConditionsPage() {
   return (
     <div className="flex flex-col pt-32 pb-24">
+      <SeoMeta
+        title="Terms and Conditions"
+        description="Read the terms and conditions governing use of the Hindu Association of Ireland website and services."
+        canonical="/terms-and-conditions"
+      />
       <div className="bg-linear-to-br from-orange-600 via-amber-600 to-orange-700 py-16 px-6 text-center">
         <div className="flex justify-center mb-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
