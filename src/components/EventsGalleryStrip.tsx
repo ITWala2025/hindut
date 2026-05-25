@@ -34,8 +34,13 @@ function useStripItems(limit = 16) {
                 row.alt_text ?? row.title ?? row.filename ?? 'Event photo'
 
               if (mediaType === 'album') {
+                const thumbSrc =
+                  row.thumbnail_url ??
+                  (row.bucket && row.bucket !== 'external'
+                    ? supabase.storage.from(row.bucket).getPublicUrl(row.path).data.publicUrl
+                    : '')
                 return {
-                  src: row.thumbnail_url ?? '',
+                  src: thumbSrc,
                   alt,
                   mediaType: 'album' as const,
                   href: row.path,

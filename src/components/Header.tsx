@@ -85,7 +85,7 @@ export function Header({ onDonateClick }: HeaderProps) {
             </Link>
 
             {/* ── Desktop nav ── */}
-            <nav className="hidden md:flex items-center gap-0.5 lg:gap-1" aria-label="Primary">
+            <nav className="hidden lg:flex items-center gap-0.5 lg:gap-1" aria-label="Primary">
               {NAV_ITEMS.map((item) => {
                 const active = isActive(item.path)
                 return (
@@ -109,7 +109,7 @@ export function Header({ onDonateClick }: HeaderProps) {
             </nav>
 
             {/* ── Desktop Donate CTA ── */}
-            <div className="hidden md:flex items-center shrink-0">
+            <div className="hidden lg:flex items-center shrink-0">
               <Button
                 onClick={onDonateClick}
                 className={cn(
@@ -125,13 +125,13 @@ export function Header({ onDonateClick }: HeaderProps) {
               </Button>
             </div>
 
-            {/* ── Mobile hamburger (opens only) ── */}
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden h-9 w-9 rounded-full text-orange-700 hover:bg-orange-100/70 focus-visible:ring-orange-400"
+              {/* ── Mobile hamburger (opens only) ── */}
+              <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden h-9 w-9 rounded-full text-orange-700 hover:bg-orange-100/70 focus-visible:ring-orange-400"
                   aria-label="Open navigation menu"
                 >
                   <List size={22} weight="bold" />

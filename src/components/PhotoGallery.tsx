@@ -27,7 +27,12 @@ function useGalleryItems(limit: number) {
               const mediaType: 'image' | 'album' = row.media_type ?? 'image'
               const label = row.alt_text ?? row.title ?? row.filename ?? 'Gallery image'
               if (mediaType === 'album') {
-                return { src: row.thumbnail_url ?? '', alt: label, mediaType: 'album' as const, href: row.path }
+                const thumbSrc =
+                  row.thumbnail_url ??
+                  (row.bucket && row.bucket !== 'external'
+                    ? supabase.storage.from(row.bucket).getPublicUrl(row.path).data.publicUrl
+                    : '')
+                return { src: thumbSrc, alt: label, mediaType: 'album' as const, href: row.path }
               }
               const isExternal = row.bucket === 'external'
               const src = isExternal

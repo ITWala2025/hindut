@@ -161,6 +161,8 @@ export function useMembership() {
 
   // ── Fetch memberships (admin-only via RLS) ────────────────────────────────
   const fetchMemberships = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setLoading(false); return }
     setLoading(true)
     const { data, error: err } = await supabase
       .from('memberships')

@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
+  DialogOverlay,
+  DialogPortal,
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
@@ -24,6 +26,7 @@ import {
   Heart,
   CheckCircle,
   CreditCard,
+  X,
   Spinner,
   Crown,
   Sparkle,
@@ -43,7 +46,6 @@ import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useMembership } from '@/hooks/useMembership'
 import type { MembershipPlan } from '@/data/membership'
-import { SeoMeta } from '@/lib/seo'
 
 // ── Icon resolver: maps DB-stored icon names to phosphor components ───────────
 const ICON_MAP: Record<string, PhosphorIcon> = {
@@ -312,11 +314,6 @@ export function MembershipPage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col">
-      <SeoMeta
-        title="Membership — Support the Hindu Temple in Limerick"
-        description="Become a member of the Hindu Association of Ireland and help build a permanent Hindu Temple in Limerick. Enjoy monthly archana, community recognition and more."
-        canonical="/membership"
-      />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <HeroCarousel
@@ -701,9 +698,30 @@ export function MembershipPage() {
 
       {/* ── Membership Checkout Dialog ───────────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) closeDialog() }}>
-        <DialogContent className="sm:max-w-[540px] bg-white p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
-          <div className="h-1.5 bg-linear-to-r from-orange-500 via-amber-400 to-orange-600" />
-          <div className="p-8">
+        <DialogPortal>
+          <DialogOverlay />
+          <DialogPrimitive.Content
+            className={cn(
+              'fixed z-50 bg-white focus:outline-none overflow-y-auto',
+              'inset-0 rounded-none',
+              'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-full',
+              'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-full',
+              'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+              'lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2',
+              'lg:w-full lg:max-w-[540px] lg:max-h-[90vh] lg:rounded-3xl lg:shadow-2xl lg:overflow-hidden',
+              'lg:data-[state=open]:slide-in-from-bottom-0 lg:data-[state=open]:zoom-in-95',
+              'lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=closed]:zoom-out-95',
+              'lg:duration-200',
+            )}
+          >
+            <DialogPrimitive.Close
+              className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center text-slate-600 hover:text-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+              aria-label="Close"
+            >
+              <X size={16} weight="bold" />
+            </DialogPrimitive.Close>
+            <div className="h-1.5 bg-linear-to-r from-orange-500 via-amber-400 to-orange-600" />
+            <div className="p-8">
 
             {/* Step 1: Details */}
             {step === 'details' && selected && (
@@ -981,12 +999,34 @@ export function MembershipPage() {
             )}
 
           </div>
-        </DialogContent>
+          </DialogPrimitive.Content>
+        </DialogPortal>
       </Dialog>
 
       {/* ── Monthly Giving Dialog ──────────────────────────────────────────── */}
       <Dialog open={givingOpen} onOpenChange={(o) => { if (!o) closeGiving() }}>
-        <DialogContent className="sm:max-w-[460px] bg-white p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
+        <DialogPortal>
+          <DialogOverlay />
+          <DialogPrimitive.Content
+            className={cn(
+              'fixed z-50 bg-white focus:outline-none overflow-y-auto',
+              'inset-0 rounded-none',
+              'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-full',
+              'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-full',
+              'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+              'lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2',
+              'lg:w-full lg:max-w-[460px] lg:max-h-[90vh] lg:rounded-3xl lg:shadow-2xl lg:overflow-hidden',
+              'lg:data-[state=open]:slide-in-from-bottom-0 lg:data-[state=open]:zoom-in-95',
+              'lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=closed]:zoom-out-95',
+              'lg:duration-200',
+            )}
+          >
+            <DialogPrimitive.Close
+              className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center text-slate-600 hover:text-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+              aria-label="Close"
+            >
+              <X size={16} weight="bold" />
+            </DialogPrimitive.Close>
           {givingTier && (() => {
             const { Icon } = givingTier
             return (
@@ -1116,7 +1156,8 @@ export function MembershipPage() {
               </>
             )
           })()}
-        </DialogContent>
+          </DialogPrimitive.Content>
+        </DialogPortal>
       </Dialog>
 
     </div>

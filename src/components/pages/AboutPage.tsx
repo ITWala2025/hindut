@@ -5,7 +5,6 @@ import { Heart, Users, BookOpen, Lightbulb, HandsPraying, MapPin } from '@phosph
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useTeam } from '@/hooks/useTeam'
-import { SeoMeta } from '@/lib/seo'
 
 type AboutTarget = 'story' | 'values' | 'team'
 
@@ -50,11 +49,6 @@ export function AboutPage() {
 
   return (
     <div className="flex flex-col">
-      <SeoMeta
-        title="About Us — Our Mission & Community"
-        description="Learn about the Hindu Association of Ireland — our mission to build a permanent Hindu Temple in Limerick, our values, history and dedicated community team."
-        canonical="/about"
-      />
       <HeroCarousel
         title="About the Hindu Association of Ireland"
         subtitle="A decade of cultural, religious and community service across Limerick"
