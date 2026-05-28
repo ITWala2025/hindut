@@ -258,7 +258,7 @@ export function AboutPage() {
         )}
       >
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16">
 
             {/* Left: Vision + Design Inspiration */}
             <div className="lg:col-span-2 space-y-8">
@@ -306,8 +306,9 @@ export function AboutPage() {
               </Card>
             </div>
 
-            {/* Right: Timeline */}
+            {/* Right: Timeline (sticky) */}
             <div className="lg:col-span-1">
+              <div className="sticky top-32">
                 <Card className="border-orange-200/50 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
                   <CardContent className="p-8">
                     <div className="flex items-start gap-4 mb-4">
@@ -377,6 +378,7 @@ export function AboutPage() {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
             </div>
 
           </div>

@@ -65,6 +65,7 @@ export function Footer() {
                 { label: 'Services', target: '/services' },
                 { label: 'Events', target: '/events' },
                 { label: 'Membership', target: '/membership' },
+                { label: 'Special Causes', target: '/causes' },
                 { label: 'Contact', target: '/contact' },
               ].map((item) => (
                 <li key={item.target}>

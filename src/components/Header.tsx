@@ -19,22 +19,26 @@ import { Logo } from '@/components/Logo'
 
 interface HeaderProps {
   onDonateClick: () => void
+  showCauses?: boolean
 }
 
-const NAV_ITEMS = [
-  { path: '/',           label: 'Home',       icon: <House             size={18} weight="duotone" /> },
-  { path: '/about',      label: 'About',   icon: <Info              size={18} weight="duotone" /> },
-  { path: '/services',   label: 'Services',   icon: <Sparkle           size={18} weight="duotone" /> },
-  { path: '/events',     label: 'Events',     icon: <CalendarBlank     size={18} weight="duotone" /> },
-  { path: '/membership', label: 'Membership', icon: <IdentificationCard size={18} weight="duotone" /> },
-  { path: '/contact',    label: 'Contact',    icon: <Envelope          size={18} weight="duotone" /> },
+const BASE_navItems = [
+  { path: '/',           label: 'Home',           icon: <House             size={18} weight="duotone" /> },
+  { path: '/about',      label: 'About',          icon: <Info              size={18} weight="duotone" /> },
+  { path: '/services',   label: 'Services',       icon: <Sparkle           size={18} weight="duotone" /> },
+  { path: '/events',     label: 'Events',         icon: <CalendarBlank     size={18} weight="duotone" /> },
+  { path: '/membership', label: 'Membership',     icon: <IdentificationCard size={18} weight="duotone" /> },
+  { path: '/causes',     label: 'Special Causes', icon: <Heart             size={18} weight="duotone" />, causesOnly: true },
+  { path: '/contact',    label: 'Contact',        icon: <Envelope          size={18} weight="duotone" /> },
 ]
 
-export function Header({ onDonateClick }: HeaderProps) {
+export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
+
+  const navItems = BASE_navItems.filter((item) => !item.causesOnly || showCauses)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -86,7 +90,7 @@ export function Header({ onDonateClick }: HeaderProps) {
 
             {/* ── Desktop nav ── */}
             <nav className="hidden lg:flex items-center gap-0.5 lg:gap-1" aria-label="Primary">
-              {NAV_ITEMS.map((item) => {
+              {navItems.map((item) => {
                 const active = isActive(item.path)
                 return (
                   <Link
@@ -182,7 +186,7 @@ export function Header({ onDonateClick }: HeaderProps) {
 
                 {/* Nav items */}
                 <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5" aria-label="Mobile navigation">
-                  {NAV_ITEMS.map((item) => {
+                  {navItems.map((item) => {
                     const active = isActive(item.path)
                     return (
                       <button

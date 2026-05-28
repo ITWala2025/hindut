@@ -116,6 +116,20 @@ export async function fetchCauseTotalRaised(causeId: string): Promise<number> {
   return (data as number) ?? 0
 }
 
+/** Lightweight check — true if at least one active cause exists (anon-safe). */
+export function useHasActiveCauses(): boolean {
+  const [has, setHas] = useState(false)
+  useEffect(() => {
+    supabase
+      .from('special_causes')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .limit(1)
+      .then(({ count }) => setHas((count ?? 0) > 0))
+  }, [])
+  return has
+}
+
 /** Derive a URL-safe slug from a title. */
 export function slugifyCause(title: string): string {
   return title

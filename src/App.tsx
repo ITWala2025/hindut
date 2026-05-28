@@ -25,6 +25,7 @@ const EventDetailPage      = lazy(() => import('@/components/pages/EventDetailPa
 import { Toaster } from '@/components/ui/sonner'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
+import { useHasActiveCauses } from '@/hooks/useSpecialCauses'
 
 /** Minimal full-page spinner shown while lazy chunks are loading */
 function PageLoader() {
@@ -61,6 +62,7 @@ function AnalyticsTracker() {
 function AppShell() {
   const [isDonationOpen, setIsDonationOpen] = useState(false)
   const openDonation = () => setIsDonationOpen(true)
+  const hasActiveCauses = useHasActiveCauses()
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
 
@@ -81,7 +83,7 @@ function AppShell() {
     <div className="flex flex-col min-h-screen relative">
       <ScrollToTop />
       <AnalyticsTracker />
-      <Header onDonateClick={openDonation} />
+      <Header onDonateClick={openDonation} showCauses={hasActiveCauses} />
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage onDonateClick={openDonation} />} />
