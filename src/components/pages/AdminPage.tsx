@@ -8,6 +8,7 @@ import { EventsSection } from '@/components/admin/sections/EventsSection'
 import { RsvpsSection } from '@/components/admin/sections/RsvpsSection'
 import { TicketBookingsSection } from '@/components/admin/sections/TicketBookingsSection'
 import { DonationsSection } from '@/components/admin/sections/DonationsSection'
+import { SpecialCausesSection } from '@/components/admin/sections/SpecialCausesSection'
 import { MembersSection } from '@/components/admin/sections/MembersSection'
 import { MembershipManagement } from '@/components/admin/sections/MembershipManagement'
 import { ReceiptsSection } from '@/components/admin/sections/ReceiptsSection'
@@ -43,6 +44,7 @@ const SECTION_VIEW_CAPABILITY: Partial<Record<AdminSectionId, string>> = {
   rsvps:      'rsvps:view',
   tickets:    'tickets:view',
   donations:  'donations:view',
+  causes:     'causes:view',
   media:      'media:view',
   services:   'services:view',
   users:      'users:view',
@@ -120,6 +122,8 @@ function renderSection(
       return <TicketBookingsSection />
     case 'donations':
       return <DonationsSection />
+    case 'causes':
+      return <SpecialCausesSection />
     case 'media':
       return <MediaSection />
     case 'services':

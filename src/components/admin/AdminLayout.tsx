@@ -19,6 +19,7 @@ import {
   Sparkle,
   Ticket,
   HandCoins,
+  Heart,
   Lock,
 } from '@phosphor-icons/react'
 import type { Capability } from '@/lib/auth'
@@ -39,6 +40,7 @@ export type AdminSectionId =
   | 'rsvps'
   | 'tickets'
   | 'donations'
+  | 'causes'
   | 'media'
   | 'services'
   | 'users'
@@ -105,6 +107,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Donations',
     icon: <HandCoins size={20} weight="duotone" />,
     capability: 'donations:view',
+  },
+  {
+    id: 'causes',
+    label: 'Special Causes',
+    icon: <Heart size={20} weight="duotone" />,
+    capability: 'causes:view',
   },
   {
     id: 'services',

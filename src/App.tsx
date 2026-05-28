@@ -13,12 +13,15 @@ import { MembershipPage } from '@/components/pages/MembershipPage'
 import { ContactPage } from '@/components/pages/ContactPage'
 // Admin + utility pages — lazily loaded (never needed for public visitors)
 const AdminPage            = lazy(() => import('@/components/pages/AdminPage').then(m => ({ default: m.AdminPage })))
+const CausesPage           = lazy(() => import('@/components/pages/CausesPage').then(m => ({ default: m.CausesPage })))
+const CauseDetailPage      = lazy(() => import('@/components/pages/CauseDetailPage').then(m => ({ default: m.CauseDetailPage })))
 const PrivacyPolicyPage    = lazy(() => import('@/components/pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })))
 const CookiesPolicyPage    = lazy(() => import('@/components/pages/CookiesPolicyPage').then(m => ({ default: m.CookiesPolicyPage })))
 const TermsAndConditionsPage = lazy(() => import('@/components/pages/TermsAndConditionsPage').then(m => ({ default: m.TermsAndConditionsPage })))
 const RefundPolicyPage     = lazy(() => import('@/components/pages/RefundPolicyPage').then(m => ({ default: m.RefundPolicyPage })))
 const PaymentSuccessPage   = lazy(() => import('@/components/pages/PaymentSuccessPage').then(m => ({ default: m.PaymentSuccessPage })))
 const ActivateRolePage     = lazy(() => import('@/components/pages/ActivateRolePage').then(m => ({ default: m.ActivateRolePage })))
+const EventDetailPage      = lazy(() => import('@/components/pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })))
 import { Toaster } from '@/components/ui/sonner'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
@@ -85,6 +88,9 @@ function AppShell() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:slug" element={<Suspense fallback={<PageLoader />}><EventDetailPage /></Suspense>} />
+          <Route path="/causes" element={<Suspense fallback={<PageLoader />}><CausesPage /></Suspense>} />
+          <Route path="/causes/:slug" element={<Suspense fallback={<PageLoader />}><CauseDetailPage /></Suspense>} />
           <Route path="/membership" element={<MembershipPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/privacy-policy" element={<Suspense fallback={<PageLoader />}><PrivacyPolicyPage /></Suspense>} />

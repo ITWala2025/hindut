@@ -161,15 +161,18 @@ export const handler: Handler = async (event) => {
               typeof session.payment_intent === 'string'
                 ? session.payment_intent
                 : session.payment_intent?.id ?? null
+            const onetimeCauseId = session.metadata?.causeId ?? null
             await supabase
               .from('donations')
               .update({
                 status:                   'succeeded',
                 stripe_payment_intent_id: paymentIntentId,
                 updated_at:               new Date().toISOString(),
+                ...(onetimeCauseId ? { cause_id: onetimeCauseId } : {}),
               })
               .eq('id', donationId)
-            console.log('[stripe-webhook] one-time donation', donationId, '→ succeeded')
+            console.log('[stripe-webhook] one-time donation', donationId, '→ succeeded',
+              onetimeCauseId ? `cause ${onetimeCauseId}` : '')
           } else {
             // ── Recurring donation: create the first row immediately ─────
             // Subsequent monthly charges are handled by invoice.paid.
@@ -177,9 +180,10 @@ export const handler: Handler = async (event) => {
               typeof session.subscription === 'string'
                 ? session.subscription
                 : (session.subscription as Stripe.Subscription | null)?.id ?? null
-            const amountEur  = (session.amount_total ?? 0) / 100
-            const donorName  = session.metadata?.donorName  ?? ''
-            const donorEmail = session.metadata?.donorEmail ?? ''
+            const amountEur        = (session.amount_total ?? 0) / 100
+            const donorName        = session.metadata?.donorName  ?? ''
+            const donorEmail       = session.metadata?.donorEmail ?? ''
+            const recurringCauseId = session.metadata?.causeId    ?? null
 
             const { data: newDon, error: donErr } = await supabase
               .from('donations')
@@ -193,6 +197,7 @@ export const handler: Handler = async (event) => {
                 status:                 'succeeded',
                 description:            'Recurring donation',
                 stripe_subscription_id: subscriptionId,
+                ...(recurringCauseId ? { cause_id: recurringCauseId } : {}),
               })
               .select('id')
               .single()
@@ -201,7 +206,8 @@ export const handler: Handler = async (event) => {
               console.error('[stripe-webhook] recurring donation insert error:', donErr.message)
             } else {
               console.log('[stripe-webhook] recurring donation', (newDon as { id: string })?.id,
-                'created for', donorEmail, 'stripe sub', subscriptionId)
+                'created for', donorEmail, 'stripe sub', subscriptionId,
+                recurringCauseId ? `cause ${recurringCauseId}` : '')
             }
           }
         } else if (kind === 'membership') {

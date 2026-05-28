@@ -51,6 +51,7 @@ export type AdminModule =
   | 'rsvps'
   | 'tickets'
   | 'donations'
+  | 'causes'
   | 'media'
   | 'services'
   | 'users'
@@ -64,6 +65,7 @@ export const MODULE_LABELS: Record<AdminModule, string> = {
   rsvps:     'RSVPs',
   tickets:   'Ticket Bookings',
   donations: 'Donations',
+  causes:    'Special Causes',
   media:     'Media Library',
   services:  'Services',
   users:     'Team & Access',
@@ -78,6 +80,7 @@ export const ADMIN_MODULES: AdminModule[] = [
   'rsvps',
   'tickets',
   'donations',
+  'causes',
   'media',
   'services',
   'users',
@@ -169,6 +172,7 @@ const DEFAULT_PERMISSIONS: Record<AdminRole, RolePermissionMap> = {
     rsvps:     { view: true,  create: false, update: true,  delete: true  },
     tickets:   { view: true,  create: false, update: true,  delete: true  },
     donations: { view: true,  create: false, update: true,  delete: true  },
+    causes:    { view: true,  create: true,  update: true,  delete: true  },
     media:     { view: true,  create: true,  update: true,  delete: true  },
     services:  { view: true,  create: true,  update: true,  delete: true  },
     users:     { view: true,  create: true,  update: true,  delete: true  },
@@ -180,6 +184,7 @@ const DEFAULT_PERMISSIONS: Record<AdminRole, RolePermissionMap> = {
     events:    { view: true,  create: true,  update: true,  delete: false },
     rsvps:     { view: true,  create: false, update: false, delete: false },
     tickets:   { view: true,  create: false, update: false, delete: false },
+    causes:    { view: true,  create: false, update: false, delete: false },
     media:     { view: true,  create: true,  update: true,  delete: false },
     services:  { view: true,  create: true,  update: true,  delete: false },
   },

@@ -36,6 +36,7 @@ const DonationSchema = z.object({
   donorEmail:  z.string().email().max(254),
   recurring:   z.boolean().optional().default(false),
   description: z.string().max(500).optional(),
+  causeId:     z.string().uuid().optional(),
   successUrl:  z.string().url().optional(),
   cancelUrl:   z.string().url().optional(),
 })
@@ -51,16 +52,22 @@ const MembershipSchema = z.object({
   cancelUrl:              z.string().url().optional(),
 })
 
+const TicketTierQuantitySchema = z.object({
+  tierId:   z.string().min(1).max(100),
+  quantity: z.number().int().min(0).max(50),
+})
+
 const TicketSchema = z.object({
-  kind:        z.literal('ticket'),
-  eventId:     z.string().uuid('Invalid event ID'),
-  firstName:   z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
-  lastName:    z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
-  phone:       z.string().regex(/^\+[1-9]\d{1,14}$/, 'Phone must be E.164'),
-  email:       z.string().email().max(254),
-  numAdults:   z.number().int().min(1).max(20),
-  numChildren: z.number().int().min(0).max(20).optional().default(0),
-  consentGdpr: z.literal(true),
+  kind:           z.literal('ticket'),
+  eventId:        z.string().uuid('Invalid event ID'),
+  firstName:      z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
+  lastName:       z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
+  phone:          z.string().regex(/^\+[1-9]\d{1,14}$/, 'Phone must be E.164'),
+  email:          z.string().email().max(254),
+  numAdults:      z.number().int().min(1).max(20).optional(),
+  numChildren:    z.number().int().min(0).max(20).optional().default(0),
+  tierQuantities: z.array(TicketTierQuantitySchema).max(20).optional(),
+  consentGdpr:    z.literal(true),
 })
 
 const BodySchema = z.discriminatedUnion('kind', [DonationSchema, MembershipSchema, TicketSchema])
@@ -74,18 +81,6 @@ function generateTicketReference(eventId: string): string {
   const suffix = Array.from(buf).map((b: number) => chars[b % chars.length]).join('')
   const code   = eventId.replace(/-/g, '').toUpperCase().slice(0, 6)
   return `HAI-TKT-${code}-${suffix}`
-}
-
-function maskTicketEmail(email: string): string {
-  const [local, domain] = email.split('@')
-  if (!domain) return '***@***'
-  const masked =
-    local.length <= 2 ? local[0] + '***' : local[0] + '***' + local[local.length - 1]
-  return `${masked}@${domain}`
-}
-
-function maskTicketPhone(phone: string): string {
-  return phone.length < 5 ? '***' : phone.slice(0, 3) + ' *** *** ' + phone.slice(-4)
 }
 
 // Map a plan cadence (from membership_plans.cadence) to Stripe billing interval.
@@ -163,6 +158,7 @@ export const handler: Handler = async (event) => {
             recurring:   false,
             status:      'pending',
             description: d.description ?? 'One-time donation',
+            ...(d.causeId ? { cause_id: d.causeId } : {}),
           })
           .select('id')
           .single()
@@ -178,7 +174,7 @@ export const handler: Handler = async (event) => {
         donationId = (donationRow as { id: string }).id
       }
 
-      const lineItem: import('stripe').Stripe.Checkout.SessionCreateParams.LineItem = {
+      const lineItem = {
         quantity: 1,
         price_data: {
           currency:    'eur',
@@ -208,16 +204,18 @@ export const handler: Handler = async (event) => {
           donorName:   d.donorName,
           donorEmail:  d.donorEmail,
           recurring:   String(d.recurring),
+          ...(d.causeId ? { causeId: d.causeId } : {}),
         },
         ...(d.recurring
           ? {
               subscription_data: {
                 // Carry donor info so invoice.paid can create a donation row per charge
                 metadata: {
-                  kind:      'donation',
-                  donorName: d.donorName,
+                  kind:       'donation',
+                  donorName:  d.donorName,
                   donorEmail: d.donorEmail,
                   amountEur:  String(d.amountEur),
+                  ...(d.causeId ? { causeId: d.causeId } : {}),
                 },
               },
             }
@@ -242,14 +240,17 @@ export const handler: Handler = async (event) => {
       // Verify event is valid, paid, and published.
       const { data: evtRow, error: evtErr } = await supabase
         .from('events')
-        .select('id, title, ticket_price_eur, is_paid, published')
+        .select('id, title, ticket_price_eur, is_paid, published, ticket_tiers')
         .eq('id', t.eventId)
         .single()
 
       if (evtErr || !evtRow) {
         return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
       }
-      const evt = evtRow as { id: string; title: string; ticket_price_eur: number; is_paid: boolean; published: boolean }
+      const evt = evtRow as {
+        id: string; title: string; ticket_price_eur: number; is_paid: boolean; published: boolean
+        ticket_tiers: Array<{ id: string; label: string; price: number; quantity: number }> | null
+      }
       if (!evt.is_paid) {
         return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Ticket booking only available for paid events' }) }
       }
@@ -257,9 +258,60 @@ export const handler: Handler = async (event) => {
         return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
       }
 
-      const adultPrice = Number(evt.ticket_price_eur) || 0
-      const amountEur  = adultPrice * t.numAdults   // children are free
-      const reference  = generateTicketReference(t.eventId)
+      const reference = generateTicketReference(t.eventId)
+
+      // Determine pricing mode: use tier-based pricing when the event has tiers
+      // and the client submitted tier quantities. Prices are always taken from the
+      // server-side DB record — never from client-submitted values.
+      const dbTiers  = evt.ticket_tiers ?? []
+      const useTiers = dbTiers.length > 0 && (t.tierQuantities?.length ?? 0) > 0
+
+      let amountEur: number
+      let lineItems: { quantity: number; price_data: { currency: string; unit_amount: number; product_data: { name: string; description?: string } } }[]
+      let numAdultsMeta: number
+      let numChildrenMeta: number
+
+      if (useTiers) {
+        const tierMap = new Map(dbTiers.map((tier) => [tier.id, tier]))
+        let total          = 0
+        let totalAttendees = 0
+        lineItems          = []
+        for (const tq of t.tierQuantities!) {
+          if (tq.quantity <= 0) continue
+          const tier = tierMap.get(tq.tierId)
+          if (!tier) continue   // ignore unknown/tampered tier IDs
+          total          += tier.price * tq.quantity
+          totalAttendees += tq.quantity
+          lineItems.push({
+            quantity:   tq.quantity,
+            price_data: {
+              currency:    'eur',
+              unit_amount: Math.round(tier.price * 100),
+              product_data: { name: `${tier.label} – ${evt.title}`, description: `${tier.label} ticket` },
+            },
+          })
+        }
+        if (lineItems.length === 0 || totalAttendees === 0) {
+          return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'No valid tickets selected' }) }
+        }
+        amountEur       = total
+        numAdultsMeta   = totalAttendees
+        numChildrenMeta = 0
+      } else {
+        const numAdults  = t.numAdults ?? 1
+        const adultPrice = Number(evt.ticket_price_eur) || 0
+        amountEur       = adultPrice * numAdults
+        numAdultsMeta   = numAdults
+        numChildrenMeta = t.numChildren ?? 0
+        lineItems = [{
+          quantity:   numAdults,
+          price_data: {
+            currency:    'eur',
+            unit_amount: Math.round(adultPrice * 100),
+            product_data: { name: `Ticket – ${evt.title}`, description: `Adult ticket · children free` },
+          },
+        }]
+      }
 
       // Build a success URL that carries booking details so the success page
       // can render a confirmation without a separate API call.
@@ -268,25 +320,15 @@ export const handler: Handler = async (event) => {
         `?ref=${encodeURIComponent(reference)}` +
         `&name=${encodeURIComponent(`${t.firstName} ${t.lastName}`)}` +
         `&event=${encodeURIComponent(evt.title)}` +
-        `&adults=${t.numAdults}` +
-        `&children=${t.numChildren ?? 0}` +
+        `&adults=${numAdultsMeta}` +
+        `&children=${numChildrenMeta}` +
         `&amount=${amountEur}` +
         `&session_id={CHECKOUT_SESSION_ID}`
 
       const ticketSession = await ctx.stripe.checkout.sessions.create({
         mode:           'payment',
         customer_email: t.email,
-        line_items: [{
-          quantity: t.numAdults,
-          price_data: {
-            currency:     'eur',
-            unit_amount:  Math.round(adultPrice * 100),
-            product_data: {
-              name:        `Ticket – ${evt.title}`,
-              description: `Adult ticket · children free`,
-            },
-          },
-        }],
+        line_items:     lineItems,
         success_url: successUrl,
         cancel_url:  `${origin}/events?ticket_cancelled=1`,
         metadata: {
@@ -297,8 +339,8 @@ export const handler: Handler = async (event) => {
           lastName:    t.lastName,
           phone:       t.phone,
           email:       t.email,
-          numAdults:   String(t.numAdults),
-          numChildren: String(t.numChildren ?? 0),
+          numAdults:   String(numAdultsMeta),
+          numChildren: String(numChildrenMeta),
           amountEur:   String(amountEur),
         },
         payment_intent_data: {
