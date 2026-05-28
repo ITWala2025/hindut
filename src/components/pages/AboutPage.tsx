@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Heart, Users, BookOpen, Lightbulb, HandsPraying, MapPin } from '@phosphor-icons/react'
+import { Heart, Users, BookOpen, Lightbulb, HandsPraying, MapPin, StarIcon, CompassIcon, CalendarBlankIcon } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useTeam } from '@/hooks/useTeam'
 
-type AboutTarget = 'story' | 'values' | 'team'
+type AboutTarget = 'story' | 'values' | 'team' | 'vision'
 
 export function AboutPage() {
   const [highlightedId, setHighlightedId] = useState<AboutTarget | null>(null)
   const { teamMembers, loading: teamLoading } = useTeam()
 
   const scrollToSection = (target: AboutTarget) => {
-    const elId = target === 'story' ? 'story-section' : target === 'values' ? 'values-section' : 'team-section'
+    const elId = target === 'story' ? 'story-section' : target === 'values' ? 'values-section' : target === 'vision' ? 'vision-section' : 'team-section'
     const el = document.getElementById(elId)
     if (!el) return
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -72,6 +72,16 @@ export function AboutPage() {
             <span className="relative flex items-center gap-2">
               <Heart size={20} weight="duotone" />
               Core Values
+            </span>
+          </button>
+          <button
+            onClick={() => scrollToSection('vision')}
+            className="group relative px-6 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-sm shadow-lg hover:shadow-white/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
+          >
+            <span aria-hidden className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
+            <span className="relative flex items-center gap-2">
+              <StarIcon size={20} weight="duotone" />
+              Our Vision
             </span>
           </button>
           <button
@@ -235,6 +245,140 @@ export function AboutPage() {
                 for a moment of peace and reflection on their journey.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Our Vision */}
+      <section
+        id="vision-section"
+        className={cn(
+          'scroll-mt-32 py-16 md:py-24 bg-linear-to-br from-orange-50 via-amber-50/40 to-slate-50 transition-shadow',
+          highlightedId === 'vision' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron',
+        )}
+      >
+        <div className="container mx-auto px-6 md:px-12 lg:px-24">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16 items-start">
+
+            {/* Left: Vision + Design Inspiration */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Section header */}
+              <div className="flex items-start gap-4">
+                <div className="rounded-xl bg-linear-to-br from-orange-100 to-amber-100 p-3 glow-saffron shrink-0">
+                  <StarIcon className="text-orange-600" size={32} weight="duotone" />
+                </div>
+                <div>
+                  <h2 className="text-3xl md:text-4xl font-bold text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
+                    A Vision Rooted in Devotion
+                  </h2>
+                  <p className="text-orange-600 text-sm mt-1">The future we are building together</p>
+                </div>
+              </div>
+
+              {/* Intro card */}
+              <Card className="border-orange-200/50 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+                <CardContent className="p-8 md:p-10">
+                  <p className="text-base md:text-lg text-foreground/90 leading-relaxed">
+                    Our dream is to build a sacred space that will serve as a center for worship,
+                    learning, and community. The future temple will be a place where people of all
+                    ages can come together to connect with their faith, celebrate traditions, and
+                    grow spiritually.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Design Inspiration card */}
+              <Card className="border-orange-200/50 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+                <CardContent className="p-8 md:p-10">
+                  <div className="flex items-start gap-4 mb-5">
+                    <div className="rounded-xl bg-linear-to-br from-amber-100 to-orange-100 p-3 glow-saffron shrink-0">
+                      <CompassIcon className="text-orange-600" size={28} weight="duotone" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-orange-800 mt-1" style={{ fontFamily: 'var(--font-heading)' }}>
+                      Design Inspiration
+                    </h3>
+                  </div>
+                  <p className="text-base text-foreground/90 leading-relaxed">
+                    Our temple design will combine traditional architecture with modern
+                    functionality, ensuring it is both beautiful and welcoming.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right: Timeline */}
+            <div className="lg:col-span-1">
+                <Card className="border-orange-200/50 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow">
+                  <CardContent className="p-8">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="rounded-xl bg-linear-to-br from-orange-100 to-amber-100 p-3 glow-saffron shrink-0">
+                        <CalendarBlankIcon className="text-orange-600" size={26} weight="duotone" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
+                          Our Timeline
+                        </h3>
+                        <p className="text-muted-foreground text-sm mt-1">
+                          Steady steps toward the vision
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="relative mt-8">
+                      {/* Vertical connector line */}
+                      <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-linear-to-b from-orange-400 via-amber-400 to-orange-200 rounded-full" />
+
+                      <div className="space-y-8">
+                        {/* Phase 1 */}
+                        <div className="relative flex gap-5 pl-14">
+                          <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-linear-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-lg ring-4 ring-orange-100 shrink-0 text-xs font-bold">
+                            1
+                          </div>
+                          <div>
+                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-xs font-semibold mb-2">
+                              Now – July 2026
+                            </div>
+                            <p className="text-sm text-foreground/80 leading-relaxed">
+                              Fundraising, community planning, and design finalization.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Phase 2 */}
+                        <div className="relative flex gap-5 pl-14">
+                          <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-linear-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg ring-4 ring-amber-100 shrink-0 text-xs font-bold">
+                            2
+                          </div>
+                          <div>
+                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold mb-2">
+                              July 2026 – July 2027
+                            </div>
+                            <p className="text-sm text-foreground/80 leading-relaxed">
+                              Goal to purchase land for the temple.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Phase 3 */}
+                        <div className="relative flex gap-5 pl-14">
+                          <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-linear-to-br from-orange-400 to-amber-400 text-white flex items-center justify-center shadow-lg ring-4 ring-orange-50 shrink-0 text-xs font-bold">
+                            3
+                          </div>
+                          <div>
+                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-semibold mb-2">
+                              Beyond 2027
+                            </div>
+                            <p className="text-sm text-foreground/80 leading-relaxed">
+                              Begin construction and bring the temple to life.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+            </div>
+
           </div>
         </div>
       </section>

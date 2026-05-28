@@ -2,11 +2,18 @@ import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { HandsPraying, CalendarBlank, GraduationCap, Users } from '@phosphor-icons/react'
+import { HandsPrayingIcon, CalendarBlankIcon, GraduationCapIcon, UsersIcon } from '@phosphor-icons/react'
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { useServices } from '@/hooks/useServices'
+import { useServiceCategories } from '@/hooks/useServiceCategories'
 import type { ServiceRecord } from '@/lib/types'
 import { SeoMeta } from '@/lib/seo'
+
+const CATEGORY_ICONS: PhosphorIcon[] = [HandsPrayingIcon, CalendarBlankIcon, GraduationCapIcon, UsersIcon]
+function getCategoryIcon(index: number): PhosphorIcon {
+  return CATEGORY_ICONS[index % CATEGORY_ICONS.length]
+}
 
 function ServiceCardSkeleton() {
   return (
@@ -19,20 +26,28 @@ function ServiceCardSkeleton() {
 }
 
 export function ServicesPage() {
-  const [activeTab, setActiveTab] = useState('daily')
+  const [activeTab, setActiveTab] = useState('')
   const [selectedService, setSelectedService] = useState<ServiceRecord | null>(null)
-  const { services, loading } = useServices()
+  const { services, loading: servicesLoading } = useServices()
+  const { categories, loading: categoriesLoading } = useServiceCategories()
 
-  const grouped = useMemo(() => {
-    const pub = services.filter((s) => s.published).sort((a, b) => a.sortOrder - b.sortOrder)
-    return {
-      daily:     pub.filter((s) => s.category === 'Daily Pujas'),
-      special:   pub.filter((s) => s.category === 'Special Ceremonies'),
-      education: pub.filter((s) => s.category === 'Education Programs'),
-      community: pub.filter((s) => s.category === 'Community Programs'),
-    }
-  }, [services])
+  const loading = servicesLoading || categoriesLoading
 
+  const publishedServices = useMemo(
+    () => services.filter((s) => s.published).sort((a, b) => a.sortOrder - b.sortOrder),
+    [services],
+  )
+
+  const categorizedServices = useMemo(
+    () =>
+      categories.map((cat) => ({
+        category: cat,
+        items: publishedServices.filter((s) => s.category === cat.name),
+      })),
+    [categories, publishedServices],
+  )
+
+  const effectiveTab = activeTab || categories[0]?.name || ''
 
   return (
     <div className="flex flex-col">
@@ -46,203 +61,105 @@ export function ServicesPage() {
         subtitle="Spiritual services, educational programs, and community events for all"
       >
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-4xl mx-auto pt-6">
-          <button
-            onClick={() => {
-              setActiveTab('daily')
-              document.getElementById('services-tabs')?.scrollIntoView({ behavior: 'smooth' })
-            }}
-            className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
-          >
-            <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
-            <span className="relative flex items-center justify-center gap-2">
-              <HandsPraying size={18} weight="duotone" className="hidden sm:block" />
-              Daily Pujas
-            </span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('special')
-              document.getElementById('services-tabs')?.scrollIntoView({ behavior: 'smooth' })
-            }}
-            className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
-          >
-            <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
-            <span className="relative flex items-center justify-center gap-2">
-              <CalendarBlank size={18} weight="duotone" className="hidden sm:block" />
-              Special
-            </span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('education')
-              document.getElementById('services-tabs')?.scrollIntoView({ behavior: 'smooth' })
-            }}
-            className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
-          >
-            <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
-            <span className="relative flex items-center justify-center gap-2">
-              <GraduationCap size={18} weight="duotone" className="hidden sm:block" />
-              Education
-            </span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('community')
-              document.getElementById('services-tabs')?.scrollIntoView({ behavior: 'smooth' })
-            }}
-            className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
-          >
-            <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
-            <span className="relative flex items-center justify-center gap-2">
-              <Users size={18} weight="duotone" className="hidden sm:block" />
-              Community
-            </span>
-          </button>
+          {categories.map((cat, i) => {
+            const Icon = getCategoryIcon(i)
+            return (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setActiveTab(cat.name)
+                  document.getElementById('services-tabs')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="group relative px-4 sm:px-5 py-3 bg-white/10 backdrop-blur-md text-white rounded-full font-semibold text-xs sm:text-sm shadow-lg hover:shadow-orange-400/30 transition-all duration-300 hover:scale-105 border border-white/30 hover:bg-white/20 overflow-hidden"
+              >
+                <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
+                <span className="relative flex items-center justify-center gap-2">
+                  <Icon size={18} weight="duotone" className="hidden sm:block" />
+                  {cat.name}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </HeroCarousel>
 
       <section id="services-tabs" className="py-8 md:py-12 bg-linear-to-br from-slate-50 via-orange-50/30 to-slate-50">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-6xl mx-auto">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-12 h-auto p-2 bg-linear-to-r from-orange-50 to-amber-50 border border-orange-200">
-              <TabsTrigger id="daily-tab" value="daily" className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
-                <HandsPraying className="mr-2 hidden sm:inline" size={20} weight="duotone" />
-                Daily Pujas
-              </TabsTrigger>
-              <TabsTrigger id="special-tab" value="special" className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
-                <CalendarBlank className="mr-2 hidden sm:inline" size={20} weight="duotone" />
-                Special Services
-              </TabsTrigger>
-              <TabsTrigger id="education-tab" value="education" className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
-                <GraduationCap className="mr-2 hidden sm:inline" size={20} weight="duotone" />
-                Education
-              </TabsTrigger>
-              <TabsTrigger id="community-tab" value="community" className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold">
-                <Users className="mr-2 hidden sm:inline" size={20} weight="duotone" />
-                Community
-              </TabsTrigger>
-            </TabsList>
+          {categories.length === 0 && !loading ? (
+            <p className="text-center text-muted-foreground py-16">No service categories yet.</p>
+          ) : (
+            <Tabs value={effectiveTab} onValueChange={setActiveTab} className="max-w-6xl mx-auto">
+              <TabsList
+                className="grid w-full mb-12 h-auto p-2 bg-linear-to-r from-orange-50 to-amber-50 border border-orange-200"
+                style={{ gridTemplateColumns: `repeat(${Math.min(categories.length, 4)}, minmax(0, 1fr))` }}
+              >
+                {categories.map((cat, i) => {
+                  const Icon = getCategoryIcon(i)
+                  return (
+                    <TabsTrigger
+                      key={cat.id}
+                      value={cat.name}
+                      className="text-sm md:text-base data-[state=active]:bg-linear-to-r data-[state=active]:from-orange-600 data-[state=active]:to-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-semibold"
+                    >
+                      <Icon className="mr-2 hidden sm:inline" size={20} weight="duotone" />
+                      {cat.name}
+                    </TabsTrigger>
+                  )
+                })}
+              </TabsList>
 
-            <TabsContent value="daily" className="space-y-8">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold mb-3 text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Daily Worship Schedule
-                </h2>
-                <p className="text-muted-foreground">
-                  Join us for our regular daily pujas and aartis
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {loading
-                  ? Array.from({ length: 4 }).map((_, i) => <ServiceCardSkeleton key={i} />)
-                  : grouped.daily.map((s: ServiceRecord) => (
-                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
-                        <CardHeader>
-                          <CardTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {s.imageUrl && (
-                            <img src={s.imageUrl} alt={s.title} className="w-full h-36 object-cover rounded-lg"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                          )}
-                          <p className="text-muted-foreground">{s.excerpt}</p>
-                        </CardContent>
-                      </Card>
-                    ))
-                }
-              </div>
-            </TabsContent>
-
-            <TabsContent value="special" className="space-y-8">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold mb-3 text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Special Ceremonies & Rituals
-                </h2>
-                <p className="text-muted-foreground">
-                  Book personalized pujas for special occasions and life events
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {loading
-                  ? Array.from({ length: 4 }).map((_, i) => <ServiceCardSkeleton key={i} />)
-                  : grouped.special.map((s: ServiceRecord) => (
-                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
-                        <CardHeader>
-                          <CardTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {s.imageUrl && (
-                            <img src={s.imageUrl} alt={s.title} className="w-full h-36 object-cover rounded-lg"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                          )}
-                          <p className="text-muted-foreground">{s.excerpt}</p>
-                        </CardContent>
-                      </Card>
-                    ))
-                }
-              </div>
-            </TabsContent>
-
-            <TabsContent value="education" className="space-y-8">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold mb-3 text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Educational Programs
-                </h2>
-                <p className="text-muted-foreground">
-                  Learn about Hindu philosophy, scriptures, and spiritual practices
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {loading
-                  ? Array.from({ length: 4 }).map((_, i) => <ServiceCardSkeleton key={i} />)
-                  : grouped.education.map((s: ServiceRecord) => (
-                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
-                        <CardHeader>
-                          <CardTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {s.imageUrl && (
-                            <img src={s.imageUrl} alt={s.title} className="w-full h-36 object-cover rounded-lg"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                          )}
-                          <p className="text-muted-foreground">{s.excerpt}</p>
-                        </CardContent>
-                      </Card>
-                    ))
-                }
-              </div>
-            </TabsContent>
-
-            <TabsContent value="community" className="space-y-8">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold mb-3 text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Community Events
-                </h2>
-                <p className="text-muted-foreground">
-                  Connect with fellow devotees through our community programs
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {loading
-                  ? Array.from({ length: 4 }).map((_, i) => <ServiceCardSkeleton key={i} />)
-                  : grouped.community.map((s: ServiceRecord) => (
-                      <Card key={s.id} onClick={() => setSelectedService(s)} className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer">
-                        <CardHeader>
-                          <CardTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>{s.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {s.imageUrl && (
-                            <img src={s.imageUrl} alt={s.title} className="w-full h-36 object-cover rounded-lg"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                          )}
-                          <p className="text-muted-foreground">{s.excerpt}</p>
-                        </CardContent>
-                      </Card>
-                    ))
-                }
-              </div>
-            </TabsContent>
-          </Tabs>
+              {categorizedServices.map((group) => (
+                <TabsContent key={group.category.id} value={group.category.name} className="space-y-8">
+                  <div className="text-center mb-8">
+                    <h2
+                      className="text-3xl font-bold mb-3 text-orange-800"
+                      style={{ fontFamily: 'var(--font-heading)' }}
+                    >
+                      {group.category.name}
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {loading
+                      ? Array.from({ length: 4 }).map((_, i) => <ServiceCardSkeleton key={i} />)
+                      : group.items.length === 0
+                        ? (
+                          <p className="col-span-2 text-center text-muted-foreground py-12">
+                            No services in this category yet.
+                          </p>
+                        )
+                        : group.items.map((s: ServiceRecord) => (
+                          <Card
+                            key={s.id}
+                            onClick={() => setSelectedService(s)}
+                            className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer"
+                          >
+                            <CardHeader>
+                              <CardTitle
+                                className="text-orange-800"
+                                style={{ fontFamily: 'var(--font-heading)' }}
+                              >
+                                {s.title}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              {s.imageUrl && (
+                                <img
+                                  src={s.imageUrl}
+                                  alt={s.title}
+                                  className="w-full h-36 object-cover rounded-lg"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                />
+                              )}
+                              <p className="text-muted-foreground">{s.excerpt}</p>
+                            </CardContent>
+                          </Card>
+                        ))
+                    }
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
         </div>
       </section>
 
@@ -250,7 +167,10 @@ export function ServicesPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,237,213,0.25),transparent_70%)]" />
         <div className="container mx-auto px-6 md:px-12 lg:px-24 text-center relative z-10">
           <div className="max-w-3xl mx-auto space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-white text-glow-saffron" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h2
+              className="text-3xl md:text-4xl font-bold text-white text-glow-saffron"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
               Book a Service
             </h2>
             <p className="text-lg text-white/95 leading-relaxed">
@@ -259,10 +179,16 @@ export function ServicesPage() {
               <span className="font-semibold text-white">hinduassociationireland@gmail.com</span>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <a href="tel:+353874953334" className="inline-flex items-center justify-center bg-white text-orange-700 hover:bg-orange-50 px-8 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover-glow-saffron">
+              <a
+                href="tel:+353874953334"
+                className="inline-flex items-center justify-center bg-white text-orange-700 hover:bg-orange-50 px-8 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover-glow-saffron"
+              >
                 Call Us Now
               </a>
-              <a href="mailto:hinduassociationireland@gmail.com" className="inline-flex items-center justify-center border-2 border-white bg-white/10 backdrop-blur-sm text-white hover:bg-white hover:text-orange-700 px-8 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover-glow-saffron">
+              <a
+                href="mailto:hinduassociationireland@gmail.com"
+                className="inline-flex items-center justify-center border-2 border-white bg-white/10 backdrop-blur-sm text-white hover:bg-white hover:text-orange-700 px-8 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover-glow-saffron"
+              >
                 Send Email
               </a>
             </div>
@@ -293,7 +219,10 @@ export function ServicesPage() {
                       <span className="text-xs font-semibold uppercase tracking-wide text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
                         {selectedService.category}
                       </span>
-                      <DialogTitle className="text-2xl font-bold text-orange-800 mt-1" style={{ fontFamily: 'var(--font-heading)' }}>
+                      <DialogTitle
+                        className="text-2xl font-bold text-orange-800 mt-1"
+                        style={{ fontFamily: 'var(--font-heading)' }}
+                      >
                         {selectedService.title}
                       </DialogTitle>
                     </div>

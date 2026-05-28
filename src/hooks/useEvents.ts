@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { EventCategory, TempleEvent, TicketTier } from '@/data/events'
+
+export function toSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
 
 // Shape returned by Supabase for events rows
 interface EventRow {
@@ -23,6 +31,7 @@ interface EventRow {
 function toTempleEvent(row: EventRow): TempleEvent {
   return {
     id: row.id,
+    slug: row.slug ?? toSlug(row.title),
     title: row.title,
     description: row.description ?? '',
     date: row.start_date.slice(0, 10),
@@ -81,6 +90,7 @@ export function useEvents() {
         ticket_tiers: event.ticketTiers ?? null,
         image_url: event.image ?? null,
         published: true,
+        slug: event.slug || toSlug(event.title),
       })
       .select('id')
       .single()
@@ -103,6 +113,7 @@ export function useEvents() {
       if (patch.stripeProductId !== undefined) update.stripe_product_id = patch.stripeProductId
       if (patch.ticketTiers !== undefined)   update.ticket_tiers    = patch.ticketTiers
       if ('image' in patch)                  update.image_url       = patch.image ?? null
+      if (patch.slug !== undefined)          update.slug            = patch.slug || toSlug(patch.title ?? '')
       const { error: err } = await supabase.from('events').update(update).eq('id', id)
       if (err) throw new Error(err.message)
       await fetchEvents()
@@ -117,6 +128,16 @@ export function useEvents() {
   }, [])
 
   return { events, loading, error, addEvent, updateEvent, deleteEvent, refetch: fetchEvents }
+}
+
+/** Returns a single published event by its slug (or derived slug for legacy events). */
+export function useEventBySlug(slug: string | undefined) {
+  const { events, loading, error } = useEvents()
+  const event = useMemo(() => {
+    if (!slug) return null
+    return events.find((e) => e.slug === slug) ?? null
+  }, [events, slug])
+  return { event, loading, error }
 }
 
 /** Convenience: sort events ascending by date. */

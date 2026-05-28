@@ -57,7 +57,7 @@ import {
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { useEvents, sortByDate } from '@/hooks/useEvents'
+import { useEvents, sortByDate, toSlug } from '@/hooks/useEvents'
 import { useMedia } from '@/hooks/useMedia'
 import {
   CATEGORY_LABELS,
@@ -72,6 +72,7 @@ import type { MediaItem } from '@/lib/types'
 import { useTicketBookings, type TicketBookingRow } from '@/hooks/useTicketBookings'
 
 const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
+  slug: '',
   title: '',
   description: '',
   date: new Date().toISOString().slice(0, 10),
@@ -108,6 +109,7 @@ export function EventsSection() {
   )
   const [imagePickerOpen, setImagePickerOpen] = useState(false)
   const [imageSearch, setImageSearch] = useState('')
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
 
   const filtered = useMemo(() => {
     const list = sortByDate(events)
@@ -126,6 +128,7 @@ export function EventsSection() {
   const openCreate = () => {
     setEditing(null)
     setForm(EMPTY_FORM)
+    setSlugManuallyEdited(false)
     setOpen(true)
   }
 
@@ -140,6 +143,7 @@ export function EventsSection() {
       stripeProductId: rest.stripeProductId ?? '',
       ticketTiers: rest.ticketTiers ?? [],
     })
+    setSlugManuallyEdited(true)
     setOpen(true)
   }
 
@@ -158,8 +162,14 @@ export function EventsSection() {
       toast.error('Title, date and location are required.')
       return
     }
+    const slug = (form.slug || toSlug(form.title)).trim()
+    if (!slug) {
+      toast.error('A URL slug is required.')
+      return
+    }
     const payload = {
       ...form,
+      slug,
       title: form.title.trim(),
       description: form.description.trim(),
       location: form.location.trim(),
@@ -510,10 +520,32 @@ export function EventsSection() {
                 <Field label="Title" required>
                   <Input
                     value={form.title}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    onChange={(e) => {
+                      const title = e.target.value
+                      setForm((f) => ({
+                        ...f,
+                        title,
+                        slug: slugManuallyEdited ? f.slug : toSlug(title),
+                      }))
+                    }}
                     placeholder="e.g. Diwali Celebration 2026"
                     required
                   />
+                </Field>
+                <Field label="URL slug" required>
+                  <Input
+                    value={form.slug ?? ''}
+                    onChange={(e) => {
+                      setSlugManuallyEdited(true)
+                      setForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))
+                    }}
+                    placeholder="e.g. diwali-celebration-2026"
+                    className="font-mono text-sm"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Public URL: <span className="font-mono">/events/{form.slug || '…'}</span>
+                  </p>
                 </Field>
                 <Field label="Description">
                   <Textarea

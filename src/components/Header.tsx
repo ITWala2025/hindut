@@ -113,14 +113,14 @@ export function Header({ onDonateClick }: HeaderProps) {
               <Button
                 onClick={onDonateClick}
                 className={cn(
-                  'rounded-full h-9 lg:h-10 px-5 lg:px-6 text-sm font-semibold',
+                  'rounded-full h-10 lg:h-12 px-6 lg:px-8 text-sm lg:text-base font-semibold',
                   'bg-linear-to-r from-orange-500 to-amber-500 text-white',
                   'shadow-[0_4px_14px_-2px_rgba(234,88,12,0.45),0_1px_0_0_rgba(255,255,255,0.30)_inset]',
                   'hover:from-orange-600 hover:to-amber-600 hover:shadow-[0_6px_20px_-2px_rgba(234,88,12,0.55)]',
                   'transition-all duration-200 active:scale-[0.97]',
                 )}
               >
-                <Heart className="mr-1.5" size={15} weight="fill" />
+                <Heart className="mr-1.5 lg:mr-2" size={15} weight="fill" />
                 Donate
               </Button>
             </div>

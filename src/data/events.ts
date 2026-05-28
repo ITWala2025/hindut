@@ -12,6 +12,7 @@ export type EventCategory =
 
 export interface TempleEvent {
   id: string
+  slug: string
   title: string
   description: string
   date: string

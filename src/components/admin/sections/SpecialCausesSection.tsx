@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import {
   Select,
   SelectContent,
@@ -28,10 +29,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -57,6 +64,26 @@ import { useMedia } from '@/hooks/useMedia'
 import { KpiCard, SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
+import type { MediaItem } from '@/lib/types'
+
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <Label className="mb-1.5 block text-sm font-semibold text-slate-800">
+        {label}{required && <span className="text-destructive"> *</span>}
+      </Label>
+      {children}
+    </div>
+  )
+}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-IE', {
@@ -114,11 +141,12 @@ export function SpecialCausesSection() {
   const { media } = useMedia()
 
   const [search, setSearch]             = useState('')
-  const [formOpen, setFormOpen]         = useState(false)
+  const [sheetOpen, setSheetOpen]       = useState(false)
   const [editTarget, setEditTarget]     = useState<CauseWithStats | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CauseWithStats | null>(null)
   const [form, setForm]                 = useState<NewSpecialCause>(EMPTY_FORM)
   const [saving, setSaving]             = useState(false)
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [imagePickerOpen, setImagePickerOpen] = useState(false)
   const [imageSearch, setImageSearch]   = useState('')
 
@@ -138,7 +166,7 @@ export function SpecialCausesSection() {
 
   const imagePickerImages = useMemo(() => {
     const q = imageSearch.toLowerCase()
-    return media.filter(
+    return (media as MediaItem[]).filter(
       (m) =>
         /\.(jpe?g|png|webp|gif|avif|svg)$/i.test(m.filename) &&
         (!q || m.title.toLowerCase().includes(q) || m.filename.toLowerCase().includes(q)),
@@ -148,7 +176,8 @@ export function SpecialCausesSection() {
   function openCreate() {
     setEditTarget(null)
     setForm(EMPTY_FORM)
-    setFormOpen(true)
+    setSlugManuallyEdited(false)
+    setSheetOpen(true)
   }
 
   function openEdit(c: CauseWithStats) {
@@ -162,10 +191,19 @@ export function SpecialCausesSection() {
       deadline:          c.deadline ? c.deadline.slice(0, 10) : null,
       status:            c.status,
     })
-    setFormOpen(true)
+    setSlugManuallyEdited(true)
+    setSheetOpen(true)
   }
 
-  async function handleSave() {
+  function closeSheet() {
+    setSheetOpen(false)
+    setEditTarget(null)
+    setForm(EMPTY_FORM)
+    setSlugManuallyEdited(false)
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
     if (!form.title.trim()) { toast.error('Title is required.'); return }
     if (!form.slug.trim())  { toast.error('Slug is required.');  return }
     setSaving(true)
@@ -184,7 +222,7 @@ export function SpecialCausesSection() {
         await createCause(payload)
         toast.success('Campaign created.')
       }
-      setFormOpen(false)
+      closeSheet()
     } catch (err) {
       toast.error((err as Error).message ?? 'Failed to save campaign.')
     } finally {
@@ -362,7 +400,7 @@ export function SpecialCausesSection() {
                     </span>
                   </Td>
                   <Td className="text-right whitespace-nowrap">
-                    {/* Public link (non-draft only) */}
+                    {/* Public page link */}
                     {c.status !== 'draft' && (
                       <Link to={`/causes/${c.slug}`} target="_blank">
                         <Button
@@ -387,7 +425,7 @@ export function SpecialCausesSection() {
                         <Play size={15} />
                       </Button>
                     )}
-                    {/* Pause active */}
+                    {/* Pause / close active */}
                     {canUpdate && c.status === 'active' && (
                       <>
                         <Button
@@ -427,7 +465,7 @@ export function SpecialCausesSection() {
                           size="sm"
                           onClick={() => handleQuickStatus(c, 'closed')}
                           className="text-red-500 hover:bg-red-50"
-                          title="Close campaign"
+                          title="Close"
                         >
                           <XCircle size={15} />
                         </Button>
@@ -439,10 +477,11 @@ export function SpecialCausesSection() {
                         variant="ghost"
                         size="sm"
                         onClick={() => openEdit(c)}
-                        className="text-slate-600 hover:text-slate-900"
+                        className="text-orange-700 hover:bg-orange-50"
                         title="Edit"
                       >
                         <Pencil size={15} />
+                        <span className="ml-1 hidden sm:inline">Edit</span>
                       </Button>
                     )}
                     {/* Delete */}
@@ -465,199 +504,255 @@ export function SpecialCausesSection() {
         )}
       </SectionCard>
 
-      {/* ─── Create / Edit Dialog ───────────────────────────────────────── */}
-      <Dialog
-        open={formOpen}
-        onOpenChange={(o) => {
-          if (!o) { setFormOpen(false); setEditTarget(null); setForm(EMPTY_FORM) }
-        }}
-      >
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editTarget ? 'Edit Campaign' : 'New Special Cause Campaign'}
-            </DialogTitle>
-            <DialogDescription>
-              {editTarget
-                ? 'Update the campaign details.'
-                : 'Create a dedicated donation campaign with its own public page.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Title */}
-            <div>
-              <Label htmlFor="sc-title" className="mb-1.5 block">Title *</Label>
-              <Input
-                id="sc-title"
-                placeholder="e.g. Diwali Lamp Fund 2026"
-                value={form.title}
-                onChange={(e) => {
-                  const title = e.target.value
-                  setForm((f) => ({
-                    ...f,
-                    title,
-                    slug: editTarget ? f.slug : slugifyCause(title),
-                  }))
-                }}
-              />
-            </div>
-
-            {/* Slug */}
-            <div>
-              <Label htmlFor="sc-slug" className="mb-1.5 block">
-                URL Slug *{' '}
-                <span className="text-xs text-muted-foreground font-normal">
-                  (auto-generated, editable)
-                </span>
-              </Label>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground shrink-0">/causes/</span>
-                <Input
-                  id="sc-slug"
-                  placeholder="diwali-lamp-fund-2026"
-                  value={form.slug}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-                    }))
-                  }
-                  className="font-mono text-sm"
-                />
+      {/* ─── Create / Edit Sheet (right slide-over) ─────────────────────── */}
+      <Sheet open={sheetOpen} onOpenChange={(o) => { if (!o) closeSheet() }}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-2xl flex flex-col p-0 gap-0 overflow-hidden"
+        >
+          {/* Sticky header */}
+          <SheetHeader className="px-6 py-5 border-b border-slate-200 shrink-0 bg-white">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <SheetTitle
+                  className="text-xl font-bold text-orange-900"
+                  style={{ fontFamily: 'var(--font-heading)' }}
+                >
+                  {editTarget ? 'Edit campaign' : 'New campaign'}
+                </SheetTitle>
+                <SheetDescription className="mt-0.5 text-sm text-muted-foreground">
+                  {editTarget
+                    ? 'Update the campaign details and save.'
+                    : 'Fill in the details to create a new donation campaign with its own public page.'}
+                </SheetDescription>
               </div>
             </div>
+          </SheetHeader>
 
-            {/* Description */}
-            <div>
-              <Label htmlFor="sc-desc" className="mb-1.5 block">Description</Label>
-              <Textarea
-                id="sc-desc"
-                placeholder="Describe what this campaign is for and how donations will be used…"
-                value={form.description ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                rows={4}
-              />
-            </div>
-
+          {/* Scrollable form */}
+          <form
+            id="cause-form"
+            onSubmit={handleSave}
+            className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
+          >
             {/* Cover image */}
             <div>
-              <Label className="mb-1.5 block">Cover Image</Label>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                Cover image
+              </p>
               {form.cover_image_url ? (
-                <div className="relative w-full h-36 rounded-lg overflow-hidden border border-slate-200">
+                <div className="relative rounded-xl overflow-hidden border border-slate-200 h-48 group">
                   <img
                     src={form.cover_image_url}
-                    alt="cover"
+                    alt="Campaign cover"
                     className="w-full h-full object-cover"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, cover_image_url: '' }))}
-                    className="absolute top-2 right-2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
-                  >
-                    <X size={14} />
-                  </button>
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => { setImageSearch(''); setImagePickerOpen(true) }}
+                      className="bg-white/90 text-slate-800 hover:bg-white"
+                    >
+                      <ImageIcon size={14} className="mr-1.5" />
+                      Change
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setForm((f) => ({ ...f, cover_image_url: '' }))}
+                      className="bg-white/90 text-red-600 hover:bg-white hover:text-red-700"
+                    >
+                      <X size={14} className="mr-1.5" />
+                      Remove
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <button
                   type="button"
-                  onClick={() => setImagePickerOpen(true)}
-                  className="w-full h-24 rounded-lg border-2 border-dashed border-orange-200 hover:border-orange-400 bg-orange-50/40 flex flex-col items-center justify-center gap-1.5 text-orange-600 hover:text-orange-800 transition-colors"
+                  onClick={() => { setImageSearch(''); setImagePickerOpen(true) }}
+                  className="w-full h-36 rounded-xl border-2 border-dashed border-slate-300 hover:border-orange-400 hover:bg-orange-50/50 transition-all flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-orange-600"
                 >
-                  <ImageIcon size={22} />
-                  <span className="text-xs">Click to select from media library</span>
+                  <ImageIcon size={32} weight="duotone" />
+                  <span className="text-sm font-medium">Select from Media Library</span>
+                  <span className="text-xs text-slate-400">Click to browse uploaded images</span>
                 </button>
               )}
             </div>
 
-            {/* Target + Deadline */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="sc-target" className="mb-1.5 block">Target Amount (€)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                    €
-                  </span>
+            <Separator />
+
+            {/* Campaign details */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                Campaign details
+              </p>
+              <div className="space-y-4">
+                <Field label="Title" required>
                   <Input
-                    id="sc-target"
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    placeholder="Optional"
-                    className="pl-6"
-                    value={form.target_amount_eur ?? ''}
-                    onChange={(e) =>
+                    value={form.title}
+                    onChange={(e) => {
+                      const title = e.target.value
                       setForm((f) => ({
                         ...f,
-                        target_amount_eur: e.target.value ? parseFloat(e.target.value) : null,
+                        title,
+                        slug: slugManuallyEdited ? f.slug : slugifyCause(title),
                       }))
-                    }
+                    }}
+                    placeholder="e.g. Diwali Lamp Fund 2026"
+                    required
                   />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="sc-deadline" className="mb-1.5 block">Deadline</Label>
-                <Input
-                  id="sc-deadline"
-                  type="date"
-                  value={form.deadline ?? ''}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, deadline: e.target.value || null }))
-                  }
-                />
+                </Field>
+
+                <Field label="URL slug" required>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground shrink-0">/causes/</span>
+                    <Input
+                      value={form.slug ?? ''}
+                      onChange={(e) => {
+                        setSlugManuallyEdited(true)
+                        setForm((f) => ({
+                          ...f,
+                          slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                        }))
+                      }}
+                      placeholder="diwali-lamp-fund-2026"
+                      className="font-mono text-sm"
+                      required
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Public URL:{' '}
+                    <span className="font-mono">/causes/{form.slug || '…'}</span>
+                  </p>
+                </Field>
+
+                <Field label="Description">
+                  <Textarea
+                    value={form.description ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    rows={4}
+                    placeholder="Describe what this campaign is for and how donations will be used…"
+                  />
+                </Field>
               </div>
             </div>
+
+            <Separator />
+
+            {/* Goal & timeline */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                Goal &amp; timeline
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Target amount (€)">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      €
+                    </span>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      placeholder="Optional"
+                      className="pl-6"
+                      value={form.target_amount_eur ?? ''}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          target_amount_eur: e.target.value ? parseFloat(e.target.value) : null,
+                        }))
+                      }
+                    />
+                  </div>
+                </Field>
+                <Field label="Deadline">
+                  <Input
+                    type="date"
+                    value={form.deadline ?? ''}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, deadline: e.target.value || null }))
+                    }
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <Separator />
 
             {/* Status */}
             <div>
-              <Label htmlFor="sc-status" className="mb-1.5 block">Status</Label>
-              <Select
-                value={form.status}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, status: v as NewSpecialCause['status'] }))
-                }
-              >
-                <SelectTrigger id="sc-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft — hidden from public</SelectItem>
-                  <SelectItem value="active">Active — visible &amp; donations open</SelectItem>
-                  <SelectItem value="paused">Paused — visible, donations closed</SelectItem>
-                  <SelectItem value="closed">Closed — campaign ended</SelectItem>
-                </SelectContent>
-              </Select>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                Visibility
+              </p>
+              <Field label="Status">
+                <Select
+                  value={form.status}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, status: v as NewSpecialCause['status'] }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft — hidden from public</SelectItem>
+                    <SelectItem value="active">Active — visible &amp; donations open</SelectItem>
+                    <SelectItem value="paused">Paused — visible, donations closed</SelectItem>
+                    <SelectItem value="closed">Closed — campaign ended</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Set to <strong>Active</strong> to publish the campaign and open donations.
+                </p>
+              </Field>
             </div>
-          </div>
+          </form>
 
-          <DialogFooter>
+          {/* Sticky footer */}
+          <div className="shrink-0 border-t border-slate-200 bg-white px-6 py-4 flex items-center justify-between gap-3">
             <Button
-              variant="outline"
-              onClick={() => { setFormOpen(false); setEditTarget(null); setForm(EMPTY_FORM) }}
+              type="button"
+              variant="ghost"
+              onClick={closeSheet}
+              className="text-slate-600"
             >
               Cancel
             </Button>
             <Button
-              className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
-              onClick={handleSave}
+              type="submit"
+              form="cause-form"
               disabled={saving}
+              className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold px-8"
             >
-              {saving ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Campaign'}
+              {saving ? 'Saving…' : editTarget ? 'Save changes' : 'Create campaign'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </SheetContent>
+      </Sheet>
 
-      {/* ─── Image Picker Dialog ─────────────────────────────────────────── */}
+      {/* ─── Media Library image picker (separate Dialog) ────────────────── */}
       <Dialog open={imagePickerOpen} onOpenChange={setImagePickerOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-[780px] max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Select Cover Image</DialogTitle>
-            <DialogDescription>Choose an image from your media library.</DialogDescription>
+            <DialogTitle
+              className="text-orange-800"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              Select image from Media Library
+            </DialogTitle>
+            <DialogDescription>
+              Click an image to use it as the campaign cover.
+            </DialogDescription>
           </DialogHeader>
+
           <div className="relative mb-3">
             <MagnifyingGlass
-              size={15}
+              size={16}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
             <Input
@@ -667,37 +762,47 @@ export function SpecialCausesSection() {
               className="pl-9"
             />
           </div>
-          <div className="grid grid-cols-3 gap-3 max-h-72 overflow-y-auto">
-            {imagePickerImages.map((img) => (
-              <button
-                key={img.id}
-                type="button"
-                onClick={() => {
-                  setForm((f) => ({ ...f, cover_image_url: img.url }))
-                  setImagePickerOpen(false)
-                  setImageSearch('')
-                }}
-                className={cn(
-                  'relative rounded-lg overflow-hidden aspect-video border-2 border-transparent hover:border-orange-500 transition-colors',
-                  form.cover_image_url === img.url && 'border-orange-500',
-                )}
-              >
-                <img
-                  src={img.url}
-                  alt={img.title}
-                  className="w-full h-full object-cover"
-                />
-                {form.cover_image_url === img.url && (
-                  <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
-                    <Check size={22} className="text-white" weight="bold" />
-                  </div>
-                )}
-              </button>
-            ))}
-            {imagePickerImages.length === 0 && (
-              <p className="col-span-3 text-center text-sm text-muted-foreground py-6">
-                No images found.
-              </p>
+
+          <div className="flex-1 overflow-y-auto">
+            {imagePickerImages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+                <ImageIcon size={40} weight="duotone" />
+                <p className="text-sm">No images found. Upload images in the Media Library first.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {imagePickerImages.map((item: MediaItem) => {
+                  const isSelected = form.cover_image_url === item.url
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setForm((f) => ({ ...f, cover_image_url: item.url }))
+                        setImagePickerOpen(false)
+                      }}
+                      className={cn(
+                        'relative rounded-lg overflow-hidden border-2 aspect-square focus:outline-none transition-all hover:border-orange-400',
+                        isSelected ? 'border-orange-500 ring-2 ring-orange-300' : 'border-transparent',
+                      )}
+                    >
+                      <img
+                        src={item.url}
+                        alt={item.alt}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
+                          <div className="bg-orange-500 text-white rounded-full p-1">
+                            <Check size={16} weight="bold" />
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             )}
           </div>
         </DialogContent>

@@ -206,6 +206,8 @@ export function MembershipPage() {
     if (!fullName.trim()) { toast.error('Please enter your full name.'); return }
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRe.test(email)) { toast.error('Please enter a valid email address.'); return }
+    const phoneRe = /^\+?[\d\s\-().]{7,20}$/
+    if (!phoneRe.test(phone.trim())) { toast.error('Please enter a valid phone number.'); return }
     if (!gdprConsent) { toast.error('Please accept the data processing consent to continue.'); return }
     setStep('payment')
   }
@@ -777,14 +779,15 @@ export function MembershipPage() {
                   </div>
                   <div>
                     <Label htmlFor="mem-phone" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                      Phone{' '}
-                      <span className="text-slate-400 text-xs font-normal">(optional)</span>
+                      Phone number <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="mem-phone"
+                      type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+353 87 000 0000"
+                      required
                       className="h-11 rounded-xl border-slate-200"
                     />
                   </div>

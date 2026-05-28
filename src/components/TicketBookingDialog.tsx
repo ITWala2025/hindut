@@ -113,6 +113,10 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
   const [isProcessing, setIsProcessing] = useState(false)
 
   const adultPrice = event.price ?? 0
+  const hasTiers   = (event.ticketTiers ?? []).length > 0
+  const [tierQtys, setTierQtys] = useState<Record<string, number>>(() =>
+    Object.fromEntries((event.ticketTiers ?? []).map((t) => [t.id, 0]))
+  )
 
   const {
     register,
@@ -131,29 +135,47 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
   const numChildren  = watch('numChildren') || 0
   const consentValue = watch('consentGdpr')
 
-  const total = Number(numAdults) * adultPrice
+  const total = hasTiers
+    ? (event.ticketTiers ?? []).reduce((sum, t) => sum + (tierQtys[t.id] ?? 0) * t.price, 0)
+    : Number(numAdults) * adultPrice
 
   const handleClose = (v: boolean) => {
-    if (!v) setTimeout(() => reset(), 300)
+    if (!v) setTimeout(() => {
+      reset()
+      setTierQtys(Object.fromEntries((event.ticketTiers ?? []).map((t) => [t.id, 0])))
+    }, 300)
     onOpenChange(v)
   }
 
   // On submit: call create-checkout-session and redirect to Stripe Checkout.
   const onDetailsSubmit = async (data: DetailsFormData) => {
+    if (hasTiers) {
+      const totalTickets = Object.values(tierQtys).reduce((s, q) => s + q, 0)
+      if (totalTickets === 0) {
+        toast.error('Please select at least 1 ticket.')
+        return
+      }
+    }
     setIsProcessing(true)
+    const tierQuantities = hasTiers
+      ? (event.ticketTiers ?? [])
+          .filter((t) => (tierQtys[t.id] ?? 0) > 0)
+          .map((t) => ({ tierId: t.id, quantity: tierQtys[t.id] }))
+      : undefined
     try {
       const res = await fetch('/.netlify/functions/create-checkout-session', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          kind:        'ticket',
-          eventId:     event.id,
-          firstName:   data.firstName,
-          lastName:    data.lastName,
-          phone:       data.phone,
-          email:       data.email,
-          numAdults:   data.numAdults,
-          numChildren: data.numChildren ?? 0,
+          kind:      'ticket',
+          eventId:   event.id,
+          firstName: data.firstName,
+          lastName:  data.lastName,
+          phone:     data.phone,
+          email:     data.email,
+          ...(hasTiers
+            ? { tierQuantities }
+            : { numAdults: data.numAdults, numChildren: data.numChildren ?? 0 }),
           consentGdpr: true,
         }),
       })
@@ -212,18 +234,45 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
             <form onSubmit={handleSubmit(onDetailsSubmit)} noValidate>
               <div className="px-6 py-5 space-y-4">
 
-                {/* Ticket price summary */}
-                <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-2">
-                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Ticket Price</p>
-                  <div className="flex justify-between text-sm text-slate-700">
-                    <span>Adult ticket</span>
-                    <span className="font-semibold">€{adultPrice.toFixed(2)}</span>
+                {/* Ticket selection */}
+                {hasTiers ? (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Select Tickets</p>
+                    {(event.ticketTiers ?? []).map((tier) => (
+                      <div key={tier.id} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-slate-700">{tier.label}</span>
+                          <span className="text-sm text-slate-400 ml-2">€{tier.price.toFixed(2)} each</span>
+                        </div>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={20}
+                          value={tierQtys[tier.id] ?? 0}
+                          onChange={(e) =>
+                            setTierQtys((prev) => ({
+                              ...prev,
+                              [tier.id]: Math.max(0, parseInt(e.target.value) || 0),
+                            }))
+                          }
+                          className="w-20 text-center"
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>Children (under 12)</span>
-                    <span>Free</span>
+                ) : (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-2">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Ticket Price</p>
+                    <div className="flex justify-between text-sm text-slate-700">
+                      <span>Adult ticket</span>
+                      <span className="font-semibold">€{adultPrice.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>Children (under 12)</span>
+                      <span>Free</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Name row */}
                 <div className="grid grid-cols-2 gap-3">
@@ -295,48 +344,55 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
                   <FieldError message={errors.email?.message} />
                 </div>
 
-                {/* Attendees row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="tb-adults" className="flex items-center gap-1.5 mb-1.5">
-                      <Users size={13} className="text-amber-600" />
-                      Adults <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="tb-adults"
-                      type="number"
-                      min={1}
-                      max={20}
-                      aria-invalid={!!errors.numAdults}
-                      className={cn(errors.numAdults && 'border-red-400 focus-visible:ring-red-300')}
-                      {...register('numAdults')}
-                    />
-                    <FieldError message={errors.numAdults?.message} />
+                {/* Attendees row — flat pricing only */}
+                {!hasTiers && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="tb-adults" className="flex items-center gap-1.5 mb-1.5">
+                        <Users size={13} className="text-amber-600" />
+                        Adults <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="tb-adults"
+                        type="number"
+                        min={1}
+                        max={20}
+                        aria-invalid={!!errors.numAdults}
+                        className={cn(errors.numAdults && 'border-red-400 focus-visible:ring-red-300')}
+                        {...register('numAdults')}
+                      />
+                      <FieldError message={errors.numAdults?.message} />
+                    </div>
+                    <div>
+                      <Label htmlFor="tb-children" className="flex items-center gap-1.5 mb-1.5">
+                        <Baby size={13} className="text-amber-600" />
+                        Children
+                        <span className="text-muted-foreground text-[10px] ml-1">(free)</span>
+                      </Label>
+                      <Input
+                        id="tb-children"
+                        type="number"
+                        min={0}
+                        max={20}
+                        aria-invalid={!!errors.numChildren}
+                        className={cn(errors.numChildren && 'border-red-400 focus-visible:ring-red-300')}
+                        {...register('numChildren')}
+                      />
+                      <FieldError message={errors.numChildren?.message} />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="tb-children" className="flex items-center gap-1.5 mb-1.5">
-                      <Baby size={13} className="text-amber-600" />
-                      Children
-                      <span className="text-muted-foreground text-[10px] ml-1">(free)</span>
-                    </Label>
-                    <Input
-                      id="tb-children"
-                      type="number"
-                      min={0}
-                      max={20}
-                      aria-invalid={!!errors.numChildren}
-                      className={cn(errors.numChildren && 'border-red-400 focus-visible:ring-red-300')}
-                      {...register('numChildren')}
-                    />
-                    <FieldError message={errors.numChildren?.message} />
-                  </div>
-                </div>
+                )}
 
                 {/* Live order total */}
                 <div className="rounded-xl bg-amber-600 text-white px-4 py-3 flex items-center justify-between">
                   <span className="text-sm font-semibold opacity-90">
-                    Total · {numAdults} adult{Number(numAdults) !== 1 ? 's' : ''}
-                    {Number(numChildren) > 0 ? ` + ${numChildren} child${Number(numChildren) !== 1 ? 'ren' : ''}` : ''}
+                    {hasTiers
+                      ? (() => {
+                          const n = Object.values(tierQtys).reduce((s, q) => s + q, 0)
+                          return `Total · ${n} ticket${n !== 1 ? 's' : ''}`
+                        })()
+                      : `Total · ${numAdults} adult${Number(numAdults) !== 1 ? 's' : ''}${Number(numChildren) > 0 ? ` + ${numChildren} child${Number(numChildren) !== 1 ? 'ren' : ''}` : ''}`
+                    }
                   </span>
                   <span className="text-xl font-bold">€{total.toFixed(2)}</span>
                 </div>

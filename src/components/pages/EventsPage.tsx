@@ -3,14 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet'
-import { CalendarBlank, MapPin, Clock, Ticket, Heart, ArrowDown, ClipboardText, Image as ImageIcon } from '@phosphor-icons/react'
+import { CalendarBlank, MapPin, Clock, Ticket, Heart, ArrowDown, ClipboardText } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { EventsGalleryStrip } from '@/components/EventsGalleryStrip'
 import { RsvpDialog } from '@/components/RsvpDialog'
@@ -50,7 +43,6 @@ export function EventsPage() {
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const [rsvpEvent, setRsvpEvent] = useState<TempleEvent | null>(null)
   const [ticketEvent, setTicketEvent] = useState<TempleEvent | null>(null)
-  const [detailEvent, setDetailEvent] = useState<TempleEvent | null>(null)
 
   const visible = useMemo(() => {
     const sorted = sortByDate(events.filter((e) => e.published))
@@ -183,7 +175,6 @@ export function EventsPage() {
                   event={event}
                   onBookTicket={() => setTicketEvent(event)}
                   onRsvp={() => setRsvpEvent(event)}
-                  onViewDetails={() => setDetailEvent(event)}
                   highlighted={highlightedId === event.id}
                 />
               ))}
@@ -205,19 +196,6 @@ export function EventsPage() {
               event={ticketEvent}
             />
           )}
-
-          {/* Event detail sheet */}
-          <Sheet open={!!detailEvent} onOpenChange={(v) => { if (!v) setDetailEvent(null) }}>
-            <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0">
-              {detailEvent && (
-                <EventDetailPanel
-                  event={detailEvent}
-                  onRsvp={() => { setDetailEvent(null); setRsvpEvent(detailEvent) }}
-                  onBookTicket={() => { setDetailEvent(null); setTicketEvent(detailEvent) }}
-                />
-              )}
-            </SheetContent>
-          </Sheet>
 
           <div className="mt-12 rounded-2xl bg-secondary p-8 md:p-12 text-center text-secondary-foreground shadow-xl relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(232,196,140,0.15),transparent_70%)]" />
@@ -257,52 +235,44 @@ function EventCard({
   event,
   onBookTicket,
   onRsvp,
-  onViewDetails,
   highlighted = false,
 }: {
   event: TempleEvent
   onBookTicket: () => void
   onRsvp: () => void
-  onViewDetails: () => void
   highlighted?: boolean
 }) {
+  const navigate = useNavigate()
   const { month, day, full } = formatEventDate(event.date)
+  const eventUrl = `/events/${event.slug}`
 
   return (
     <Card
       id={`event-${event.id}`}
+      onClick={() => navigate(eventUrl)}
       className={cn(
-        'group scroll-mt-32 border-orange-200/60 bg-white/85 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden',
+        'group scroll-mt-32 border-orange-200/60 bg-white/85 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden cursor-pointer',
         highlighted && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron',
       )}
     >
-      {/* Clickable image / header area */}
-      <button
-        type="button"
-        onClick={onViewDetails}
-        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
-        aria-label={`View details for ${event.title}`}
-      >
-        {event.image ? (
-          <div className="relative h-44 overflow-hidden">
-            <img
-              src={event.image}
-              alt={event.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
-          </div>
-        ) : (
-          <div className="h-2 bg-linear-to-r from-orange-400 to-amber-400" />
-        )}
-      </button>
+      {/* Image */}
+      {event.image ? (
+        <div className="relative h-44 overflow-hidden">
+          <img
+            src={event.image}
+            alt={event.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
+        </div>
+      ) : (
+        <div className="h-2 bg-linear-to-r from-orange-400 to-amber-400" />
+      )}
 
       <CardContent className="p-6 space-y-4">
         <div className="flex items-start gap-4">
           <div className="flex flex-col items-center justify-center bg-linear-to-br from-orange-100 to-amber-100 rounded-xl p-3 min-w-[72px] glow-saffron">
-            <span className="text-xs font-semibold text-orange-700 tracking-widest">
-              {month}
-            </span>
+            <span className="text-xs font-semibold text-orange-700 tracking-widest">{month}</span>
             <span className="text-3xl font-bold text-orange-800 leading-none">{day}</span>
           </div>
           <div className="flex-1 min-w-0">
@@ -316,18 +286,12 @@ function EventCard({
                 <Badge className="bg-orange-600 text-white">Free</Badge>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onViewDetails}
-              className="text-left focus:outline-none"
+            <h3
+              className="text-lg font-bold text-orange-800 leading-snug group-hover:underline"
+              style={{ fontFamily: 'var(--font-heading)' }}
             >
-              <h3
-                className="text-lg font-bold text-orange-800 leading-snug hover:underline"
-                style={{ fontFamily: 'var(--font-heading)' }}
-              >
-                {event.title}
-              </h3>
-            </button>
+              {event.title}
+            </h3>
           </div>
         </div>
 
@@ -350,128 +314,26 @@ function EventCard({
           </li>
         </ul>
 
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={onViewDetails}
-            className="text-sm font-medium text-orange-700 hover:text-orange-900 hover:underline text-left"
+        {/* Action button — stopPropagation so card click doesn't fire */}
+        {event.isPaid ? (
+          <Button
+            onClick={(e) => { e.stopPropagation(); onBookTicket() }}
+            className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
           >
-            View full details →
-          </button>
-          {event.isPaid ? (
-            <Button
-              onClick={onBookTicket}
-              className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
-            >
-              <Ticket className="mr-2" weight="fill" />
-              Book ticket
-            </Button>
-          ) : (
-            <Button
-              className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
-              onClick={onRsvp}
-            >
-              <ClipboardText className="mr-2" weight="fill" />
-              RSVP
-            </Button>
-          )}
-        </div>
+            <Ticket className="mr-2" weight="fill" />
+            Book ticket
+          </Button>
+        ) : (
+          <Button
+            onClick={(e) => { e.stopPropagation(); onRsvp() }}
+            className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+          >
+            <ClipboardText className="mr-2" weight="fill" />
+            RSVP
+          </Button>
+        )}
       </CardContent>
     </Card>
   )
 }
 
-function EventDetailPanel({
-  event,
-  onRsvp,
-  onBookTicket,
-}: {
-  event: TempleEvent
-  onRsvp: () => void
-  onBookTicket: () => void
-}) {
-  const { full } = formatEventDate(event.date)
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Image */}
-      {event.image ? (
-        <div className="relative h-56 shrink-0 overflow-hidden">
-          <img
-            src={event.image}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
-        </div>
-      ) : (
-        <div className="h-20 bg-linear-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0">
-          <ImageIcon size={40} className="text-white/60" weight="duotone" />
-        </div>
-      )}
-
-      <div className="p-6 space-y-5 flex-1 overflow-y-auto">
-        <SheetHeader>
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <Badge variant="outline" className={CATEGORY_COLORS[event.category]}>
-              {CATEGORY_LABELS[event.category]}
-            </Badge>
-            {event.isPaid ? (
-              <Badge className="bg-amber-500 text-white">€{event.price ?? 0}</Badge>
-            ) : (
-              <Badge className="bg-orange-600 text-white">Free entry</Badge>
-            )}
-          </div>
-          <SheetTitle
-            className="text-2xl text-orange-800 leading-snug"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            {event.title}
-          </SheetTitle>
-          <SheetDescription asChild>
-            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-              {event.description}
-            </p>
-          </SheetDescription>
-        </SheetHeader>
-
-        <ul className="space-y-3 text-sm text-orange-800 border-t border-orange-100 pt-4">
-          <li className="flex items-start gap-3">
-            <CalendarBlank size={18} className="mt-0.5 text-orange-500 shrink-0" weight="duotone" />
-            <span>{full}</span>
-          </li>
-          {event.time && (
-            <li className="flex items-start gap-3">
-              <Clock size={18} className="mt-0.5 text-orange-500 shrink-0" weight="duotone" />
-              <span>{event.time}</span>
-            </li>
-          )}
-          <li className="flex items-start gap-3">
-            <MapPin size={18} className="mt-0.5 text-orange-500 shrink-0" weight="duotone" />
-            <span>{event.location}</span>
-          </li>
-        </ul>
-
-        <div className="pt-2">
-          {event.isPaid ? (
-            <Button
-              onClick={onBookTicket}
-              className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
-            >
-              <Ticket className="mr-2" weight="fill" />
-              Book ticket
-            </Button>
-          ) : (
-            <Button
-              className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
-              onClick={onRsvp}
-            >
-              <ClipboardText className="mr-2" weight="fill" />
-              RSVP for this event
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
