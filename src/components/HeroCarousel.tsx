@@ -62,10 +62,8 @@ export function HeroCarousel({
             ))}
           </div>
         )}
-        {/* Lighter overlay — keeps text readable while letting the temple
-            imagery clearly show through. */}
-        <div className="absolute inset-0 bg-linear-to-b from-black/35 via-black/20 to-black/55" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_65%,rgba(0,0,0,0.35),transparent_70%)]" />
+        {/* Consistent semi-transparent overlay — guarantees white heading legibility */}
+        <div className="absolute inset-0 bg-black/50" />
       </div>
 
       {/* Content - with top padding to avoid header overlap */}

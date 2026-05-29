@@ -66,27 +66,6 @@ export function ContactPage() {
         {/* Quick-jump pills: each chip scrolls to a contact method or the
             message form below and briefly highlights it. */}
         <div className="mt-8 flex flex-col items-center gap-4">
-          <p className="text-sm uppercase tracking-[0.2em] text-white/85">
-            How can we help?
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {CONTACT_PILLS.map((pill) => (
-              <button
-                key={pill.id}
-                type="button"
-                onClick={() => scrollToContact(pill.id)}
-                className="group inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20 hover:shadow-lg"
-                aria-label={`Scroll to ${pill.label}`}
-              >
-                <span>{pill.label}</span>
-                <ArrowDown
-                  size={14}
-                  weight="bold"
-                  className="transition-transform group-hover:translate-y-0.5"
-                />
-              </button>
-            ))}
-          </div>
           <div className="mt-6 flex flex-col items-center gap-3">
             <p className="text-sm uppercase tracking-[0.2em] text-white/85">Follow Us</p>
             <div className="flex items-center gap-4">
@@ -301,13 +280,12 @@ export function ContactPage() {
             </h2>
             <div className="rounded-xl overflow-hidden aspect-video shadow-md border border-orange-100">
               <iframe
-                src="https://maps.google.com/maps?q=4+Upper+Denmark+Street,+Limerick,+Ireland&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                src="https://maps.google.com/maps?q=4+Upper+Denmark+Street,+Limerick,+Ireland&output=embed&z=16"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
                 allowFullScreen
                 loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
                 title="Find Us — Hindu Association of Ireland"
               />
             </div>

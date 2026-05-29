@@ -83,7 +83,7 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
             <Link
               to="/"
               className="shrink-0 transition-all hover:opacity-90 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 rounded-xl"
-              aria-label="Hindu Temple Limerick — Home"
+              aria-label="Hindu Association of Ireland — Home"
             >
               <Logo size="md" showText={true} />
             </Link>
@@ -164,10 +164,7 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[17px] font-bold text-white leading-tight drop-shadow-sm truncate" style={{ fontFamily: 'var(--font-heading)' }}>
-                          Hindu Temple
-                        </p>
-                        <p className="text-[11px] font-medium text-orange-100/80 tracking-widest uppercase mt-0.5">
-                          Limerick, Ireland
+                          Hindu Association of Ireland
                         </p>
                       </div>
                     </div>

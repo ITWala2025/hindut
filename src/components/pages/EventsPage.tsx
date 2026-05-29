@@ -76,11 +76,11 @@ export function EventsPage() {
     <div className="flex flex-col">
       <SeoMeta
         title="Events — Hindu Festivals & Community Gatherings"
-        description="Upcoming Hindu festivals, pujas, yoga sessions and cultural events organised by the Hindu Association of Ireland in Limerick. Free and ticketed events for all."
+        description="Upcoming Hindu festivals, prayers, yoga sessions and cultural events organised by the Hindu Association of Ireland in Limerick. Free and ticketed events for all."
         canonical="/events"
       />
       <HeroCarousel
-        title="Temple Events & Calendar"
+        title="Community & Cultural Center Events & Calendar"
         subtitle={`${upcoming.length} upcoming celebrations across Ahane, Pallaskenry and Mungret`}
       >
         {/* Quick-jump pills: tap a celebration to scroll straight to its

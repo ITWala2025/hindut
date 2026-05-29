@@ -104,10 +104,36 @@
   --color-amber-950: oklch(0.22 0.045 35);
 }
 
-body {
-  font-family: var(--font-body);
+/* === Base typography ===
+   Lives in @layer base so Tailwind utility classes (text-4xl, text-sm, etc.)
+   in @layer utilities always override these defaults when explicitly set.
+   Components that need different sizes just add a text-* utility. */
+@layer base {
+  body {
+    font-family: var(--font-body);
+    font-size: 1.125rem; /* 18px */
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    line-height: 1.2;
+  }
+
+  h1 { font-size: 3rem;      font-weight: 700; } /* 48px */
+  h2 { font-size: 2.25rem;   font-weight: 600; } /* 36px */
+  h3 { font-size: 1.875rem;  font-weight: 600; } /* 30px */
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
+/* Accessible keyboard focus ring */
+:focus-visible {
+  outline: 2px solid #C75B12;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Uniform card shadow token */
+:root {
+  --shadow-card: 0px 2px 4px rgba(0, 0, 0, 0.10);
 }

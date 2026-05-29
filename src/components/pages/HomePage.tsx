@@ -77,7 +77,7 @@ export function HomePage({ onDonateClick }: HomePageProps) {
   const services = [
     {
       icon: HandsPraying,
-      title: 'Daily Pujas',
+      title: 'Daily Prayers',
       description: 'Experience divine blessings through our traditional daily worship ceremonies — morning aarti, abhishekam and sandhya prayers.',
       featured: true,
       cta: 'Service Times',
@@ -122,7 +122,7 @@ export function HomePage({ onDonateClick }: HomePageProps) {
     <div className="flex flex-col relative">
       <SeoMeta
         title="Hindu Temple Limerick — Home"
-        description="The Hindu Association of Ireland is building a permanent Hindu Temple in Limerick. Join our community for puja, festivals, yoga, cultural events and membership."
+        description="The Hindu Association of Ireland is building a permanent Hindu Temple in Limerick. Join our community for prayer, festivals, yoga, cultural events and membership."
         canonical="/"
       />
       {/* Background Music - Krishna Bhajan */}
@@ -151,7 +151,7 @@ export function HomePage({ onDonateClick }: HomePageProps) {
 
       <HeroCarousel
         title="Welcome to the Hindu Association of Ireland"
-        subtitle="A united platform working to establish a permanent Hindu Temple in Limerick. Join us in prayer, celebration and community."
+        subtitle="A united platform working to establish a permanent Hindu Cultural Center in Limerick. Join us in prayer, celebration and community."
         enableRevealAnimation={true}
       >
         <div className="inline-block mb-8 mt-8 relative">
@@ -170,9 +170,9 @@ export function HomePage({ onDonateClick }: HomePageProps) {
                 <div className="absolute inset-0 rounded-full bg-linear-to-br from-amber-300 via-orange-400 to-amber-600 p-[3px] shadow-2xl shadow-orange-500/60 glow-saffron-intense">
                   <div className="h-full w-full rounded-full overflow-hidden bg-white">
                     <img
-                      src="/logo.jpeg"
+                      src="/HAI%20(Green)%20%20Hindu%20Association%20Ireland%20logo-01.jpg"
                       alt="Hindu Association of Ireland"
-                      className="h-full w-full object-cover rounded-full"
+                      className="h-full w-full object-contain rounded-full"
                     />
                   </div>
                 </div>
@@ -182,23 +182,25 @@ export function HomePage({ onDonateClick }: HomePageProps) {
         </div>
         <div className="flex flex-col gap-8 items-center pt-10">
           <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
+            {/* Primary CTA — Donate */}
             <button
-              onClick={() => navigate('/about')}
+              onClick={onDonateClick}
               className="group relative px-8 py-4 bg-linear-to-r from-orange-600 via-amber-500 to-orange-600 text-white rounded-full font-bold text-base shadow-2xl hover:shadow-orange-500/50 transition-all duration-300 hover:scale-110 hover-glow-saffron overflow-hidden"
             >
               <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
               <span className="relative flex items-center gap-2">
-                Discover Our Story
+                <Heart weight="fill" />
+                Support Our Cultural Center
               </span>
             </button>
+            {/* Secondary CTA — Discover (outline/ghost on dark) */}
             <button
-              onClick={onDonateClick}
-              className="group relative px-8 py-4 bg-white/90 backdrop-blur-lg text-orange-700 rounded-full font-bold text-base shadow-2xl hover:shadow-white/50 transition-all duration-300 hover:scale-110 border-2 border-white/50 hover:border-white overflow-hidden"
+              onClick={() => navigate('/about')}
+              className="group relative px-8 py-4 bg-white/10 backdrop-blur-lg text-white rounded-full font-bold text-base shadow-lg hover:shadow-white/30 transition-all duration-300 hover:scale-105 border-2 border-white/50 hover:border-white hover:bg-white/20 overflow-hidden"
             >
-              <span className="absolute inset-0 bg-linear-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+              <span className="absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
               <span className="relative flex items-center gap-2">
-                <Heart weight="fill" />
-                Support Our Temple
+                Discover Our Story
               </span>
             </button>
           </div>

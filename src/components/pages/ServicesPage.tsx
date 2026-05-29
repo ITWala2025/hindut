@@ -52,12 +52,12 @@ export function ServicesPage() {
   return (
     <div className="flex flex-col">
       <SeoMeta
-        title="Temple Services — Puja, Yoga & Cultural Programs"
-        description="Explore sacred services at the Hindu Association of Ireland — daily puja, havan ceremonies, yoga classes, Vedic education and community programs in Limerick."
+        title="Temple Services — Prayer, Yoga & Cultural Programs"
+        description="Explore sacred services at the Hindu Association of Ireland — daily prayer, havan ceremonies, yoga classes, Vedic education and community programs in Limerick."
         canonical="/services"
       />
       <HeroCarousel
-        title="Temple Services"
+        title="Community & Cultural Services"
         subtitle="Spiritual services, educational programs, and community events for all"
       >
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-4xl mx-auto pt-6">

@@ -18,16 +18,10 @@ export function Logo({ size = 'md', showText = true, className = '' }: LogoProps
     lg: 'text-xl md:text-2xl',
   }
 
-  const subtitleSize = {
-    sm: 'text-[9px]',
-    md: 'text-[10px] md:text-[11px]',
-    lg: 'text-xs md:text-sm',
-  }
-
   return (
     <div className={`flex items-center gap-2 md:gap-3 ${className}`}>
       <img
-        src="/logo.webp"
+        src="/HAI%20(Green)%20%20Hindu%20Association%20Ireland%20logo-01.jpg"
         alt="Hindu Association of Ireland"
         className={`${logoSize[size]} w-auto object-contain select-none rounded-2xl drop-shadow-[0_2px_6px_rgba(154,52,18,0.18)] transition-transform duration-300 ease-out hover:scale-[1.04]`}
         draggable={false}
@@ -39,9 +33,6 @@ export function Logo({ size = 'md', showText = true, className = '' }: LogoProps
             className={`${titleSize[size]} font-semibold tracking-tight text-orange-800`}
             style={{ fontFamily: 'var(--font-heading)' }}
           >
-            Hindu Temple Limerick
-          </span>
-          <span className={`${subtitleSize[size]} font-medium uppercase tracking-[0.18em] text-orange-600/70 mt-0.5`}>
             Hindu Association of Ireland
           </span>
         </div>

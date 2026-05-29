@@ -125,7 +125,7 @@ export function AboutPage() {
                       hub for future generations.
                     </p>
                     <p>
-                      Over the past 10 years, HAI members have consistently organised
+                      A decade of serving the Limerick community, HAI members have consistently organised
                       and supported diverse cultural, religious and community service
                       events throughout Limerick — from Sri Rama Navami and Diwali to
                       Onam, Ganesh Chaturthi and monthly community prayers.
@@ -167,20 +167,22 @@ export function AboutPage() {
                       <HandsPraying className="text-orange-600" size={32} weight="duotone" />
                     </div>
                     <h2 className="text-3xl md:text-4xl font-bold text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
-                      Deities We Celebrate
+                      Our Spiritual Celebrations
                     </h2>
                   </div>
                   <div className="space-y-4 text-base text-foreground/90 leading-relaxed">
                     <p>
-                      HAI events honour all major Hindu deities across the calendar
-                      year — Sri Rama on Rama Navami, Lord Krishna on Janmashtami,
-                      Goddess Lakshmi on Varalakshmi Vratam, Lord Ganesha on Ganesh
-                      Chaturthi and Goddess Durga on Dussehra.
+                      HAI embraces the full breadth of Hindu spiritual traditions,
+                      honouring the divine in all its forms across the sacred calendar.
+                      Our celebrations draw from diverse regional and devotional
+                      traditions — Shaiva, Vaishnava, Shakta and beyond — so that
+                      every member of our community finds a place of belonging.
                     </p>
                     <p>
-                      Each celebration is conducted according to traditional Vedic
-                      rites with bhajans, abhishekam and community prasad shared by
-                      every attendee.
+                      Each gathering is an opportunity for collective prayer, devotional
+                      music, sacred rituals and the sharing of prasad — creating a
+                      welcoming space where all Hindu traditions are equally revered
+                      and celebrated together.
                     </p>
                   </div>
                 </CardContent>
@@ -513,18 +515,37 @@ export function AboutPage() {
               </div>
             </div>
 
-            {/* Footnote */}
-            <div className="mt-14 text-center">
-              <p className="text-sm text-slate-500 max-w-xl mx-auto">
-                Interested in joining the team or volunteering for an event?{' '}
-                <a
-                  href="/contact"
-                  className="text-orange-700 font-semibold hover:text-orange-800 underline underline-offset-4 decoration-orange-300 hover:decoration-orange-600 transition-colors"
-                >
-                  Get in touch
-                </a>
-                .
-              </p>
+            {/* Community participation CTA */}
+            <div className="mt-16">
+              <div className="relative rounded-3xl overflow-hidden">
+                <div className="absolute inset-0 bg-linear-to-br from-orange-600 via-amber-500 to-orange-700" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.12),transparent_60%)]" />
+                <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-white/40 to-transparent" />
+                <div className="relative z-10 px-8 py-10 md:px-12 md:py-12 text-center">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-white text-xs font-semibold uppercase tracking-wider mb-5">
+                    <Users size={14} weight="fill" />
+                    Community Participation
+                  </div>
+                  <h3
+                    className="text-2xl md:text-3xl font-bold text-white mb-4"
+                    style={{ fontFamily: 'var(--font-heading)' }}
+                  >
+                    Become part of something meaningful
+                  </h3>
+                  <p className="text-orange-100 text-base md:text-lg max-w-xl mx-auto leading-relaxed mb-8">
+                    HAI is powered entirely by volunteers. Whether you'd like to join
+                    the organising team, help at an event, or simply get more involved
+                    in community life — we'd love to hear from you.
+                  </p>
+                  <a
+                    href="/contact"
+                    className="inline-flex items-center gap-2 bg-white text-orange-700 hover:bg-orange-50 font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                  >
+                    Get in touch
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></svg>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </div>

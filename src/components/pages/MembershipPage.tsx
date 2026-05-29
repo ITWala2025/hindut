@@ -380,9 +380,20 @@ export function MembershipPage() {
             >
               Membership &amp; monthly giving
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              One-off annual membership or a recurring monthly commitment.every contribution directly sustains our community.
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed mb-6">
+              One-off annual membership or a recurring monthly commitment — every contribution directly sustains our community.
             </p>
+            <div className="max-w-3xl mx-auto rounded-2xl bg-orange-50 border border-orange-200 px-8 py-6 text-left space-y-3">
+              <h3 className="text-base font-bold text-orange-800">Why your support matters</h3>
+              <p className="text-sm text-slate-700 leading-relaxed">
+                The Hindu Association of Ireland is entirely community-funded. Your membership and donations power our
+                weekly satsangs, monthly community prayers, cultural festivals, and educational programs for all ages.
+                Beyond sustaining these activities, every contribution brings us closer to our long-term vision —
+                establishing a permanent Hindu Cultural Centre and Temple in Limerick that will serve generations to come.
+                When you become a member or give monthly, you are not just supporting events; you are investing in
+                a permanent home for the Hindu community in Ireland.
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 xl:gap-14 items-stretch">
@@ -658,43 +669,6 @@ export function MembershipPage() {
               </AccordionItem>
             ))}
           </Accordion>
-        </div>
-      </section>
-
-      {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
-      <section className="py-16 bg-linear-to-r from-orange-600 to-amber-600">
-        <div className="container mx-auto px-6 text-center">
-          <h2
-            className="text-3xl md:text-4xl font-bold text-white mb-4"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            Ready to join our community?
-          </h2>
-          <p className="text-orange-100 mb-8 max-w-xl mx-auto">
-            Become a member today and be part of building Limerick's permanent Hindu Temple.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            {annualPlan && (
-              <Button
-                onClick={() => openFor(annualPlan)}
-                size="lg"
-                className="h-14 px-10 bg-white text-orange-700 hover:bg-orange-50 font-bold rounded-full shadow-xl"
-              >
-                <Heart weight="fill" className="mr-2" />
-                Join Now — €{annualPlan.price}/year
-              </Button>
-            )}
-            <Button
-              onClick={() =>
-                document.getElementById('monthly-giving')?.scrollIntoView({ behavior: 'smooth' })
-              }
-              size="lg"
-              variant="outline"
-              className="h-14 px-10 bg-transparent border-white/60 text-white hover:bg-white/10 rounded-full"
-            >
-              Explore Monthly Giving
-            </Button>
-          </div>
         </div>
       </section>
 

@@ -1,4 +1,4 @@
-import { MapPin, Phone, Envelope, Clock, InstagramLogo, FacebookLogo, TwitterLogo } from '@phosphor-icons/react'
+import { MapPin, Phone, Envelope, InstagramLogo, FacebookLogo, TwitterLogo } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
 import { openCookiePreferences } from '@/components/CookieConsentBanner'
@@ -7,14 +7,18 @@ export function Footer() {
   return (
     <footer className="border-t border-orange-200/40 bg-linear-to-b from-orange-50 via-amber-50 to-orange-100 shadow-inner shadow-orange-200/50">
       <div className="container mx-auto px-6 md:px-12 lg:px-24 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
           <div>
             <div className="flex items-center space-x-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-orange-500 to-amber-600 glow-saffron">
-                <span className="text-xl font-bold text-white">ॐ</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md glow-saffron overflow-hidden">
+                <img
+                  src="/HAI%20(Green)%20%20Hindu%20Association%20Ireland%20logo-01.jpg"
+                  alt="Hindu Association of Ireland"
+                  className="h-full w-full object-contain"
+                />
               </div>
               <span className="text-lg font-bold text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
-                Hindu Temple
+                Hindu Association of Ireland
               </span>
             </div>
             <p className="text-sm text-orange-700/80 leading-relaxed">
@@ -57,7 +61,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold mb-4 text-orange-800">Quick Links</h3>
+            <p className="text-sm font-semibold mb-4 text-orange-800">Quick Links</p>
             <ul className="space-y-2">
               {[
                 { label: 'Home', target: '/' },
@@ -81,27 +85,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold mb-4 text-orange-800">Temple Hours</h3>
-            <div className="space-y-2 text-sm text-orange-700/80">
-              <div className="flex items-start gap-2">
-                <Clock className="mt-0.5 shrink-0 text-orange-600" size={16} />
-                <div>
-                  <p className="font-medium text-orange-800">Morning Darshan</p>
-                  <p>6:00 AM - 12:00 PM</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Clock className="mt-0.5 shrink-0 text-orange-600" size={16} />
-                <div>
-                  <p className="font-medium text-orange-800">Evening Darshan</p>
-                  <p>5:00 PM - 9:00 PM</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold mb-4 text-orange-800">Contact Info</h3>
+            <p className="text-sm font-semibold mb-4 text-orange-800">Contact Info</p>
             <ul className="space-y-3 text-sm text-orange-700/80">
               <li className="flex items-start gap-2">
                 <MapPin className="mt-0.5 shrink-0 text-orange-600" size={16} />
@@ -139,7 +123,7 @@ export function Footer() {
           <button
             type="button"
             onClick={openCookiePreferences}
-            className="hover:text-orange-600 transition-colors"
+            className="hover:text-orange-600 transition-colors leading-none h-auto min-h-0 p-0 bg-transparent border-0"
           >
             Cookie Preferences
           </button>
