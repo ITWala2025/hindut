@@ -12,7 +12,6 @@ import {
   Warning,
   ArrowsClockwise,
   Link,
-  Trash,
   Plus,
   CheckCircle,
   XCircle,
@@ -325,8 +324,6 @@ export function StripeProductMapper() {
   const [mode, setMode] = useState<'test' | 'live'>('test')
   const [error, setError] = useState<string | null>(null)
 
-  const canDelete = can('settings:delete')
-
   const load = async () => {
     setLoading(true)
     setError(null)
@@ -363,35 +360,6 @@ export function StripeProductMapper() {
   useEffect(() => {
     void load()
   }, [])
-
-  const handleDeleteMapping = async (mappingId: string) => {
-    if (!confirm('Are you sure you want to delete this mapping?')) return
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
-        toast.error('Session expired')
-        return
-      }
-
-      const res = await fetch(`/.netlify/functions/stripe-mappings?id=${mappingId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
-
-      if (!res.ok) {
-        const json = await res.json()
-        toast.error(json.error || 'Failed to delete mapping')
-        return
-      }
-
-      toast.success('Mapping deleted')
-      await load()
-    } catch (err) {
-      console.error('[stripe-product-mapper] delete error:', err)
-      toast.error('Network error')
-    }
-  }
 
   const getMappingForPrice = (priceId: string): Mapping | undefined => {
     return mappings.find((m) => m.stripe_price_id === priceId)
@@ -524,16 +492,6 @@ export function StripeProductMapper() {
                           existingMapping={mapping}
                           onMappingCreated={load}
                         />
-                        {mapping && canDelete && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteMapping(mapping.id)}
-                            className="border-red-200 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash size={14} />
-                          </Button>
-                        )}
                       </div>
                     </div>
                   )

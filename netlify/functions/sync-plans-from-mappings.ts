@@ -11,13 +11,20 @@
  *   - description, benefits, popular, sort_order
  *   - subtitle, icon, gradient, bg_gradient, border_color, category
  *
+ * Handles deleted products:
+ *   - If product is deleted/archived in Stripe, marks plan as inactive (active=false)
+ *   - Existing memberships using that plan remain intact
+ *   - Plan stays in database for historical records
+ *
  * POST /.netlify/functions/sync-plans-from-mappings
  * Authorization: Bearer <supabase-access-token>
  *
  * Response:
  *   {
  *     mode: 'test' | 'live',
- *     synced: number
+ *     synced: number,        // Successfully synced plans
+ *     deactivated: number,   // Plans marked inactive (deleted from Stripe)
+ *     total: number          // Total mappings processed
  *   }
  */
 
@@ -112,6 +119,7 @@ export const handler: Handler = async (event) => {
     }
 
     let synced = 0
+    let deactivated = 0
 
     // Sync each mapped product
     for (const mapping of mappings) {
@@ -199,8 +207,34 @@ export const handler: Handler = async (event) => {
           synced++
         }
       } catch (err) {
+        // Product or price deleted/not found in Stripe - mark plan as inactive
         const message = err instanceof Error ? err.message : 'Unknown error'
-        console.error(`[sync-plans] Error processing mapping ${mapping.id}:`, message)
+        const isNotFound = message.includes('No such') || message.includes('not found')
+        
+        if (isNotFound) {
+          console.log(`[sync-plans] Product ${mapping.stripe_product_id} not found in Stripe, marking plan ${mapping.entity_id} as inactive`)
+          
+          // Check if plan exists in database
+          const { data: existingPlan } = await supabase
+            .from('membership_plans')
+            .select('id')
+            .eq('id', mapping.entity_id)
+            .maybeSingle()
+
+          if (existingPlan) {
+            // Mark as inactive - preserve all metadata and existing memberships
+            const { error: deactivateError } = await supabase
+              .from('membership_plans')
+              .update({ active: false })
+              .eq('id', mapping.entity_id)
+            
+            if (!deactivateError) {
+              deactivated++
+            }
+          }
+        } else {
+          console.error(`[sync-plans] Error processing mapping ${mapping.id}:`, message)
+        }
         // Continue with other mappings
       }
     }
@@ -211,6 +245,7 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify({
         mode: ctx.mode,
         synced,
+        deactivated,
         total: mappings.length,
       }),
     }

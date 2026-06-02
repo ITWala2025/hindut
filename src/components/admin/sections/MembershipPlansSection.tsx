@@ -51,7 +51,12 @@ export function MembershipPlansSection() {
         return
       }
 
-      toast.success(`Synced ${json.synced} plans from Stripe ${json.mode} mode`)
+      // Build success message
+      let message = `Synced ${json.synced} plans from Stripe ${json.mode} mode`
+      if (json.deactivated > 0) {
+        message += ` (${json.deactivated} deactivated - products deleted/archived in Stripe)`
+      }
+      toast.success(message)
       
       // Refresh the page to show updated plans
       setTimeout(() => window.location.reload(), 1000)
