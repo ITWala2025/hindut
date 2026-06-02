@@ -186,7 +186,19 @@ async function handleGet(event: HandlerEvent) {
   return {
     statusCode: 200,
     headers: jsonHeaders,
-    bodyauth = await requireRole(
+    body: JSON.stringify({
+      mode: ctx.mode,
+      products,
+      mappings: mappings || [],
+    }),
+  }
+}
+
+/**
+ * POST - Create a new mapping
+ */
+async function handlePost(event: HandlerEvent) {
+  const auth = await requireRole(
     event.headers.authorization ?? event.headers.Authorization,
     ['super_admin']
   )
