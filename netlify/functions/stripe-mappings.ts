@@ -105,14 +105,17 @@ async function fetchStripeProducts(stripe: Stripe): Promise<StripeProductWithPri
   const products: StripeProductWithPrices[] = []
   
   // Fetch all active products from Stripe (not from local config)
-  for await (const product of stripe.products.list({ limit: 100, active: true }).autoPagingIter()) {
-    // Fetch all prices for this product from Stripe
-    const prices = []
-    for await (const price of stripe.prices.list({ 
-      product: product.id,
-      limit: 100,
-    }).autoPagingIter()) {
-      prices.push({
+  const productPages = await stripe.products.list({ limit: 100, active: true })
+  
+  // Fetch prices for each product
+  await Promise.all(
+    productPages.data.map(async (product) => {
+      const priceList = await stripe.prices.list({ 
+        product: product.id,
+        limit: 100,
+      })
+      
+      const prices = priceList.data.map((price) => ({
         id: price.id,
         nickname: price.nickname,
         currency: price.currency,
@@ -123,19 +126,19 @@ async function fetchStripeProducts(stripe: Stripe): Promise<StripeProductWithPri
           interval_count: price.recurring.interval_count,
         } : null,
         active: price.active,
+      }))
+      
+      products.push({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        active: product.active,
+        metadata: product.metadata,
+        created: product.created,
+        prices,
       })
-    }
-    
-    products.push({
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      active: product.active,
-      metadata: product.metadata,
-      created: product.created,
-      prices,
     })
-  }
+  )
   
   return products
 }
