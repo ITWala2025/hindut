@@ -79,7 +79,8 @@ async function generateMemberCode(
 
 function getStripeForSecret(secretKey: string | undefined): Stripe | null {
   if (!secretKey) return null
-  return new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as Stripe.LatestApiVersion })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any })
 }
 
 function rawBody(event: Parameters<Handler>[0]): string {
@@ -255,7 +256,8 @@ export const handler: Handler = async (event) => {
           if (subscriptionId) {
             try {
               const sub = await stripe.subscriptions.retrieve(subscriptionId)
-              expiresAt = new Date(sub.current_period_end * 1000).toISOString()
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              expiresAt = new Date(((sub as unknown) as { current_period_end: number }).current_period_end * 1000).toISOString()
             } catch (err) {
               console.warn('[stripe-webhook] subscriptions.retrieve failed:', (err as Error).message)
             }
@@ -385,6 +387,7 @@ export const handler: Handler = async (event) => {
 
               const monthlySub = await stripe.subscriptions.create({
                 customer: customerId,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 items: [{
                   price_data: {
                     currency:    'eur',
@@ -394,7 +397,7 @@ export const handler: Handler = async (event) => {
                       description: `Monthly contribution by ${memberName}`,
                     },
                     recurring: { interval: 'month' as const },
-                  },
+                  } as any,
                 }],
                 trial_end:  trialEnd,
                 ...(defaultPaymentMethodId ? { default_payment_method: defaultPaymentMethodId } : {}),
@@ -571,7 +574,10 @@ export const handler: Handler = async (event) => {
 
       // ─── Monthly invoice paid → create a succeeded donation row ─────────
       case 'invoice.paid': {
-        const invoice = stripeEvent.data.object as Stripe.Invoice
+        const invoice = stripeEvent.data.object as Stripe.Invoice & {
+          subscription?: string | Stripe.Subscription | null
+          billing_reason?: string
+        }
         // Skip zero-amount trial invoices (no money was charged)
         if ((invoice.amount_paid ?? 0) === 0) break
 
@@ -627,7 +633,7 @@ export const handler: Handler = async (event) => {
           // ── Recurring donation: only handle subsequent monthly charges ──
           // The first charge row is created by checkout.session.completed.
           // Subsequent cycle invoices (billing_reason='subscription_cycle') need a new row.
-          if ((invoice as Stripe.Invoice & { billing_reason?: string }).billing_reason !== 'subscription_cycle') break
+          if (invoice.billing_reason !== 'subscription_cycle') break
 
           const amountEur  = (invoice.amount_paid ?? 0) / 100
           const donorName  = sub.metadata?.donorName  ?? ''
@@ -680,10 +686,11 @@ export const handler: Handler = async (event) => {
           ? 'canceled'
           : (mappedStatus[sub.status] ?? 'pending')
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const expiresAt =
           stripeEvent.type === 'customer.subscription.deleted'
             ? null
-            : new Date(sub.current_period_end * 1000).toISOString()
+            : new Date(((sub as unknown) as { current_period_end: number }).current_period_end * 1000).toISOString()
 
         await supabase
           .from('memberships')
@@ -698,7 +705,9 @@ export const handler: Handler = async (event) => {
 
       // ─── Upcoming invoice reminder (fires 3 days before charge) ─────────────
       case 'invoice.upcoming': {
-        const invoice = stripeEvent.data.object as Stripe.Invoice
+        const invoice = stripeEvent.data.object as Stripe.Invoice & {
+          subscription?: string | Stripe.Subscription | null
+        }
 
         // Only handle real amounts (skip €0 trial invoices).
         if ((invoice.amount_due ?? 0) === 0) break
