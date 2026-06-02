@@ -162,11 +162,10 @@ export function MembershipPage() {
   )
 
   const givingTiles = useMemo<GivingTile[]>(() => {
-    const dbTiles = plans
+    return plans
       .filter((p) => p.category === 'giving' && p.active)
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map(planToTile)
-    return [...dbTiles, CUSTOM_TILE]
   }, [plans])
 
   const monthlyGivingAmounts = useMemo(

@@ -1,8 +1,8 @@
 /**
  * sync-plans-from-mappings.ts
  *
- * Admin endpoint to sync membership_plans from stripe_product_mappings.
- * Updates the database based on active Stripe product mappings for membership entities.
+ * Admin endpoint to sync all membership and giving plans from stripeCatalogMapping
+ * to the database. This ensures the database is the single source of truth for the frontend.
  *
  * POST /.netlify/functions/sync-plans-from-mappings
  * Authorization: Bearer <supabase-access-token>
@@ -10,13 +10,13 @@
  * Response:
  *   {
  *     mode: 'test' | 'live',
- *     synced: number,
- *     deactivated: number
+ *     synced: number
  *   }
  */
 
 import type { Handler } from '@netlify/functions'
 import { resolveStripe, supabaseAdmin, jsonHeaders } from './lib/stripe.js'
+import { MEMBERSHIP_CATALOG } from './lib/membershipCatalog.js'
 
 type AuthResult =
   | { ok: true; userId: string }
@@ -81,57 +81,40 @@ export const handler: Handler = async (event) => {
     const ctx = await resolveStripe({ host })
     const supabase = supabaseAdmin()
 
-    // Fetch all membership mappings for current mode
-    const { data: mappings, error: mappingsError } = await supabase
-      .from('stripe_product_mappings')
-      .select('*')
-      .eq('stripe_mode', ctx.mode)
-      .eq('entity_type', 'membership')
-      .eq('is_active', true)
-
-    if (mappingsError) {
-      console.error('[sync-plans] Error fetching mappings:', mappingsError)
-      return {
-        statusCode: 500,
-        headers: jsonHeaders,
-        body: JSON.stringify({ error: 'Failed to fetch mappings' }),
-      }
-    }
-
     let synced = 0
-    let deactivated = 0
 
-    // Upsert plans from mappings
-    for (const mapping of mappings || []) {
-      const priceMonthly = mapping.price_amount ? mapping.price_amount / 100 : 0
-      const durationMonths = mapping.price_interval === 'year' ? 12 : 
-                            mapping.price_interval === 'month' ? 1 : 1
-
+    // Sync all plans from MEMBERSHIP_CATALOG to database
+    for (const catalogPlan of MEMBERSHIP_CATALOG) {
       const { error: upsertError } = await supabase
         .from('membership_plans')
         .upsert({
-          id: mapping.entity_id,
-          name: mapping.product_name,
-          duration_label: mapping.price_interval === 'year' ? '1 year' : '1 month',
-          duration_months: durationMonths,
-          price_eur: priceMonthly,
-          description: `Membership plan from Stripe catalog`,
-          benefits: ['Community access', 'Event invitations', 'Member benefits'],
-          popular: false,
-          sort_order: 10,
+          id: catalogPlan.id,
+          name: catalogPlan.name,
+          duration_label: catalogPlan.durationLabel,
+          duration_months: catalogPlan.durationMonths,
+          price_eur: catalogPlan.price,
+          description: catalogPlan.description,
+          benefits: catalogPlan.benefits,
+          popular: catalogPlan.popular,
+          sort_order: catalogPlan.sortOrder,
+          subtitle: catalogPlan.subtitle || null,
+          icon: catalogPlan.icon || null,
+          gradient: catalogPlan.gradient || null,
+          bg_gradient: catalogPlan.bgGradient || null,
+          border_color: catalogPlan.borderColor || null,
+          category: catalogPlan.category,
+          cadence: catalogPlan.cadence,
+          active: catalogPlan.active,
         }, {
           onConflict: 'id'
         })
 
       if (upsertError) {
-        console.error('[sync-plans] Error upserting plan:', upsertError)
+        console.error('[sync-plans] Error upserting plan:', catalogPlan.id, upsertError)
       } else {
         synced++
       }
     }
-
-    // TODO: Mark plans as inactive if they're no longer mapped
-    // (This would require adding an 'active' column to membership_plans table)
 
     return {
       statusCode: 200,
@@ -139,7 +122,6 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify({
         mode: ctx.mode,
         synced,
-        deactivated,
       }),
     }
   } catch (err) {
