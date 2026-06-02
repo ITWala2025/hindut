@@ -4,6 +4,11 @@ import {
   PencilSimple,
   Trash,
   Star,
+  ArrowsClockwise,
+  CheckCircle,
+  Warning,
+  Spinner,
+  Link,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -42,6 +47,7 @@ import { SectionCard, EmptyState } from '@/components/admin/adminUi'
 
 import { useMembership, type PlanInput } from '@/hooks/useMembership'
 import { useAuth } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 import type {
   MembershipPlan,
   PlanCadence,
@@ -89,6 +95,37 @@ const EMPTY_INPUT: PlanInput = {
   active: true,
 }
 
+/**
+ * Shows which Stripe modes have been synced for a plan.
+ * Green badge = catalog Price ID exists for that mode.
+ */
+function StripeLinkBadge({ plan }: { plan: MembershipPlan }) {
+  const hasTest = !!plan.stripePriceIdTest
+  const hasLive = !!plan.stripePriceIdLive
+  if (!hasTest && !hasLive) {
+    return (
+      <span className="flex items-center gap-1 text-xs text-slate-400">
+        <Warning size={12} weight="fill" className="text-amber-400" />
+        Not synced
+      </span>
+    )
+  }
+  return (
+    <span className="flex items-center gap-1">
+      {hasTest && (
+        <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200 gap-0.5">
+          <Link size={9} />TEST
+        </Badge>
+      )}
+      {hasLive && (
+        <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 gap-0.5">
+          <CheckCircle size={9} weight="fill" />LIVE
+        </Badge>
+      )}
+    </span>
+  )
+}
+
 function planToInput(p: MembershipPlan): PlanInput {
   return {
     id: p.id,
@@ -113,7 +150,7 @@ function planToInput(p: MembershipPlan): PlanInput {
 
 export function MembershipPlansSection() {
   const { can } = useAuth()
-  const { plans, createPlan, updatePlan, deletePlan } = useMembership()
+  const { plans, createPlan, updatePlan, deletePlan, refreshPlans } = useMembership()
   const canCreate = can('members:create')
   const canUpdate = can('members:update')
   const canDelete = can('members:delete')
@@ -122,6 +159,52 @@ export function MembershipPlansSection() {
     () => [...plans].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)),
     [plans],
   )
+
+  // ── Stripe catalog sync ──────────────────────────────────────────────────
+  const [syncing, setSyncing] = useState(false)
+  const [syncMode, setSyncMode] = useState<'test' | 'live' | null>(null)
+
+  const handleSync = async () => {
+    setSyncing(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast.error('Sign-in required to sync Stripe catalog.')
+        return
+      }
+      const res = await fetch('/.netlify/functions/sync-membership-plans', {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const json = await res.json() as {
+        mode?: 'test' | 'live'
+        synced?: { planId: string; productId: string; priceId: string; action: string }[]
+        errors?: { planId: string; message: string }[]
+        error?: string
+      }
+      if (!res.ok) {
+        toast.error(json.error ?? 'Sync failed.')
+        return
+      }
+      setSyncMode(json.mode ?? null)
+      await refreshPlans()
+      const created = json.synced?.filter((s) => s.action !== 'reused').length ?? 0
+      const reused  = json.synced?.filter((s) => s.action === 'reused').length ?? 0
+      const errCount = json.errors?.length ?? 0
+      toast.success(
+        `Stripe sync complete [${json.mode}]: ${created} created/updated, ${reused} already linked${
+          errCount ? `, ${errCount} error(s)` : ''
+        }.`,
+      )
+      if (errCount) {
+        json.errors?.forEach((e) => toast.error(`Plan ${e.planId}: ${e.message}`))
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Network error during sync.')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -200,11 +283,39 @@ export function MembershipPlansSection() {
         title="Membership Plans"
         description="Manage plans shown on the public /membership page. Includes annual membership and monthly giving tiers."
         actions={
-          canCreate ? (
-            <Button onClick={openCreate} className="gap-2">
-              <Plus size={16} weight="bold" /> New plan
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {canUpdate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleSync()}
+                disabled={syncing}
+                title="Sync plans to Stripe product catalogue (creates Products + Prices in current mode)"
+                className="gap-1.5"
+              >
+                {syncing ? (
+                  <Spinner size={14} className="animate-spin" />
+                ) : (
+                  <ArrowsClockwise size={14} />
+                )}
+                Sync to Stripe
+                {syncMode && (
+                  <Badge
+                    className={`ml-1 text-[10px] uppercase tracking-wider ${
+                      syncMode === 'live' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                    }`}
+                  >
+                    {syncMode}
+                  </Badge>
+                )}
+              </Button>
+            )}
+            {canCreate && (
+              <Button onClick={openCreate} className="gap-2">
+                <Plus size={16} weight="bold" /> New plan
+              </Button>
+            )}
+          </div>
         }
       >
         {sortedPlans.length === 0 ? (
@@ -221,6 +332,7 @@ export function MembershipPlansSection() {
                   <th className="py-2 pr-3 font-medium">Category</th>
                   <th className="py-2 pr-3 font-medium">Cadence</th>
                   <th className="py-2 pr-3 font-medium">Price</th>
+                  <th className="py-2 pr-3 font-medium">Stripe</th>
                   <th className="py-2 pr-3 font-medium">Status</th>
                   <th className="py-2 pr-3 font-medium">Sort</th>
                   <th className="py-2 pr-3 font-medium text-right">Actions</th>
@@ -243,6 +355,9 @@ export function MembershipPlansSection() {
                     <td className="py-2 pr-3 capitalize">{p.category}</td>
                     <td className="py-2 pr-3 capitalize">{p.cadence.replace('_', '-')}</td>
                     <td className="py-2 pr-3">€{p.price}</td>
+                    <td className="py-2 pr-3">
+                      <StripeLinkBadge plan={p} />
+                    </td>
                     <td className="py-2 pr-3">
                       {p.active ? (
                         <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Active</Badge>

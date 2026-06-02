@@ -28,6 +28,10 @@ interface PlanRow {
   bg_gradient: string | null
   border_color: string | null
   active: boolean | null
+  stripe_product_id_test: string | null
+  stripe_price_id_test: string | null
+  stripe_product_id_live: string | null
+  stripe_price_id_live: string | null
 }
 
 interface MembershipRow {
@@ -71,6 +75,10 @@ function toPlan(row: PlanRow): MembershipPlan {
     bgGradient: row.bg_gradient ?? undefined,
     borderColor: row.border_color ?? undefined,
     active: row.active ?? true,
+    stripeProductIdTest: row.stripe_product_id_test ?? undefined,
+    stripePriceIdTest:   row.stripe_price_id_test   ?? undefined,
+    stripeProductIdLive: row.stripe_product_id_live  ?? undefined,
+    stripePriceIdLive:   row.stripe_price_id_live    ?? undefined,
   }
 }
 
@@ -94,6 +102,11 @@ export interface PlanInput {
   bgGradient?: string
   borderColor?: string
   active?: boolean
+  // Stripe catalog IDs (read-only in normal plan edits; written by sync function)
+  stripeProductIdTest?: string
+  stripePriceIdTest?: string
+  stripeProductIdLive?: string
+  stripePriceIdLive?: string
 }
 
 function planInputToRow(input: PlanInput) {

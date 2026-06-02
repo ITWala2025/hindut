@@ -3,6 +3,7 @@
  *
  * Fetches the Stripe product catalogue via /.netlify/functions/stripe-products
  * and renders it as a collapsible list inside the Stripe settings section.
+ * Products that are linked to a membership plan show a "Linked: <planId>" badge.
  */
 import { useState } from 'react'
 import {
@@ -15,6 +16,7 @@ import {
   XCircle,
   CaretDown,
   CaretRight,
+  Link,
 } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,6 +48,9 @@ interface CatalogueResponse {
   mode:     'test' | 'live'
   products: StripeProduct[]
 }
+
+/** Map from Stripe product_id → plan id(s) that reference it */
+type ProductLinkMap = Map<string, string[]>
 
 function formatAmount(amount: number | null, currency: string): string {
   if (amount === null) return 'Usage-based'
@@ -94,7 +99,7 @@ function PriceRow({ price }: { price: StripePrice }) {
   )
 }
 
-function ProductRow({ product }: { product: StripeProduct }) {
+function ProductRow({ product, linkedPlanIds }: { product: StripeProduct; linkedPlanIds: string[] }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -113,13 +118,18 @@ function ProductRow({ product }: { product: StripeProduct }) {
           <CaretRight size={14} className="text-slate-400 shrink-0" />
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-slate-900 text-sm truncate">{product.name}</span>
             {product.active ? (
               <CheckCircle size={14} weight="fill" className="text-emerald-500 shrink-0" />
             ) : (
               <XCircle size={14} weight="fill" className="text-slate-400 shrink-0" />
             )}
+            {linkedPlanIds.map((planId) => (
+              <Badge key={planId} className="text-[10px] bg-blue-100 text-blue-700 border-blue-200 gap-0.5">
+                <Link size={9} /> {planId}
+              </Badge>
+            ))}
           </div>
           {product.description && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">{product.description}</p>
@@ -168,9 +178,11 @@ function ProductRow({ product }: { product: StripeProduct }) {
 
 interface Props {
   mode: 'test' | 'live'
+  /** Map of Stripe product_id → linked plan ids (from membership_plans) */
+  productLinkMap?: ProductLinkMap
 }
 
-export function StripeProductCatalogue({ mode }: Props) {
+export function StripeProductCatalogue({ mode, productLinkMap }: Props) {
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded]   = useState(false)
   const [error, setError]     = useState<string | null>(null)
@@ -266,7 +278,7 @@ export function StripeProductCatalogue({ mode }: Props) {
           ) : (
             <div className="space-y-2">
               {data.products.map((p) => (
-                <ProductRow key={p.id} product={p} />
+                <ProductRow key={p.id} product={p} linkedPlanIds={productLinkMap?.get(p.id) ?? []} />
               ))}
             </div>
           )}

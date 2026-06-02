@@ -28,6 +28,11 @@ export interface MembershipPlan {
   bgGradient?: string
   borderColor?: string
   active: boolean
+  // Stripe product-catalogue IDs (written by sync-membership-plans function)
+  stripeProductIdTest?: string
+  stripePriceIdTest?: string
+  stripeProductIdLive?: string
+  stripePriceIdLive?: string
 }
 
 export interface MembershipRecord {

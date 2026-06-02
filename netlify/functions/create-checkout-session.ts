@@ -362,17 +362,25 @@ export const handler: Handler = async (event) => {
     // ─────────────────────────────────────────────────────────────────────
     const m = parsed.data
 
-    // Fetch plan row for price + duration metadata
+    // Fetch plan row including Stripe catalog IDs for the active mode
     const { data: planRow, error: planErr } = await supabase
       .from('membership_plans')
-      .select('id, name, price_eur, duration_months, cadence')
+      .select('id, name, price_eur, duration_months, cadence, stripe_price_id_test, stripe_price_id_live')
       .eq('id', m.planId)
       .maybeSingle()
 
     if (planErr || !planRow) {
       return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Membership plan not found' }) }
     }
-    const plan = planRow as { id: string; name: string; price_eur: number; duration_months: number; cadence: string | null }
+    const plan = planRow as {
+      id: string
+      name: string
+      price_eur: number
+      duration_months: number
+      cadence: string | null
+      stripe_price_id_test: string | null
+      stripe_price_id_live: string | null
+    }
 
     // Upsert member by email (members table has unique constraint on email? let's just insert).
     let memberId: string | null = null
@@ -431,27 +439,44 @@ export const handler: Handler = async (event) => {
     }
     const membershipId = (memRow as { id: string }).id
 
+    // Use the pre-created Stripe catalog Price ID when available — this links the
+    // subscription to a proper product in the Stripe Dashboard (chain of events:
+    // Product → Price → Subscription → Invoice → PaymentIntent). Falls back to
+    // inline price_data if the plan has not been synced to the catalog yet.
+    const catalogPriceId =
+      ctx.mode === 'live' ? plan.stripe_price_id_live : plan.stripe_price_id_test
+
     const cadence = cadenceToStripe(plan.cadence, plan.duration_months)
+    const membershipLineItem = catalogPriceId
+      ? { price: catalogPriceId, quantity: 1 as const }
+      : {
+          quantity: 1 as const,
+          price_data: {
+            currency:    'eur',
+            unit_amount: Math.round(plan.price_eur * 100),
+            product_data: {
+              name:        `${plan.name} membership`,
+              description: `Hindu Association of Ireland — ${plan.name} plan`,
+            },
+            recurring: {
+              interval:       cadence.interval,
+              interval_count: cadence.intervalCount,
+            },
+          },
+        }
+
+    console.log(
+      `[create-checkout-session] membership ${m.planId} using ${
+        catalogPriceId ? `catalog price ${catalogPriceId}` : 'inline price_data (not yet synced)'
+      } [${ctx.mode}]`,
+    )
+
     const session = await ctx.stripe.checkout.sessions.create({
       mode:             'subscription',
       // Omitting payment_method_types lets the Stripe Dashboard control which
       // methods appear. Revolut Pay is not supported in subscription mode.
       customer_email:   m.email,
-      line_items: [{
-        quantity: 1,
-        price_data: {
-          currency:    'eur',
-          unit_amount: Math.round(plan.price_eur * 100),
-          product_data: {
-            name:        `${plan.name} membership`,
-            description: `Hindu Association of Ireland — ${plan.name} plan`,
-          },
-          recurring: {
-            interval:       cadence.interval,
-            interval_count: cadence.intervalCount,
-          },
-        },
-      }],
+      line_items: [membershipLineItem],
       success_url: `${m.successUrl ?? `${origin}/membership-success`}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  m.cancelUrl  ?? `${origin}/membership?cancelled=1`,
       metadata: {
