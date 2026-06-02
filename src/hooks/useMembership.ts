@@ -90,17 +90,30 @@ export function useMembership() {
 
   // ── Fetch plans from database ──────────────────────────────────────────────
   const fetchPlans = useCallback(async () => {
-    const { data, error: err } = await supabase
-      .from('membership_plans')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order', { ascending: true })
-    
-    if (err) {
-      console.error('[useMembership] Error fetching plans:', err)
-      // Fallback to catalog if database fetch fails
-      setPlans(MEMBERSHIP_CATALOG.map(catalogToMembershipPlan))
-    } else if (data && data.length > 0) {
+    try {
+      const { data, error: err } = await supabase
+        .from('membership_plans')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+      
+      if (err) {
+        console.error('[useMembership] Error fetching plans:', err)
+        // Fallback to catalog if database fetch fails
+        setPlans(MEMBERSHIP_CATALOG.map(catalogToMembershipPlan))
+        return
+      }
+
+      // Check if database has the new columns by seeing if any plan has category field
+      const hasNewColumns = data && data.length > 0 && 'category' in data[0]
+      
+      if (!hasNewColumns || !data || data.length === 0) {
+        // Database doesn't have new columns or is empty - use catalog
+        console.log('[useMembership] Database missing new columns or empty, using catalog')
+        setPlans(MEMBERSHIP_CATALOG.map(catalogToMembershipPlan))
+        return
+      }
+
       // Map database plans with all attributes
       setPlans(data.map((row: any) => ({
         id: row.id,
@@ -121,8 +134,9 @@ export function useMembership() {
         borderColor: row.border_color || undefined,
         active: row.active !== false,
       })))
-    } else {
-      // Fallback to catalog if no plans in database
+    } catch (err) {
+      console.error('[useMembership] Exception fetching plans:', err)
+      // Fallback to catalog on any error
       setPlans(MEMBERSHIP_CATALOG.map(catalogToMembershipPlan))
     }
   }, [])

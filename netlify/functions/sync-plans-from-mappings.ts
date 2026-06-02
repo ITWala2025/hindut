@@ -1,8 +1,15 @@
 /**
  * sync-plans-from-mappings.ts
  *
- * Admin endpoint to sync membership plans from Stripe products (via mappings table)
- * to the database. Fetches Stripe product details and stores with all attributes.
+ * Admin endpoint to sync membership plans from Stripe products (via mappings table).
+ * 
+ * Updates ONLY Stripe-managed fields:
+ *   - name, price_eur, duration_label, duration_months, cadence, active
+ *   - stripe_product_id, stripe_price_id, stripe_mode
+ * 
+ * Preserves manually-managed metadata:
+ *   - description, benefits, popular, sort_order
+ *   - subtitle, icon, gradient, bg_gradient, border_color, category
  *
  * POST /.netlify/functions/sync-plans-from-mappings
  * Authorization: Bearer <supabase-access-token>
@@ -113,8 +120,7 @@ export const handler: Handler = async (event) => {
         const product = await ctx.stripe.products.retrieve(mapping.stripe_product_id)
         const price = await ctx.stripe.prices.retrieve(mapping.stripe_price_id)
 
-        // Extract metadata and attributes
-        const metadata = product.metadata || {}
+        // Extract price amount
         const priceAmount = typeof price.unit_amount === 'number' ? price.unit_amount / 100 : 0
 
         // Determine cadence from price interval
@@ -136,43 +142,56 @@ export const handler: Handler = async (event) => {
           durationLabel = 'One Time'
         }
 
-        // Build benefits array
-        let benefits: string[] = []
-        if (metadata.benefits) {
-          try {
-            benefits = JSON.parse(metadata.benefits)
-          } catch {
-            benefits = metadata.benefits.split(',').map((b: string) => b.trim())
-          }
-        }
-
-        // Upsert to membership_plans
-        const { error: upsertError } = await supabase
+        // Check if plan exists
+        const { data: existingPlan } = await supabase
           .from('membership_plans')
-          .upsert({
-            id: mapping.entity_id,
-            name: product.name,
-            duration_label: durationLabel,
-            duration_months: durationMonths,
-            price_eur: priceAmount,
-            description: product.description || '',
-            benefits: benefits,
-            popular: metadata.popular === 'true' || metadata.popular === '1',
-            sort_order: parseInt(metadata.sort_order || '0'),
-            subtitle: metadata.subtitle || null,
-            icon: metadata.icon || null,
-            gradient: metadata.gradient || null,
-            bg_gradient: metadata.bg_gradient || null,
-            border_color: metadata.border_color || null,
-            category: metadata.category || 'membership',
-            cadence: cadence,
-            active: product.active,
-            stripe_product_id: mapping.stripe_product_id,
-            stripe_price_id: mapping.stripe_price_id,
-            stripe_mode: ctx.mode,
-          }, {
-            onConflict: 'id'
-          })
+          .select('id')
+          .eq('id', mapping.entity_id)
+          .maybeSingle()
+
+        let upsertError = null
+
+        if (existingPlan) {
+          // Plan exists - only update Stripe-managed fields
+          const { error } = await supabase
+            .from('membership_plans')
+            .update({
+              name: product.name,
+              duration_label: durationLabel,
+              duration_months: durationMonths,
+              price_eur: priceAmount,
+              cadence: cadence,
+              active: product.active,
+              stripe_product_id: mapping.stripe_product_id,
+              stripe_price_id: mapping.stripe_price_id,
+              stripe_mode: ctx.mode,
+            })
+            .eq('id', mapping.entity_id)
+          upsertError = error
+        } else {
+          // Plan doesn't exist - insert with minimal required fields
+          // Admin should manually add metadata (benefits, icons, etc.) later
+          const { error } = await supabase
+            .from('membership_plans')
+            .insert({
+              id: mapping.entity_id,
+              name: product.name,
+              duration_label: durationLabel,
+              duration_months: durationMonths,
+              price_eur: priceAmount,
+              description: product.description || 'Membership plan from Stripe catalog',
+              benefits: [],
+              popular: false,
+              sort_order: 0,
+              category: 'membership',
+              cadence: cadence,
+              active: product.active,
+              stripe_product_id: mapping.stripe_product_id,
+              stripe_price_id: mapping.stripe_price_id,
+              stripe_mode: ctx.mode,
+            })
+          upsertError = error
+        }
 
         if (upsertError) {
           console.error('[sync-plans] Error upserting plan:', mapping.entity_id, upsertError)
