@@ -24,7 +24,6 @@
 import type { Handler } from '@netlify/functions'
 import { randomBytes } from 'node:crypto'
 import { resolveStripe, supabaseAdmin, jsonHeaders } from './lib/stripe.js'
-import { getPlanById, getStripePriceId } from './lib/membershipCatalog.js'
 import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
@@ -363,14 +362,26 @@ export const handler: Handler = async (event) => {
     // ─────────────────────────────────────────────────────────────────────
     const m = parsed.data
 
-    // Fetch plan from catalog (not database)
-    const plan = getPlanById(m.planId)
-    if (!plan) {
-      return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Membership plan not found' }) }
+    // Fetch plan from database
+    const { data: plan, error: planErr } = await supabase
+      .from('membership_plans')
+      .select('*')
+      .eq('id', m.planId)
+      .eq('active', true)
+      .maybeSingle()
+
+    if (planErr || !plan) {
+      console.error('[create-checkout-session] plan query error:', planErr)
+      return { 
+        statusCode: 404, 
+        headers: jsonHeaders, 
+        body: JSON.stringify({ error: 'Membership plan not found or inactive' }) 
+      }
     }
 
-    // Get the Stripe catalog price ID for the current mode
-    const catalogPriceId = getStripePriceId(m.planId, ctx.mode)
+    // Use Stripe price ID from database if available and matches current mode
+    const useStripePriceId = plan.stripe_price_id && plan.stripe_mode === ctx.mode
+    const stripePriceId = useStripePriceId ? plan.stripe_price_id : null
 
     // Upsert member by email (members table has unique constraint on email? let's just insert).
     let memberId: string | null = null
@@ -429,30 +440,33 @@ export const handler: Handler = async (event) => {
     }
     const membershipId = (memRow as { id: string }).id
 
-    // Use the pre-created Stripe catalog Price ID when available. Falls back to
-    // inline price_data if the plan has not been synced to the catalog yet.
-    const cadence = cadenceToStripe(plan.cadence, plan.duration_months)
-    const membershipLineItem = catalogPriceId
-      ? { price: catalogPriceId, quantity: 1 as const }
+    // Determine Stripe cadence from database plan
+    const cadence = plan.cadence === 'monthly' 
+      ? { interval: 'month' as const, intervalCount: 1 }
+      : plan.cadence === 'one_time'
+      ? null // one_time has no recurring
+      : { interval: 'year' as const, intervalCount: 1 } // default annual
+
+    // Use Stripe price ID from database when available. Falls back to
+    // inline price_data if the plan has not been synced yet.
+    const membershipLineItem = stripePriceId
+      ? { price: stripePriceId, quantity: 1 as const }
       : {
           quantity: 1 as const,
           price_data: {
             currency:    'eur',
             unit_amount: Math.round(plan.price_eur * 100),
             product_data: {
-              name:        `${plan.name} membership`,
-              description: `Hindu Association of Ireland — ${plan.name} plan`,
+              name:        `${plan.name}`,
+              description: plan.description || '',
             },
-            recurring: {
-              interval:       cadence.interval,
-              interval_count: cadence.intervalCount,
-            },
+            ...(cadence ? { recurring: cadence } : {}),
           },
         }
 
     console.log(
       `[create-checkout-session] membership ${m.planId} using ${
-        catalogPriceId ? `catalog price ${catalogPriceId}` : 'inline price_data (not yet synced)'
+        stripePriceId ? `Stripe price ${stripePriceId}` : 'inline price_data (not synced yet)'
       } [${ctx.mode}]`,
     )
 
