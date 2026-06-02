@@ -9,6 +9,7 @@ interface PaymentSuccessPageProps {
 
 export function PaymentSuccessPage({ variant }: PaymentSuccessPageProps) {
   const search = new URLSearchParams(useLocation().search)
+  const monthlyEur = search.get('monthly_eur') ? parseFloat(search.get('monthly_eur')!) : null
 
   // Ticket params (passed by finaliseBooking in TicketBookingDialog)
   const name       = search.get('name')
@@ -134,6 +135,24 @@ export function PaymentSuccessPage({ variant }: PaymentSuccessPageProps) {
         <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
           {copy.body}
         </p>
+
+        {variant === 'membership' && monthlyEur && (
+          <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5 text-left space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <Heart weight="fill" size={16} className="text-amber-600 shrink-0" />
+              <span className="text-sm font-semibold text-amber-900">Monthly contribution added</span>
+            </div>
+            <p className="text-sm text-amber-800 leading-relaxed">
+              Your <strong>€{monthlyEur}/month</strong> contribution will begin on the
+              <strong> 1st of next month</strong> and continue monthly until cancelled.
+              No charge today.
+            </p>
+            <p className="text-xs text-amber-600">
+              You will receive a reminder email 3 days before each charge.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <Button asChild className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold">
             <Link to={copy.ctaTo}>
