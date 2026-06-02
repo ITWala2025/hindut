@@ -273,20 +273,32 @@ async function handlePost(event: HandlerEvent) {
       price_interval,
       is_active: true,
       created_by: auth.userId,
-      updated_by: auth.userI
-      stripe_product_id,
-      stripe_price_id,
-      stripe_mode,
-      entity_type,
-      entity_id,
-      product_name: product_name || 'Unnamed',
-      price_amount,
-      price_currency: price_currency || 'eur',
-      price_interval,
-      is_active: true,
-      created_by: user.id,
-      updated_by: user.id,
-    })auth = await requireRole(
+      updated_by: auth.userId,
+    })
+    .select()
+    .single()
+  
+  if (error) {
+    console.error('[stripe-mappings] Error creating mapping:', error)
+    return {
+      statusCode: 500,
+      headers: jsonHeaders,
+      body: JSON.stringify({ error: 'Failed to create mapping' }),
+    }
+  }
+  
+  return {
+    statusCode: 201,
+    headers: jsonHeaders,
+    body: JSON.stringify(mapping),
+  }
+}
+
+/**
+ * PUT - Update an existing mapping
+ */
+async function handlePut(event: HandlerEvent) {
+  const auth = await requireRole(
     event.headers.authorization ?? event.headers.Authorization,
     ['super_admin']
   )
@@ -320,43 +332,7 @@ async function handlePost(event: HandlerEvent) {
   }
   
   const updates: any = {
-    updated_by: auth.userI
-async function handlePut(event: HandlerEvent) {
-  const { user } = await requireAuth(event, supabase, ['super_admin'])
-  
-  if (!event.body) {
-    return {
-      statusCode: 400,
-      headers: jsonHeaders,
-      body: JSON.stringify({ error: 'Request body required' }),
-    }
-  }
-  
-  const body = JSON.parse(event.body)
-  const { id, entity_type, entity_id, is_active } = body
-  
-  if (!id) {
-    return {
-      statusCode: 400,
-      headers: jsonHeaders,
-      body: JSON.stringify({ error: 'Mapping ID required' }),
-    }
-  }
-  
-  const auth = await requireRole(
-    event.headers.authorization ?? event.headers.Authorization,
-    ['super_admin']
-  )
-  if (!auth.ok) {
-    return {
-      statusCode: auth.status,
-      headers: jsonHeaders,
-      body: JSON.stringify({ error: auth.reason }),
-    }
-  }
-
-  const supabase = supabaseAdmin(
-    updated_by: user.id,
+    updated_by: auth.userId,
     updated_at: new Date().toISOString(),
   }
   
@@ -391,7 +367,19 @@ async function handlePut(event: HandlerEvent) {
  * DELETE - Remove a mapping
  */
 async function handleDelete(event: HandlerEvent) {
-  const { user } = await requireAuth(event, supabase, ['super_admin'])
+  const auth = await requireRole(
+    event.headers.authorization ?? event.headers.Authorization,
+    ['super_admin']
+  )
+  if (!auth.ok) {
+    return {
+      statusCode: auth.status,
+      headers: jsonHeaders,
+      body: JSON.stringify({ error: auth.reason }),
+    }
+  }
+
+  const supabase = supabaseAdmin()
   
   const id = event.queryStringParameters?.id
   
