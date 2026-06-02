@@ -1,38 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { MEMBERSHIP_CATALOG, type StripeCatalogPlan } from '@/data/stripeCatalogMapping'
 import type {
   MembershipPlan,
   MembershipPlanId,
   MembershipRecord,
-  PlanCadence,
-  PlanCategory,
 } from '@/data/membership'
 
 // ─── DB row shapes ──────────────────────────────────────────────────────────
-
-interface PlanRow {
-  id: string
-  name: string
-  duration_label: string
-  duration_months: number
-  price_eur: number | string
-  description: string | null
-  benefits: string[] | null
-  popular: boolean
-  sort_order: number
-  cadence: string | null
-  category: string | null
-  subtitle: string | null
-  icon: string | null
-  gradient: string | null
-  bg_gradient: string | null
-  border_color: string | null
-  active: boolean | null
-  stripe_product_id_test: string | null
-  stripe_price_id_test: string | null
-  stripe_product_id_live: string | null
-  stripe_price_id_live: string | null
-}
 
 interface MembershipRow {
   id: string
@@ -56,78 +31,30 @@ interface MembershipRow {
 
 // ─── Mappers ─────────────────────────────────────────────────────────────────
 
-function toPlan(row: PlanRow): MembershipPlan {
+/** Convert StripeCatalogPlan to MembershipPlan */
+function catalogToMembershipPlan(catalogPlan: StripeCatalogPlan): MembershipPlan {
   return {
-    id: row.id as MembershipPlanId,
-    name: row.name,
-    durationLabel: row.duration_label,
-    durationMonths: row.duration_months,
-    price: Number(row.price_eur),
-    description: row.description ?? '',
-    benefits: row.benefits ?? [],
-    popular: row.popular,
-    sortOrder: row.sort_order ?? 0,
-    cadence: (row.cadence ?? 'annual') as PlanCadence,
-    category: (row.category ?? 'membership') as PlanCategory,
-    subtitle: row.subtitle ?? undefined,
-    icon: row.icon ?? undefined,
-    gradient: row.gradient ?? undefined,
-    bgGradient: row.bg_gradient ?? undefined,
-    borderColor: row.border_color ?? undefined,
-    active: row.active ?? true,
-    stripeProductIdTest: row.stripe_product_id_test ?? undefined,
-    stripePriceIdTest:   row.stripe_price_id_test   ?? undefined,
-    stripeProductIdLive: row.stripe_product_id_live  ?? undefined,
-    stripePriceIdLive:   row.stripe_price_id_live    ?? undefined,
-  }
-}
-
-// ─── Plan input shape used by admin CRUD ────────────────────────────────────
-
-export interface PlanInput {
-  id: string
-  name: string
-  durationLabel: string
-  durationMonths: number
-  price: number
-  description?: string
-  benefits: string[]
-  popular?: boolean
-  sortOrder?: number
-  cadence: PlanCadence
-  category: PlanCategory
-  subtitle?: string
-  icon?: string
-  gradient?: string
-  bgGradient?: string
-  borderColor?: string
-  active?: boolean
-  // Stripe catalog IDs (read-only in normal plan edits; written by sync function)
-  stripeProductIdTest?: string
-  stripePriceIdTest?: string
-  stripeProductIdLive?: string
-  stripePriceIdLive?: string
-}
-
-function planInputToRow(input: PlanInput) {
-  return {
-    id: input.id,
-    name: input.name,
-    duration_label: input.durationLabel,
-    duration_months: input.durationMonths,
-    price_eur: input.price,
-    description: input.description ?? null,
-    benefits: input.benefits,
-    popular: input.popular ?? false,
-    sort_order: input.sortOrder ?? 0,
-    cadence: input.cadence,
-    category: input.category,
-    subtitle: input.subtitle ?? null,
-    icon: input.icon ?? null,
-    gradient: input.gradient ?? null,
-    bg_gradient: input.bgGradient ?? null,
-    border_color: input.borderColor ?? null,
-    active: input.active ?? true,
+    id: catalogPlan.id as MembershipPlanId,
+    name: catalogPlan.name,
+    durationLabel: catalogPlan.durationLabel,
+    durationMonths: catalogPlan.durationMonths,
+    price: catalogPlan.price,
+    description: catalogPlan.description,
+    benefits: catalogPlan.benefits,
+    popular: catalogPlan.popular,
+    sortOrder: catalogPlan.sortOrder,
+    cadence: catalogPlan.cadence,
+    category: catalogPlan.category,
+    subtitle: catalogPlan.subtitle,
+    icon: catalogPlan.icon,
+    gradient: catalogPlan.gradient,
+    bgGradient: catalogPlan.bgGradient,
+    borderColor: catalogPlan.borderColor,
+    active: catalogPlan.active,
+    stripeProductIdTest: catalogPlan.stripe.test.productId ?? undefined,
+    stripePriceIdTest: catalogPlan.stripe.test.priceId ?? undefined,
+    stripeProductIdLive: catalogPlan.stripe.live.productId ?? undefined,
+    stripePriceIdLive: catalogPlan.stripe.live.priceId ?? undefined,
   }
 }
 
@@ -152,25 +79,16 @@ function toRecord(row: MembershipRow): MembershipRecord {
 
 /**
  * Supabase-backed membership store.
- * Plans are fetched from `public.membership_plans`.
+ * Plans are loaded from the Stripe catalog mapping (src/data/stripeCatalogMapping.ts).
  * Memberships are fetched from `public.memberships` joined with `public.members`.
  */
 export function useMembership() {
-  const [plans, setPlans] = useState<MembershipPlan[]>([])
   const [memberships, setMemberships] = useState<MembershipRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // ── Fetch plans (public) ──────────────────────────────────────────────────
-  const fetchPlans = useCallback(async () => {
-    const { data, error: err } = await supabase
-      .from('membership_plans')
-      .select('*')
-      .order('sort_order', { ascending: true })
-    if (!err && data) setPlans((data as PlanRow[]).map(toPlan))
-  }, [])
-
-  useEffect(() => { fetchPlans() }, [fetchPlans])
+  // Plans come from the catalog mapping, not the database
+  const plans: MembershipPlan[] = MEMBERSHIP_CATALOG.map(catalogToMembershipPlan)
 
   // ── Fetch memberships (admin-only via RLS) ────────────────────────────────
   const fetchMemberships = useCallback(async () => {
@@ -230,33 +148,6 @@ export function useMembership() {
     await fetchMemberships()
   }, [fetchMemberships])
 
-  // ── Plan CRUD (admin-only via RLS) ────────────────────────────────────────
-  const createPlan = useCallback(async (input: PlanInput) => {
-    const { error: err } = await supabase
-      .from('membership_plans')
-      .insert(planInputToRow(input))
-    if (err) throw new Error(err.message)
-    await fetchPlans()
-  }, [fetchPlans])
-
-  const updatePlan = useCallback(async (id: string, input: PlanInput) => {
-    const { error: err } = await supabase
-      .from('membership_plans')
-      .update(planInputToRow(input))
-      .eq('id', id)
-    if (err) throw new Error(err.message)
-    await fetchPlans()
-  }, [fetchPlans])
-
-  const deletePlan = useCallback(async (id: string) => {
-    const { error: err } = await supabase
-      .from('membership_plans')
-      .delete()
-      .eq('id', id)
-    if (err) throw new Error(err.message)
-    await fetchPlans()
-  }, [fetchPlans])
-
   return {
     memberships,
     plans,
@@ -267,10 +158,6 @@ export function useMembership() {
     setStatus,
     remove,
     syncStripe,
-    createPlan,
-    updatePlan,
-    deletePlan,
-    refreshPlans: fetchPlans,
   }
 }
 

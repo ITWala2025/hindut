@@ -31,8 +31,6 @@ import { SectionCard } from '@/components/admin/adminUi'
 import { supabase } from '@/lib/supabase'
 import { resetStripeCache } from '@/lib/stripeClient'
 import { cn } from '@/lib/utils'
-import { StripeProductCatalogue } from '@/components/admin/sections/StripeProductCatalogue'
-import { useMembership } from '@/hooks/useMembership'
 
 type Mode       = 'test' | 'live'
 type Source     = 'db-override' | 'env-override' | 'host'
@@ -82,22 +80,6 @@ export function StripePaymentsCard({ canWrite }: Props) {
   const [saving, setSaving]     = useState(false)
   const [settings, setSettings] = useState<PaymentSettings | null>(null)
   const [error, setError]       = useState<string | null>(null)
-
-  const { plans } = useMembership()
-
-  // Build a map: Stripe product_id → plan ids that reference it
-  // so the catalogue can display "Linked: annual" badges
-  const productLinkMap = new Map<string, string[]>()
-  if (settings) {
-    for (const plan of plans) {
-      const productId = settings.mode === 'live' ? plan.stripeProductIdLive : plan.stripeProductIdTest
-      if (productId) {
-        const existing = productLinkMap.get(productId) ?? []
-        existing.push(plan.id)
-        productLinkMap.set(productId, existing)
-      }
-    }
-  }
 
   const load = async () => {
     setLoading(true)
@@ -375,11 +357,6 @@ export function StripePaymentsCard({ canWrite }: Props) {
               Last updated: {new Date(settings.updatedAt).toLocaleString()}
             </p>
           )}
-
-          {/* ── Product catalogue ──────────────────────────────────────── */}
-          <div className="border-t border-slate-100 pt-5">
-            <StripeProductCatalogue mode={settings.mode} productLinkMap={productLinkMap} />
-          </div>
         </div>
       ) : null}
     </SectionCard>
