@@ -79,16 +79,46 @@ function toRecord(row: MembershipRow): MembershipRecord {
 
 /**
  * Supabase-backed membership store.
- * Plans are loaded from the Stripe catalog mapping (src/data/stripeCatalogMapping.ts).
+ * Plans are loaded from the database (public.membership_plans).
  * Memberships are fetched from `public.memberships` joined with `public.members`.
  */
 export function useMembership() {
   const [memberships, setMemberships] = useState<MembershipRecord[]>([])
+  const [plans, setPlans] = useState<MembershipPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Plans come from the catalog mapping, not the database
-  const plans: MembershipPlan[] = MEMBERSHIP_CATALOG.map(catalogToMembershipPlan)
+  // ── Fetch plans from database ──────────────────────────────────────────────
+  const fetchPlans = useCallback(async () => {
+    const { data, error: err } = await supabase
+      .from('membership_plans')
+      .select('*')
+      .order('sort_order', { ascending: true })
+    
+    if (err) {
+      console.error('[useMembership] Error fetching plans:', err)
+      // Fallback to catalog if database fetch fails
+      setPlans(MEMBERSHIP_CATALOG.map(catalogToMembershipPlan))
+    } else if (data && data.length > 0) {
+      setPlans(data.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        durationLabel: row.duration_label,
+        durationMonths: row.duration_months,
+        price: parseFloat(row.price_eur),
+        description: row.description || '',
+        benefits: Array.isArray(row.benefits) ? row.benefits : [],
+        popular: row.popular || false,
+        sortOrder: row.sort_order || 0,
+        cadence: row.duration_months === 12 ? 'annual' : 'monthly',
+        category: 'membership',
+        active: true,
+      })))
+    } else {
+      // Fallback to catalog if no plans in database
+      setPlans(MEMBERSHIP_CATALOG.map(catalogToMembershipPlan))
+    }
+  }, [])
 
   // ── Fetch memberships (admin-only via RLS) ────────────────────────────────
   const fetchMemberships = useCallback(async () => {
@@ -107,7 +137,10 @@ export function useMembership() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchMemberships() }, [fetchMemberships])
+  useEffect(() => { 
+    fetchPlans()
+    fetchMemberships() 
+  }, [fetchPlans, fetchMemberships])
 
   const getPlan = useCallback(
     (id: MembershipPlanId) => plans.find((p) => p.id === id),
@@ -143,10 +176,9 @@ export function useMembership() {
   }, [])
 
   const syncStripe = useCallback(async () => {
-    // Placeholder: in production, call a Supabase Edge Function or backend
-    await new Promise((r) => setTimeout(r, 800))
-    await fetchMemberships()
-  }, [fetchMemberships])
+    // Refresh both memberships and plans from database
+    await Promise.all([fetchMemberships(), fetchPlans()])
+  }, [fetchMemberships, fetchPlans])
 
   return {
     memberships,
