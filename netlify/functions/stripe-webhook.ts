@@ -308,7 +308,7 @@ export const handler: Handler = async (event) => {
                 memberCode,
                 memberEmail,
                 planName,
-                addedMonthly: false, // standalone monthly giving is a separate flow
+                addedMonthly: monthlyContributionEurEarly >= 1,
               }
               const transporter = createMailTransporter()
               await transporter.sendMail({
