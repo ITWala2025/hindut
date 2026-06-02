@@ -34,6 +34,11 @@ import {
   buildMembershipWelcomeEmailText,
   type MembershipWelcomeEmailParams,
 } from './lib/membershipEmailTemplate.js'
+import {
+  buildMonthlyReminderEmailHtml,
+  buildMonthlyReminderEmailText,
+  type MonthlyReminderEmailParams,
+} from './lib/monthlyReminderEmailTemplate.js'
 
 // ---------------------------------------------------------------------------
 // SMTP helpers (same credentials as rsvp-submit)
@@ -688,6 +693,72 @@ export const handler: Handler = async (event) => {
             updated_at: new Date().toISOString(),
           })
           .eq('id', membershipId)
+        break
+      }
+
+      // ─── Upcoming invoice reminder (fires 3 days before charge) ─────────────
+      case 'invoice.upcoming': {
+        const invoice = stripeEvent.data.object as Stripe.Invoice & {
+          next_payment_attempt?: number | null
+          subscription?:         string | Stripe.Subscription | null
+        }
+
+        // Only handle real amounts (skip €0 trial invoices).
+        if ((invoice.amount_due ?? 0) === 0) break
+
+        const subId =
+          typeof invoice.subscription === 'string'
+            ? invoice.subscription
+            : (invoice.subscription as Stripe.Subscription | null)?.id ?? null
+        if (!subId) break
+
+        const sub = await stripe.subscriptions.retrieve(subId).catch(() => null)
+        if (!sub || sub.metadata?.kind !== 'monthly_contribution') break
+
+        const memberEmail = sub.metadata?.memberEmail ?? ''
+        const memberName  = sub.metadata?.memberName  ?? ''
+        const planName    = sub.metadata?.planName    ?? 'Annual'
+        const amountEur   = (invoice.amount_due ?? 0) / 100
+
+        // Format the charge date as "1 July 2026"
+        const chargeDateMs = (invoice.next_payment_attempt ?? 0) * 1000
+        const chargeDate   = chargeDateMs
+          ? new Date(chargeDateMs).toLocaleDateString('en-IE', {
+              day: 'numeric', month: 'long', year: 'numeric',
+            })
+          : 'shortly'
+
+        if (!memberEmail || !process.env.SMTP_HOST) {
+          console.log(
+            '[stripe-webhook] invoice.upcoming: skipping reminder for', memberEmail || '(no email)',
+            process.env.SMTP_HOST ? '' : '(SMTP not configured)',
+          )
+          break
+        }
+
+        try {
+          const reminderParams: MonthlyReminderEmailParams = {
+            memberName,
+            memberEmail,
+            amountEur,
+            chargeDate,
+            planName,
+          }
+          const transporter = createMailTransporter()
+          await transporter.sendMail({
+            from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+            to:      memberEmail,
+            subject: `Upcoming monthly contribution of €${amountEur.toFixed(2)} – Hindu Association of Ireland`,
+            html:    buildMonthlyReminderEmailHtml(reminderParams),
+            text:    buildMonthlyReminderEmailText(reminderParams),
+          })
+          console.log(
+            '[stripe-webhook] invoice.upcoming reminder sent to', memberEmail,
+            'for €', amountEur, 'on', chargeDate,
+          )
+        } catch (emailErr) {
+          console.error('[stripe-webhook] invoice.upcoming email error:', (emailErr as Error).message)
+        }
         break
       }
 
