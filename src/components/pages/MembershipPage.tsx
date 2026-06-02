@@ -147,7 +147,6 @@ export function MembershipPage() {
   // ── Monthly giving dialog state ───────────────────────────────────────────
   const [givingOpen, setGivingOpen] = useState(false)
   const [givingTier, setGivingTier] = useState<GivingTile | null>(null)
-  const [givingCustom, setGivingCustom] = useState('')
   const [givingName, setGivingName] = useState('')
   const [givingEmail, setGivingEmail] = useState('')
   const [givingConsent, setGivingConsent] = useState(false)
@@ -162,11 +161,10 @@ export function MembershipPage() {
   )
 
   const givingTiles = useMemo<GivingTile[]>(() => {
-    const dbTiles = plans
+    return plans
       .filter((p) => p.category === 'giving' && p.active)
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map(planToTile)
-    return [...dbTiles, CUSTOM_TILE]
   }, [plans])
 
   const monthlyGivingAmounts = useMemo(
@@ -250,7 +248,6 @@ export function MembershipPage() {
     setGivingTier(tier)
     setGivingName('')
     setGivingEmail('')
-    setGivingCustom('')
     setGivingConsent(false)
     setGivingProcessing(false)
     setGivingOpen(true)
@@ -268,33 +265,18 @@ export function MembershipPage() {
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRe.test(givingEmail)) { toast.error('Please enter a valid email.'); return }
     if (!givingConsent) { toast.error('Please accept the data consent to continue.'); return }
-    const amount = givingTier.amount ?? parseFloat(givingCustom)
-    if (!amount || amount < 1) { toast.error('Please enter a valid amount (min €1).'); return }
+    if (!givingTier.amount || givingTier.amount < 1) { toast.error('Invalid plan amount.'); return }
     setGivingProcessing(true)
     try {
-      // Tiers backed by a DB plan (shraddha/seva/bhakti) go through the membership
-      // flow so they land in `memberships`, not `donations`. The free-form
-      // CUSTOM_TILE has no plan id and still uses the recurring donation flow.
-      const isPlanTier = givingTier.id !== 'custom' && givingTier.amount !== null
-      const body = isPlanTier
-        ? {
-            kind: 'membership' as const,
-            planId: givingTier.id,
-            fullName: givingName.trim(),
-            email: givingEmail.trim(),
-            successUrl: `${window.location.origin}/membership-success`,
-            cancelUrl: `${window.location.origin}/membership?cancelled=1`,
-          }
-        : {
-            kind: 'donation' as const,
-            amountEur: amount,
-            donorName: givingName.trim(),
-            donorEmail: givingEmail.trim(),
-            recurring: true,
-            description: `Monthly giving – ${givingTier.name} tier`,
-            successUrl: `${window.location.origin}/donation-success`,
-            cancelUrl: `${window.location.origin}/membership?cancelled=1`,
-          }
+      // All giving tiers are backed by DB plans from Stripe catalog
+      const body = {
+        kind: 'membership' as const,
+        planId: givingTier.id,
+        fullName: givingName.trim(),
+        email: givingEmail.trim(),
+        successUrl: `${window.location.origin}/membership-success`,
+        cancelUrl: `${window.location.origin}/membership?cancelled=1`,
+      }
       const res = await fetch('/.netlify/functions/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1034,23 +1016,6 @@ export function MembershipPage() {
                   </DialogHeader>
 
                   <form onSubmit={payGiving} className="space-y-4">
-                    {!givingTier.amount && (
-                      <div>
-                        <Label className="text-sm font-medium text-slate-700 mb-1.5 block">
-                          Monthly amount (€) <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          type="number"
-                          value={givingCustom}
-                          onChange={(e) => setGivingCustom(e.target.value)}
-                          placeholder="Enter amount (min €1)"
-                          min="1"
-                          step="0.01"
-                          required
-                          className="h-11 rounded-xl"
-                        />
-                      </div>
-                    )}
                     <div>
                       <Label htmlFor="giving-name" className="text-sm font-medium text-slate-700 mb-1.5 block">
                         Your name <span className="text-red-500">*</span>
@@ -1118,13 +1083,7 @@ export function MembershipPage() {
                       ) : (
                         <>
                           <Heart weight="fill" className="mr-2" />
-                          Give{' '}
-                          {givingTier.amount
-                            ? `€${givingTier.amount}`
-                            : givingCustom
-                              ? `€${givingCustom}`
-                              : ''
-                          }/month
+                          Give €{givingTier.amount}/month
                         </>
                       )}
                     </Button>
