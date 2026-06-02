@@ -698,10 +698,7 @@ export const handler: Handler = async (event) => {
 
       // ─── Upcoming invoice reminder (fires 3 days before charge) ─────────────
       case 'invoice.upcoming': {
-        const invoice = stripeEvent.data.object as Stripe.Invoice & {
-          next_payment_attempt?: number | null
-          subscription?:         string | Stripe.Subscription | null
-        }
+        const invoice = stripeEvent.data.object as Stripe.Invoice
 
         // Only handle real amounts (skip €0 trial invoices).
         if ((invoice.amount_due ?? 0) === 0) break
@@ -712,12 +709,15 @@ export const handler: Handler = async (event) => {
             : (invoice.subscription as Stripe.Subscription | null)?.id ?? null
         if (!subId) break
 
-        const sub = await stripe.subscriptions.retrieve(subId).catch(() => null)
+        const sub = await stripe.subscriptions.retrieve(subId).catch((err: unknown) => {
+          if ((err as { statusCode?: number })?.statusCode === 404) return null
+          throw err
+        })
         if (!sub || sub.metadata?.kind !== 'monthly_contribution') break
 
         const memberEmail = sub.metadata?.memberEmail ?? ''
         const memberName  = sub.metadata?.memberName  ?? ''
-        const planName    = sub.metadata?.planName    ?? 'Annual'
+        const planName    = sub.metadata?.planName    ?? ''
         const amountEur   = (invoice.amount_due ?? 0) / 100
 
         // Format the charge date as "1 July 2026"
@@ -728,6 +728,9 @@ export const handler: Handler = async (event) => {
             })
           : 'shortly'
 
+        // NOTE: No deduplication — Stripe retries can deliver this event more than once,
+        // potentially sending the member duplicate reminder emails. A future hardening
+        // pass should record stripeEvent.id before sending to prevent this.
         if (!memberEmail || !process.env.SMTP_HOST) {
           console.log(
             '[stripe-webhook] invoice.upcoming: skipping reminder for', memberEmail || '(no email)',
