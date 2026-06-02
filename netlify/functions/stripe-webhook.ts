@@ -334,8 +334,8 @@ export const handler: Handler = async (event) => {
             const now = new Date()
             const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
 
-            // Ensure the receipt metadata is written before attempting Stripe setup,
-            // so it is visible even if the Stripe subscription creation fails.
+            // Persist receipt metadata before attempting Stripe setup so it is
+            // visible even if the subscription creation fails.
             const { error: receiptMetaErr } = await supabase
               .from('receipts')
               .update({
@@ -353,9 +353,31 @@ export const handler: Handler = async (event) => {
             try {
               const trialEnd = Math.floor(nextMonthStart.getTime() / 1000)
 
-              // Create the Stripe subscription — NO donation row yet.
-              // A fresh 'succeeded' donation row is created by invoice.paid each
-              // time a real payment is charged (trial invoices are skipped).
+              // Stripe requires a default_payment_method on new subscriptions so it
+              // can charge the customer when the trial ends. The annual checkout sets
+              // this on the subscription; retrieve it and forward it here.
+              let defaultPaymentMethodId: string | null = null
+              if (subscriptionId) {
+                try {
+                  const annualSub = await stripe.subscriptions.retrieve(subscriptionId)
+                  const dpm = annualSub.default_payment_method
+                  defaultPaymentMethodId = typeof dpm === 'string' ? dpm : (dpm as Stripe.PaymentMethod | null)?.id ?? null
+                } catch (pmErr) {
+                  console.warn('[stripe-webhook] could not retrieve annual sub for PM:', (pmErr as Error).message)
+                }
+              }
+
+              // Fall back to customer invoice default if sub had none.
+              if (!defaultPaymentMethodId) {
+                try {
+                  const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
+                  const cdpm = customer.invoice_settings?.default_payment_method
+                  defaultPaymentMethodId = typeof cdpm === 'string' ? cdpm : (cdpm as Stripe.PaymentMethod | null)?.id ?? null
+                } catch (custErr) {
+                  console.warn('[stripe-webhook] could not retrieve customer for PM:', (custErr as Error).message)
+                }
+              }
+
               const monthlySub = await stripe.subscriptions.create({
                 customer: customerId,
                 items: [{
@@ -369,7 +391,8 @@ export const handler: Handler = async (event) => {
                     recurring: { interval: 'month' as const },
                   },
                 }],
-                trial_end: trialEnd,
+                trial_end:  trialEnd,
+                ...(defaultPaymentMethodId ? { default_payment_method: defaultPaymentMethodId } : {}),
                 metadata: {
                   kind:         'monthly_contribution',
                   amountEur:    String(monthlyContributionEur),
@@ -383,16 +406,23 @@ export const handler: Handler = async (event) => {
 
               await supabase
                 .from('memberships')
-                .update({
-                  monthly_stripe_sub_id: monthlySub.id,
-                })
+                .update({ monthly_stripe_sub_id: monthlySub.id })
                 .eq('id', membershipId)
 
-              console.log('[stripe-webhook] monthly contribution sub', monthlySub.id, 'created for', memberEmail,
-                'trial until', nextMonthStart.toISOString())
+              console.log(
+                '[stripe-webhook] monthly contribution sub', monthlySub.id,
+                'created for', memberEmail,
+                'trial until', nextMonthStart.toISOString(),
+                'default_pm:', defaultPaymentMethodId ?? 'none',
+              )
             } catch (subErr) {
-              // Non-fatal: log but do not fail the webhook
-              console.error('[stripe-webhook] monthly contribution setup error:', (subErr as Error).message)
+              // Log the full error so it appears in Netlify function logs.
+              console.error(
+                '[stripe-webhook] monthly contribution setup FAILED for membership', membershipId,
+                '— error:', (subErr as Error).message,
+                '— customer:', customerId,
+                '— amount:', monthlyContributionEur,
+              )
             }
           }
         } else if (kind === 'ticket') {
