@@ -11,16 +11,54 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
-import { requireAuth } from './lib/auth'
-import { getStripeInstance } from './lib/getStripeInstance'
+import { resolveStripe, supabaseAdmin, jsonHeaders } from './lib/stripe.js'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+type PermAction = 'view' | 'create' | 'update' | 'delete'
 
-const jsonHeaders = { 'Content-Type': 'application/json' }
+type AuthResult =
+  | { ok: true; userId: string; role: string }
+  | { ok: false; status: 401 | 403; reason: string }
+
+/**
+ * Authenticate and check if user has required role
+ */
+async function requireRole(
+  authHeader: string | undefined,
+  allowedRoles: string[],
+): Promise<AuthResult> {
+  if (!authHeader) return { ok: false, status: 401, reason: 'No Authorization header' }
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+  if (!token) return { ok: false, status: 401, reason: 'Empty bearer token' }
+
+  const supabase = supabaseAdmin()
+  const { data: userData, error: userErr } = await supabase.auth.getUser(token)
+  if (userErr || !userData?.user) {
+    console.error('[requireRole] auth.getUser failed:', userErr?.message ?? 'no user')
+    return { ok: false, status: 401, reason: userErr?.message ?? 'Token validation failed' }
+  }
+
+  const { data: roleRow, error: roleErr } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userData.user.id)
+    .maybeSingle()
+  if (roleErr) {
+    console.error('[requireRole] user_roles query error:', roleErr.message)
+  }
+
+  const role: string | undefined =
+    (!roleErr && (roleRow as { role?: string } | null)?.role) ||
+    (userData.user.app_metadata?.role as string | undefined)
+  if (!role) {
+    return { ok: false, status: 403, reason: `No role found for user ${userData.user.id}` }
+  }
+
+  if (!allowedRoles.includes(role)) {
+    return { ok: false, status: 403, reason: `Role '${role}' not authorized. Required: ${allowedRoles.join(' or ')}` }
+  }
+
+  return { ok: true, userId: userData.user.id, role }
+}
 
 interface StripeProductWithPrices {
   id: string
@@ -58,15 +96,19 @@ interface Mapping {
 
 /**
  * Fetch all Stripe products and prices for the current mode
+ * 
+ * IMPORTANT: This fetches ONLY from Stripe's product catalog via API.
+ * It does NOT include local config files (e.g., stripeCatalogMapping.ts).
+ * This ensures admins see the true source of truth from Stripe.
  */
 async function fetchStripeProducts(stripe: Stripe): Promise<StripeProductWithPrices[]> {
   const products: StripeProductWithPrices[] = []
   
-  // Fetch all products
+  // Fetch all active products from Stripe (not from local config)
   const productsIterator = stripe.products.list({ limit: 100, active: true })
   
   for await (const product of productsIterator.autoPagingIter()) {
-    // Fetch prices for this product
+    // Fetch all prices for this product from Stripe
     const pricesIterator = stripe.prices.list({ 
       product: product.id,
       limit: 100,
@@ -106,9 +148,21 @@ async function fetchStripeProducts(stripe: Stripe): Promise<StripeProductWithPri
  * GET - Fetch all Stripe products with existing mappings
  */
 async function handleGet(event: HandlerEvent) {
-  const { user } = await requireAuth(event, supabase, ['admin', 'super_admin'])
-  
-  const ctx = getStripeInstance()
+  const auth = await requireRole(
+    event.headers.authorization ?? event.headers.Authorization,
+    ['super_admin', 'admin']
+  )
+  if (!auth.ok) {
+    return {
+      statusCode: auth.status,
+      headers: jsonHeaders,
+      body: JSON.stringify({ error: auth.reason }),
+    }
+  }
+
+  const host = event.headers.host ?? event.headers.Host ?? null
+  const ctx = await resolveStripe(host)
+  const supabase = supabaseAdmin()
   
   // Fetch Stripe products
   const products = await fetchStripeProducts(ctx.stripe)
@@ -132,19 +186,19 @@ async function handleGet(event: HandlerEvent) {
   return {
     statusCode: 200,
     headers: jsonHeaders,
-    body: JSON.stringify({
-      mode: ctx.mode,
-      products,
-      mappings: mappings || [],
-    }),
+    bodyauth = await requireRole(
+    event.headers.authorization ?? event.headers.Authorization,
+    ['super_admin']
+  )
+  if (!auth.ok) {
+    return {
+      statusCode: auth.status,
+      headers: jsonHeaders,
+      body: JSON.stringify({ error: auth.reason }),
+    }
   }
-}
 
-/**
- * POST - Create a new mapping
- */
-async function handlePost(event: HandlerEvent) {
-  const { user } = await requireAuth(event, supabase, ['super_admin'])
+  const supabase = supabaseAdmin()
   
   if (!event.body) {
     return {
@@ -206,31 +260,55 @@ async function handlePost(event: HandlerEvent) {
       price_currency: price_currency || 'eur',
       price_interval,
       is_active: true,
+      created_by: auth.userId,
+      updated_by: auth.userI
+      stripe_product_id,
+      stripe_price_id,
+      stripe_mode,
+      entity_type,
+      entity_id,
+      product_name: product_name || 'Unnamed',
+      price_amount,
+      price_currency: price_currency || 'eur',
+      price_interval,
+      is_active: true,
       created_by: user.id,
       updated_by: user.id,
-    })
-    .select()
-    .single()
-  
-  if (error) {
-    console.error('[stripe-mappings] Error creating mapping:', error)
+    })auth = await requireRole(
+    event.headers.authorization ?? event.headers.Authorization,
+    ['super_admin']
+  )
+  if (!auth.ok) {
     return {
-      statusCode: 500,
+      statusCode: auth.status,
       headers: jsonHeaders,
-      body: JSON.stringify({ error: 'Failed to create mapping' }),
+      body: JSON.stringify({ error: auth.reason }),
+    }
+  }
+
+  const supabase = supabaseAdmin()
+  
+  if (!event.body) {
+    return {
+      statusCode: 400,
+      headers: jsonHeaders,
+      body: JSON.stringify({ error: 'Request body required' }),
     }
   }
   
-  return {
-    statusCode: 201,
-    headers: jsonHeaders,
-    body: JSON.stringify({ mapping }),
+  const body = JSON.parse(event.body)
+  const { id, entity_type, entity_id, is_active } = body
+  
+  if (!id) {
+    return {
+      statusCode: 400,
+      headers: jsonHeaders,
+      body: JSON.stringify({ error: 'Mapping ID required' }),
+    }
   }
-}
-
-/**
- * PUT - Update an existing mapping
- */
+  
+  const updates: any = {
+    updated_by: auth.userI
 async function handlePut(event: HandlerEvent) {
   const { user } = await requireAuth(event, supabase, ['super_admin'])
   
@@ -253,7 +331,19 @@ async function handlePut(event: HandlerEvent) {
     }
   }
   
-  const updates: any = {
+  const auth = await requireRole(
+    event.headers.authorization ?? event.headers.Authorization,
+    ['super_admin']
+  )
+  if (!auth.ok) {
+    return {
+      statusCode: auth.status,
+      headers: jsonHeaders,
+      body: JSON.stringify({ error: auth.reason }),
+    }
+  }
+
+  const supabase = supabaseAdmin(
     updated_by: user.id,
     updated_at: new Date().toISOString(),
   }
