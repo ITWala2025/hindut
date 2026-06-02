@@ -228,7 +228,7 @@ export function useMembership() {
  */
 export function useMemberPaymentHistory(monthlyStripeSubId: string | undefined) {
   const [history, setHistory]   = useState<DonationHistoryEntry[]>([])
-  const [loading, setLoading]   = useState(false)
+  const [loading, setLoading]   = useState(!!monthlyStripeSubId)
 
   useEffect(() => {
     if (!monthlyStripeSubId) { setHistory([]); return }

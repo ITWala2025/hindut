@@ -129,6 +129,9 @@ function deriveUpcomingMonthly(
     ? member.startDate.split('-').map(Number)
     : null
   if (!startParts || startParts.length < 3) return []
+  // startParts[1] is a 1-indexed month; Date.UTC uses 0-indexed months,
+  // so using it directly advances the date by one month — giving us the 1st
+  // of the month after startDate, which is when billing actually begins.
   const billingStart = new Date(Date.UTC(startParts[0], startParts[1], 1))
 
   const expiresOn = member.expiresOn
