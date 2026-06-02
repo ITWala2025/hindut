@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { SectionCard } from '@/components/admin/adminUi'
+import { StripeProductMapper } from '@/components/admin/sections/StripeProductMapper'
 
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -81,7 +82,7 @@ export function MembershipPlansSection() {
     <div className="space-y-4">
       <SectionCard
         title="Membership Plans"
-        description="Plans are managed via Stripe product catalog. Update stripe IDs in src/data/stripeCatalogMapping.ts"
+        description="Plans are managed via Stripe product catalog. Map Stripe prices to your membership tiers below."
         actions={
           <div className="flex items-center gap-2">
             <Badge
@@ -161,21 +162,14 @@ export function MembershipPlansSection() {
             </tbody>
           </table>
         </div>
+      </SectionCard>
 
-        <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-900">
-          <div className="flex items-start gap-2">
-            <Storefront size={18} weight="duotone" className="text-blue-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold mb-1">How to update Stripe IDs:</p>
-              <ol className="text-xs space-y-1 list-decimal list-inside text-blue-800">
-                <li>Create products + prices in Stripe Dashboard (test &amp; live modes)</li>
-                <li>Copy the <code className="bg-blue-100 px-1 py-0.5 rounded">price_xxx</code> IDs</li>
-                <li>Update <code className="bg-blue-100 px-1 py-0.5 rounded">src/data/stripeCatalogMapping.ts</code></li>
-                <li>Commit and deploy — changes take effect immediately</li>
-              </ol>
-            </div>
-          </div>
-        </div>
+      {/* Stripe Product Mapper */}
+      <SectionCard
+        title="Stripe Product Mapping"
+        description="View all Stripe products and map them to your membership plans, donations, special causes, or tickets."
+      >
+        <StripeProductMapper />
       </SectionCard>
     </div>
   )
