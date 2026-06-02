@@ -15,6 +15,7 @@ import {
   Envelope,
   Phone,
   CalendarBlank,
+  CalendarCheck,
   CaretLeft,
   CaretRight,
   X,
@@ -49,7 +50,7 @@ import {
 } from '@/components/ui/sheet'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { useMembership } from '@/hooks/useMembership'
+import { useMembership, useMemberPaymentHistory, type DonationHistoryEntry } from '@/hooks/useMembership'
 import { useReceiptFlags } from '@/hooks/useReceipts'
 import { downloadReceiptPdf } from '@/lib/receiptPdf'
 import { useAuth } from '@/lib/auth'
@@ -107,6 +108,174 @@ function monthlySubStatus(startDateStr: string): 'trial' | 'active' {
   return new Date() < new Date(billingStart + 'T00:00:00Z') ? 'trial' : 'active'
 }
 
+// ── Payment Timeline ──────────────────────────────────────────────────────────
+
+interface TimelineEntry {
+  key:       string
+  date:      string  // YYYY-MM-DD
+  amountEur: number
+  type:      'annual' | 'monthly'
+  status:    'paid' | 'scheduled' | 'failed' | 'refunded'
+  label:     string
+}
+
+function deriveUpcomingMonthly(
+  member: MembershipRecord,
+  paidDates: Set<string>,
+): TimelineEntry[] {
+  if (!member.monthlyContributionEur || !member.monthlyStripeSubId) return []
+
+  const startParts = member.startDate
+    ? member.startDate.split('-').map(Number)
+    : null
+  if (!startParts || startParts.length < 3) return []
+  const billingStart = new Date(Date.UTC(startParts[0], startParts[1], 1))
+
+  const expiresOn = member.expiresOn
+    ? new Date(member.expiresOn + 'T00:00:00Z')
+    : null
+  const cutoff = expiresOn ?? new Date(Date.UTC(
+    billingStart.getUTCFullYear(),
+    billingStart.getUTCMonth() + 6,
+    1,
+  ))
+
+  const today   = new Date()
+  const entries: TimelineEntry[] = []
+  let   d       = new Date(billingStart)
+
+  while (d <= cutoff && entries.length < 12) {
+    const dateStr = d.toISOString().slice(0, 10)
+    if (d > today && !paidDates.has(dateStr)) {
+      entries.push({
+        key:       `monthly-upcoming-${dateStr}`,
+        date:      dateStr,
+        amountEur: member.monthlyContributionEur,
+        type:      'monthly',
+        status:    'scheduled',
+        label:     'Monthly contribution',
+      })
+    }
+    d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))
+  }
+  return entries
+}
+
+function PaymentTimeline({
+  member,
+  planPrice,
+  planName,
+}: {
+  member:    MembershipRecord
+  planPrice: number
+  planName:  string
+}) {
+  const { history, loading } = useMemberPaymentHistory(member.monthlyStripeSubId)
+
+  const entries = useMemo<TimelineEntry[]>(() => {
+    const today = new Date()
+    const all: TimelineEntry[] = []
+
+    if (member.startDate) {
+      all.push({
+        key:       'annual-paid',
+        date:      member.startDate,
+        amountEur: planPrice,
+        type:      'annual',
+        status:    'paid',
+        label:     `${planName} membership`,
+      })
+    }
+
+    if (member.expiresOn && new Date(member.expiresOn + 'T00:00:00Z') > today) {
+      all.push({
+        key:       'annual-renewal',
+        date:      member.expiresOn,
+        amountEur: planPrice,
+        type:      'annual',
+        status:    'scheduled',
+        label:     `${planName} membership renewal`,
+      })
+    }
+
+    for (const h of history) {
+      all.push({
+        key:       h.id,
+        date:      h.date,
+        amountEur: h.amountEur,
+        type:      'monthly',
+        status:    h.status === 'succeeded' ? 'paid' : h.status,
+        label:     'Monthly contribution',
+      })
+    }
+
+    const paidDates = new Set(history.map((h) => h.date))
+    for (const u of deriveUpcomingMonthly(member, paidDates)) {
+      all.push(u)
+    }
+
+    return all.sort((a, b) => a.date.localeCompare(b.date))
+  }, [member, planPrice, planName, history])
+
+  const ENTRY_STYLES: Record<TimelineEntry['status'], { dot: string; badge: string; label: string }> = {
+    paid:      { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',  label: 'Paid'      },
+    scheduled: { dot: 'bg-blue-400',    badge: 'bg-blue-50 text-blue-700 border-blue-200',           label: 'Scheduled' },
+    failed:    { dot: 'bg-red-500',     badge: 'bg-red-50 text-red-700 border-red-200',              label: 'Failed'    },
+    refunded:  { dot: 'bg-slate-400',   badge: 'bg-slate-50 text-slate-600 border-slate-200',        label: 'Refunded'  },
+  }
+
+  if (loading) {
+    return <div className="text-xs text-slate-400 py-4 text-center">Loading payment history…</div>
+  }
+
+  if (entries.length === 0) {
+    return <div className="text-xs text-slate-400 py-4 text-center">No payment records yet.</div>
+  }
+
+  return (
+    <div className="relative">
+      <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" />
+      <div className="space-y-3">
+        {entries.map((e) => {
+          const s = ENTRY_STYLES[e.status]
+          const isUpcoming = e.status === 'scheduled'
+          return (
+            <div key={e.key} className="flex items-start gap-3">
+              <div
+                className={cn(
+                  'mt-1.5 h-3.5 w-3.5 rounded-full border-2 border-white shrink-0 z-10',
+                  s.dot,
+                  isUpcoming && 'opacity-60',
+                )}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className={cn('text-sm font-medium', isUpcoming ? 'text-slate-400' : 'text-slate-800')}>
+                    {e.label}
+                  </span>
+                  <span className={cn(
+                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold border',
+                    s.badge,
+                  )}>
+                    {s.label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="text-xs text-slate-500">{e.date}</span>
+                  <span className={cn('text-xs font-bold', isUpcoming ? 'text-slate-400' : 'text-slate-700')}>
+                    €{e.amountEur.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-slate-400 capitalize">{e.type}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Member Detail Panel ───────────────────────────────────────────────────────
 
 function MemberDetailSheet({
@@ -117,6 +286,8 @@ function MemberDetailSheet({
   onRenew,
   onDelete,
   canWrite,
+  planPrice,
+  planName,
 }: {
   member: MembershipRecord | null
   onClose: () => void
@@ -125,6 +296,8 @@ function MemberDetailSheet({
   onRenew: (id: string) => void
   onDelete: (id: string) => void
   canWrite: boolean
+  planPrice: number
+  planName:  string
 }) {
   if (!member) return null
   return (
@@ -286,6 +459,21 @@ function MemberDetailSheet({
               </>
             )}
 
+            {/* Payment History & Schedule */}
+            <Separator className="bg-slate-100" />
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CalendarCheck size={14} weight="bold" className="text-slate-500" />
+                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+                  Payment History &amp; Schedule
+                </h4>
+              </div>
+              <PaymentTimeline
+                member={member}
+                planPrice={planPrice}
+                planName={planName}
+              />
+            </div>
 
           </div>
 
@@ -361,7 +549,7 @@ function MemberDetailSheet({
 
 export function MembersSection() {
   const { can } = useAuth()
-  const { memberships, plans, cancel, remove, setStatus, syncStripe } = useMembership()
+  const { memberships, plans, getPlan, cancel, remove, setStatus, syncStripe } = useMembership()
   const { flags: receiptFlags, fetchReceiptById } = useReceiptFlags('membership')
   const canCreate = can('members:create')
   const canUpdate = can('members:update')
@@ -967,6 +1155,8 @@ export function MembersSection() {
         onRenew={(id) => setStatus(id, 'active')}
         onDelete={remove}
         canWrite={canWrite}
+        planPrice={getPlan(detailMember?.planId ?? '')?.price ?? 0}
+        planName={getPlan(detailMember?.planId ?? '')?.name ?? detailMember?.planId ?? ''}
       />
     </div>
   )
