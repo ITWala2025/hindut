@@ -385,20 +385,21 @@ export const handler: Handler = async (event) => {
                 }
               }
 
+              // subscriptions.create() does not support price_data.product_data —
+              // that shorthand only works in Checkout Sessions. Create the price
+              // (with product_data) separately, then reference it by ID.
+              const monthlyPrice = await stripe.prices.create({
+                currency:    'eur',
+                unit_amount: Math.round(monthlyContributionEur * 100),
+                recurring:   { interval: 'month' },
+                product_data: {
+                  name: 'Monthly Contribution – Hindu Association of Ireland',
+                },
+              })
+
               const monthlySub = await stripe.subscriptions.create({
                 customer: customerId,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                items: [{
-                  price_data: {
-                    currency:    'eur',
-                    unit_amount: Math.round(monthlyContributionEur * 100),
-                    product_data: {
-                      name:        'Monthly Contribution – Hindu Association of Ireland',
-                      description: `Monthly contribution by ${memberName}`,
-                    },
-                    recurring: { interval: 'month' as const },
-                  } as any,
-                }],
+                items: [{ price: monthlyPrice.id }],
                 trial_end:  trialEnd,
                 ...(defaultPaymentMethodId ? { default_payment_method: defaultPaymentMethodId } : {}),
                 metadata: {
