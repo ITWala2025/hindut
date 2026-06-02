@@ -9,7 +9,10 @@ interface PaymentSuccessPageProps {
 
 export function PaymentSuccessPage({ variant }: PaymentSuccessPageProps) {
   const search = new URLSearchParams(useLocation().search)
-  const monthlyEur = search.get('monthly_eur') ? parseFloat(search.get('monthly_eur')!) : null
+  const monthlyEur = (() => {
+    const val = parseFloat(search.get('monthly_eur') ?? '')
+    return !isNaN(val) && val > 0 ? val : null
+  })()
 
   // Ticket params (passed by finaliseBooking in TicketBookingDialog)
   const name       = search.get('name')
