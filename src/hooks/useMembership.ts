@@ -95,12 +95,18 @@ export function useMembership() {
       .select('*')
       .order('sort_order', { ascending: true })
     
+    // Always include giving plans from catalog (shraddha, seva, bhakti)
+    const givingPlans = MEMBERSHIP_CATALOG
+      .filter(p => p.category === 'giving')
+      .map(catalogToMembershipPlan)
+    
     if (err) {
       console.error('[useMembership] Error fetching plans:', err)
-      // Fallback to catalog if database fetch fails
+      // Fallback to full catalog if database fetch fails
       setPlans(MEMBERSHIP_CATALOG.map(catalogToMembershipPlan))
     } else if (data && data.length > 0) {
-      setPlans(data.map((row: any) => ({
+      // Merge database plans with catalog giving plans
+      const dbPlans = data.map((row: any) => ({
         id: row.id,
         name: row.name,
         durationLabel: row.duration_label,
@@ -111,9 +117,10 @@ export function useMembership() {
         popular: row.popular || false,
         sortOrder: row.sort_order || 0,
         cadence: row.duration_months === 12 ? 'annual' : 'monthly',
-        category: 'membership',
+        category: 'membership' as const,
         active: true,
-      })))
+      }))
+      setPlans([...dbPlans, ...givingPlans])
     } else {
       // Fallback to catalog if no plans in database
       setPlans(MEMBERSHIP_CATALOG.map(catalogToMembershipPlan))
