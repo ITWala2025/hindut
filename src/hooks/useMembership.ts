@@ -7,6 +7,13 @@ import type {
   MembershipRecord,
 } from '@/data/membership'
 
+export interface DonationHistoryEntry {
+  id:         string
+  date:       string  // YYYY-MM-DD
+  amountEur:  number
+  status:     'succeeded' | 'failed' | 'refunded'
+}
+
 // ─── DB row shapes ──────────────────────────────────────────────────────────
 
 interface MembershipRow {
@@ -214,3 +221,41 @@ export function useMembership() {
   }
 }
 
+/**
+ * Fetches past monthly contribution charges for a single membership.
+ * Returns rows from the donations table that belong to the monthly
+ * Stripe subscription linked to this membership record.
+ */
+export function useMemberPaymentHistory(monthlyStripeSubId: string | undefined) {
+  const [history, setHistory]   = useState<DonationHistoryEntry[]>([])
+  const [loading, setLoading]   = useState(!!monthlyStripeSubId)
+
+  useEffect(() => {
+    if (!monthlyStripeSubId) { setHistory([]); return }
+
+    setLoading(true)
+    supabase
+      .from('donations')
+      .select('id, amount_eur, status, created_at')
+      .eq('stripe_subscription_id', monthlyStripeSubId)
+      .in('status', ['succeeded', 'failed', 'refunded'])
+      .order('created_at', { ascending: false })
+      .then(({ data, error: err }) => {
+        if (err) {
+          console.error('[useMemberPaymentHistory] fetch error:', err.message)
+        } else {
+          setHistory(
+            (data ?? []).map((row: { id: string; amount_eur: number; status: string; created_at: string }) => ({
+              id:        row.id,
+              date:      row.created_at.slice(0, 10),
+              amountEur: Number(row.amount_eur),
+              status:    row.status as DonationHistoryEntry['status'],
+            })),
+          )
+        }
+        setLoading(false)
+      })
+  }, [monthlyStripeSubId])
+
+  return { history, loading }
+}

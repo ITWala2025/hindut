@@ -34,6 +34,11 @@ import {
   buildMembershipWelcomeEmailText,
   type MembershipWelcomeEmailParams,
 } from './lib/membershipEmailTemplate.js'
+import {
+  buildMonthlyReminderEmailHtml,
+  buildMonthlyReminderEmailText,
+  type MonthlyReminderEmailParams,
+} from './lib/monthlyReminderEmailTemplate.js'
 
 // ---------------------------------------------------------------------------
 // SMTP helpers (same credentials as rsvp-submit)
@@ -308,7 +313,7 @@ export const handler: Handler = async (event) => {
                 memberCode,
                 memberEmail,
                 planName,
-                addedMonthly: false, // standalone monthly giving is a separate flow
+                addedMonthly: monthlyContributionEurEarly >= 1,
               }
               const transporter = createMailTransporter()
               await transporter.sendMail({
@@ -334,8 +339,8 @@ export const handler: Handler = async (event) => {
             const now = new Date()
             const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
 
-            // Ensure the receipt metadata is written before attempting Stripe setup,
-            // so it is visible even if the Stripe subscription creation fails.
+            // Persist receipt metadata before attempting Stripe setup so it is
+            // visible even if the subscription creation fails.
             const { error: receiptMetaErr } = await supabase
               .from('receipts')
               .update({
@@ -353,9 +358,31 @@ export const handler: Handler = async (event) => {
             try {
               const trialEnd = Math.floor(nextMonthStart.getTime() / 1000)
 
-              // Create the Stripe subscription — NO donation row yet.
-              // A fresh 'succeeded' donation row is created by invoice.paid each
-              // time a real payment is charged (trial invoices are skipped).
+              // Stripe requires a default_payment_method on new subscriptions so it
+              // can charge the customer when the trial ends. The annual checkout sets
+              // this on the subscription; retrieve it and forward it here.
+              let defaultPaymentMethodId: string | null = null
+              if (subscriptionId) {
+                try {
+                  const annualSub = await stripe.subscriptions.retrieve(subscriptionId)
+                  const dpm = annualSub.default_payment_method
+                  defaultPaymentMethodId = typeof dpm === 'string' ? dpm : (dpm as Stripe.PaymentMethod | null)?.id ?? null
+                } catch (pmErr) {
+                  console.warn('[stripe-webhook] could not retrieve annual sub for PM:', (pmErr as Error).message)
+                }
+              }
+
+              // Fall back to customer invoice default if sub had none.
+              if (!defaultPaymentMethodId) {
+                try {
+                  const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
+                  const cdpm = customer.invoice_settings?.default_payment_method
+                  defaultPaymentMethodId = typeof cdpm === 'string' ? cdpm : (cdpm as Stripe.PaymentMethod | null)?.id ?? null
+                } catch (custErr) {
+                  console.warn('[stripe-webhook] could not retrieve customer for PM:', (custErr as Error).message)
+                }
+              }
+
               const monthlySub = await stripe.subscriptions.create({
                 customer: customerId,
                 items: [{
@@ -369,7 +396,8 @@ export const handler: Handler = async (event) => {
                     recurring: { interval: 'month' as const },
                   },
                 }],
-                trial_end: trialEnd,
+                trial_end:  trialEnd,
+                ...(defaultPaymentMethodId ? { default_payment_method: defaultPaymentMethodId } : {}),
                 metadata: {
                   kind:         'monthly_contribution',
                   amountEur:    String(monthlyContributionEur),
@@ -383,16 +411,23 @@ export const handler: Handler = async (event) => {
 
               await supabase
                 .from('memberships')
-                .update({
-                  monthly_stripe_sub_id: monthlySub.id,
-                })
+                .update({ monthly_stripe_sub_id: monthlySub.id })
                 .eq('id', membershipId)
 
-              console.log('[stripe-webhook] monthly contribution sub', monthlySub.id, 'created for', memberEmail,
-                'trial until', nextMonthStart.toISOString())
+              console.log(
+                '[stripe-webhook] monthly contribution sub', monthlySub.id,
+                'created for', memberEmail,
+                'trial until', nextMonthStart.toISOString(),
+                'default_pm:', defaultPaymentMethodId ?? 'none',
+              )
             } catch (subErr) {
-              // Non-fatal: log but do not fail the webhook
-              console.error('[stripe-webhook] monthly contribution setup error:', (subErr as Error).message)
+              // Log the full error so it appears in Netlify function logs.
+              console.error(
+                '[stripe-webhook] monthly contribution setup FAILED for membership', membershipId,
+                '— error:', (subErr as Error).message,
+                '— customer:', customerId,
+                '— amount:', monthlyContributionEur,
+              )
             }
           }
         } else if (kind === 'ticket') {
@@ -658,6 +693,75 @@ export const handler: Handler = async (event) => {
             updated_at: new Date().toISOString(),
           })
           .eq('id', membershipId)
+        break
+      }
+
+      // ─── Upcoming invoice reminder (fires 3 days before charge) ─────────────
+      case 'invoice.upcoming': {
+        const invoice = stripeEvent.data.object as Stripe.Invoice
+
+        // Only handle real amounts (skip €0 trial invoices).
+        if ((invoice.amount_due ?? 0) === 0) break
+
+        const subId =
+          typeof invoice.subscription === 'string'
+            ? invoice.subscription
+            : (invoice.subscription as Stripe.Subscription | null)?.id ?? null
+        if (!subId) break
+
+        const sub = await stripe.subscriptions.retrieve(subId).catch((err: unknown) => {
+          if ((err as { statusCode?: number })?.statusCode === 404) return null
+          throw err
+        })
+        if (!sub || sub.metadata?.kind !== 'monthly_contribution') break
+
+        const memberEmail = sub.metadata?.memberEmail ?? ''
+        const memberName  = sub.metadata?.memberName  ?? ''
+        const planName    = sub.metadata?.planName    ?? ''
+        const amountEur   = (invoice.amount_due ?? 0) / 100
+
+        // Format the charge date as "1 July 2026"
+        const chargeDateMs = (invoice.next_payment_attempt ?? 0) * 1000
+        const chargeDate   = chargeDateMs
+          ? new Date(chargeDateMs).toLocaleDateString('en-IE', {
+              day: 'numeric', month: 'long', year: 'numeric',
+            })
+          : 'shortly'
+
+        // NOTE: No deduplication — Stripe retries can deliver this event more than once,
+        // potentially sending the member duplicate reminder emails. A future hardening
+        // pass should record stripeEvent.id before sending to prevent this.
+        if (!memberEmail || !process.env.SMTP_HOST) {
+          console.log(
+            '[stripe-webhook] invoice.upcoming: skipping reminder for', memberEmail || '(no email)',
+            process.env.SMTP_HOST ? '' : '(SMTP not configured)',
+          )
+          break
+        }
+
+        try {
+          const reminderParams: MonthlyReminderEmailParams = {
+            memberName,
+            memberEmail,
+            amountEur,
+            chargeDate,
+            planName,
+          }
+          const transporter = createMailTransporter()
+          await transporter.sendMail({
+            from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+            to:      memberEmail,
+            subject: `Upcoming monthly contribution of €${amountEur.toFixed(2)} – Hindu Association of Ireland`,
+            html:    buildMonthlyReminderEmailHtml(reminderParams),
+            text:    buildMonthlyReminderEmailText(reminderParams),
+          })
+          console.log(
+            '[stripe-webhook] invoice.upcoming reminder sent to', memberEmail,
+            'for €', amountEur, 'on', chargeDate,
+          )
+        } catch (emailErr) {
+          console.error('[stripe-webhook] invoice.upcoming email error:', (emailErr as Error).message)
+        }
         break
       }
 

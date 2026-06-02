@@ -476,7 +476,7 @@ export const handler: Handler = async (event) => {
       // methods appear. Revolut Pay is not supported in subscription mode.
       customer_email:   m.email,
       line_items: [membershipLineItem],
-      success_url: `${m.successUrl ?? `${origin}/membership-success`}?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${m.successUrl ?? `${origin}/membership-success`}?session_id={CHECKOUT_SESSION_ID}${m.monthlyContributionEur ? `&monthly_eur=${encodeURIComponent(String(m.monthlyContributionEur))}` : ''}`,
       cancel_url:  m.cancelUrl  ?? `${origin}/membership?cancelled=1`,
       metadata: {
         kind:         'membership',
