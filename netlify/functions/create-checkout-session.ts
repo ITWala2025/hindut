@@ -429,66 +429,6 @@ export const handler: Handler = async (event) => {
     }
     const membershipId = (memRow as { id: string }).id
 
-    // Get the Stripe catalog price ID for the current mode
-    const catalogPriceId = getStripePriceId(m.planId, ctx.mode)
-
-    // Upsert member by email
-    let memberId: string | null = null
-    const { data: existingMember } = await supabase
-      .from('members')
-      .select('id')
-      .eq('email', m.email)
-      .maybeSingle()
-
-    if (existingMember) {
-      memberId = (existingMember as { id: string }).id
-      await supabase
-        .from('members')
-        .update({ full_name: m.fullName, phone: m.phone ?? null })
-        .eq('id', memberId)
-    } else {
-      const { data: newMember, error: memberErr } = await supabase
-        .from('members')
-        .insert({
-          full_name: m.fullName,
-          email:     m.email,
-          phone:     m.phone ?? null,
-          user_id:   null,
-        })
-        .select('id')
-        .single()
-      if (memberErr || !newMember) {
-        console.error('[create-checkout-session] member insert error:', memberErr)
-        return {
-          statusCode: 500,
-          headers:    jsonHeaders,
-          body:       JSON.stringify({ error: 'Failed to create member record' }),
-        }
-      }
-      memberId = (newMember as { id: string }).id
-    }
-
-    // Create pending membership row
-    const { data: memRow, error: memErr } = await supabase
-      .from('memberships')
-      .insert({
-        member_id: memberId,
-        plan:      plan.id,
-        status:    'pending',
-      })
-      .select('id')
-      .single()
-
-    if (memErr || !memRow) {
-      console.error('[create-checkout-session] membership insert error:', memErr)
-      return {
-        statusCode: 500,
-        headers:    jsonHeaders,
-        body:       JSON.stringify({ error: 'Failed to create membership record' }),
-      }
-    }
-    const membershipId = (memRow as { id: string }).id
-
     // Use the pre-created Stripe catalog Price ID when available. Falls back to
     // inline price_data if the plan has not been synced to the catalog yet.
     const cadence = cadenceToStripe(plan.cadence, plan.duration_months)
