@@ -154,7 +154,7 @@ export const MEMBERSHIP_CATALOG: StripeCatalogPlan[] = [
     name: 'Bhakti',
     durationLabel: 'month',
     durationMonths: 1,
-    price: 108.00,
+    price: 100.00,
     description: 'Champion supporter of the Limerick Hindu Temple project.',
     benefits: [
       'All Seva tier benefits',
