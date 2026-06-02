@@ -43,7 +43,7 @@ CREATE INDEX idx_stripe_product_mappings_active ON public.stripe_product_mapping
 CREATE TRIGGER stripe_product_mappings_updated_at
   BEFORE UPDATE ON public.stripe_product_mappings
   FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
+  EXECUTE FUNCTION public.set_updated_at();
 
 -- RLS Policies
 ALTER TABLE public.stripe_product_mappings ENABLE ROW LEVEL SECURITY;
@@ -55,9 +55,9 @@ CREATE POLICY "Admins can view stripe mappings"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM public.users
-      WHERE users.id = auth.uid()
-      AND users.role IN ('super_admin', 'admin')
+      SELECT 1 FROM public.user_roles
+      WHERE user_roles.user_id = auth.uid()
+      AND user_roles.role IN ('super_admin', 'admin')
     )
   );
 
@@ -68,9 +68,9 @@ CREATE POLICY "Super admins can insert stripe mappings"
   TO authenticated
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM public.users
-      WHERE users.id = auth.uid()
-      AND users.role = 'super_admin'
+      SELECT 1 FROM public.user_roles
+      WHERE user_roles.user_id = auth.uid()
+      AND user_roles.role = 'super_admin'
     )
   );
 
@@ -80,9 +80,9 @@ CREATE POLICY "Super admins can update stripe mappings"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM public.users
-      WHERE users.id = auth.uid()
-      AND users.role = 'super_admin'
+      SELECT 1 FROM public.user_roles
+      WHERE user_roles.user_id = auth.uid()
+      AND user_roles.role = 'super_admin'
     )
   );
 
@@ -92,9 +92,9 @@ CREATE POLICY "Super admins can delete stripe mappings"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM public.users
-      WHERE users.id = auth.uid()
-      AND users.role = 'super_admin'
+      SELECT 1 FROM public.user_roles
+      WHERE user_roles.user_id = auth.uid()
+      AND user_roles.role = 'super_admin'
     )
   );
 
