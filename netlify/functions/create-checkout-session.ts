@@ -384,14 +384,14 @@ export const handler: Handler = async (event) => {
       // Verify RSVP exists and is confirmed
       const { data: rsvpRow, error: rsvpErr } = await supabase
         .from('event_rsvps')
-        .select('id, event_id, status')
+        .select('id, event_id, status, reference_number')
         .eq('id', s.rsvpId)
         .single()
 
       if (rsvpErr || !rsvpRow) {
         return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'RSVP not found' }) }
       }
-      const rsvp = rsvpRow as { id: string; event_id: string; status: string }
+      const rsvp = rsvpRow as { id: string; event_id: string; status: string; reference_number: string }
       if (rsvp.status !== 'confirmed') {
         return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'RSVP is not confirmed' }) }
       }
@@ -466,7 +466,7 @@ export const handler: Handler = async (event) => {
 
       const defaultSuccessUrl =
         `${origin}/rsvp-service-success` +
-        `?ref=${encodeURIComponent(s.rsvpId)}` +
+        `?ref=${encodeURIComponent(rsvp.reference_number)}` +
         `&event=${encodeURIComponent(evt.title)}` +
         `&amount=${totalEur}` +
         `&services=${encodeURIComponent(serviceNames)}` +
