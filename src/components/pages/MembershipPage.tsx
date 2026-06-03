@@ -269,7 +269,7 @@ export function MembershipPage() {
     if (!givingConsent) { toast.error('Please accept the data consent to continue.'); return }
     
     // For custom tier, validate the custom amount input
-    const amount = givingTier.amount ?? parseFloat(givingCustom)
+    const amount = (givingTier.amount && givingTier.amount > 0) ? givingTier.amount : parseFloat(givingCustom)
     if (!amount || amount < 1) { toast.error('Please enter a valid amount (min €1).'); return }
     
     setGivingProcessing(true)
