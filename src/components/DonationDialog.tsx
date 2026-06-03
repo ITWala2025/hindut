@@ -23,7 +23,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
   const [recurring, setRecurring] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const presetAmounts = [10, 25, 50, 100, 250, 500]
+  const presetAmounts = [11, 21, 51, 108, 251, 501]
 
   const getDonationAmount = () => selectedAmount || parseFloat(customAmount) || 0
 
@@ -165,7 +165,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                     Support Our Temple
                   </DialogTitle>
                   <DialogDescription className="text-sm">
-                    Choose your donation amount
+                    Your Seva Contribution
                   </DialogDescription>
                 </div>
               </div>
@@ -173,7 +173,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
 
             <div className="space-y-6 mt-4">
               <div>
-                <Label className="text-sm font-semibold mb-3 block text-orange-800">Select Amount</Label>
+                <Label className="text-sm font-semibold mb-3 block text-orange-800">Sankalp Seva- Select Amount</Label>
                 <div className="grid grid-cols-3 gap-3">
                   {presetAmounts.map((amount) => (
                     <Button
@@ -199,7 +199,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
 
               <div>
                 <Label htmlFor="custom-amount" className="text-sm font-semibold mb-2 block text-orange-800">
-                  Or Enter Custom Amount
+                  Or Sankalp Seva- Your Chosen Amount
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-600 font-semibold">€</span>
@@ -234,7 +234,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                 />
                 <div className="flex-1">
                   <div className="text-sm font-semibold text-orange-800">
-                    Make this a monthly recurring donation
+                    Support the Temple Through Monthly Seva
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     You will be charged €{getDonationAmount() || '—'} every month. Cancel any time.

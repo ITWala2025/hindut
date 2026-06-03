@@ -7,7 +7,6 @@ import {
   Heart,
   Image as ImageIcon,
   X,
-  Check,
   Target,
   ArrowsClockwise,
   ArrowSquareOut,
@@ -36,13 +35,6 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -60,12 +52,10 @@ import {
   type NewSpecialCause,
 } from '@/hooks/useSpecialCauses'
 import { useAuth } from '@/lib/auth'
-import { useMedia } from '@/hooks/useMedia'
+import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog'
 import { KpiCard, SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
-import type { MediaItem } from '@/lib/types'
-
 function Field({
   label,
   required,
@@ -138,7 +128,6 @@ export function SpecialCausesSection() {
 
   const { causes, loading, error, refetch, createCause, updateCause, deleteCause } =
     useSpecialCauses()
-  const { media } = useMedia()
 
   const [search, setSearch]             = useState('')
   const [sheetOpen, setSheetOpen]       = useState(false)
@@ -163,15 +152,6 @@ export function SpecialCausesSection() {
   const activeCauses = causes.filter((c) => c.status === 'active').length
   const totalRaised  = causes.reduce((s, c) => s + (c.total_raised ?? 0), 0)
   const totalDonors  = causes.reduce((s, c) => s + Number(c.donor_count ?? 0), 0)
-
-  const imagePickerImages = useMemo(() => {
-    const q = imageSearch.toLowerCase()
-    return (media as MediaItem[]).filter(
-      (m) =>
-        /\.(jpe?g|png|webp|gif|avif|svg)$/i.test(m.filename) &&
-        (!q || m.title.toLowerCase().includes(q) || m.filename.toLowerCase().includes(q)),
-    )
-  }, [media, imageSearch])
 
   function openCreate() {
     setEditTarget(null)
@@ -735,78 +715,16 @@ export function SpecialCausesSection() {
         </SheetContent>
       </Sheet>
 
-      {/* ─── Media Library image picker (separate Dialog) ────────────────── */}
-      <Dialog open={imagePickerOpen} onOpenChange={setImagePickerOpen}>
-        <DialogContent className="sm:max-w-[780px] max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle
-              className="text-orange-800"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              Select image from Media Library
-            </DialogTitle>
-            <DialogDescription>
-              Click an image to use it as the campaign cover.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="relative mb-3">
-            <MagnifyingGlass
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              placeholder="Search images…"
-              value={imageSearch}
-              onChange={(e) => setImageSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {imagePickerImages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-                <ImageIcon size={40} weight="duotone" />
-                <p className="text-sm">No images found. Upload images in the Media Library first.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {imagePickerImages.map((item: MediaItem) => {
-                  const isSelected = form.cover_image_url === item.url
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        setForm((f) => ({ ...f, cover_image_url: item.url }))
-                        setImagePickerOpen(false)
-                      }}
-                      className={cn(
-                        'relative rounded-lg overflow-hidden border-2 aspect-square focus:outline-none transition-all hover:border-orange-400',
-                        isSelected ? 'border-orange-500 ring-2 ring-orange-300' : 'border-transparent',
-                      )}
-                    >
-                      <img
-                        src={item.url}
-                        alt={item.alt}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                      {isSelected && (
-                        <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
-                          <div className="bg-orange-500 text-white rounded-full p-1">
-                            <Check size={16} weight="bold" />
-                          </div>
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <MediaPickerDialog
+        open={imagePickerOpen}
+        onOpenChange={setImagePickerOpen}
+        selectedUrl={form.cover_image_url}
+        onSelect={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+        onRemove={() => setForm((f) => ({ ...f, cover_image_url: '' }))}
+        description="Click an image to use it as the campaign cover."
+        search={imageSearch}
+        onSearchChange={setImageSearch}
+      />
 
       {/* ─── Delete Confirm ───────────────────────────────────────────────── */}
       <AlertDialog

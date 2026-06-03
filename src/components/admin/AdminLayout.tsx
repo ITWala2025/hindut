@@ -21,6 +21,7 @@ import {
   HandCoins,
   Heart,
   Lock,
+  IdentificationBadge,
 } from '@phosphor-icons/react'
 import type { Capability } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,7 @@ export type AdminSectionId =
   | 'causes'
   | 'media'
   | 'services'
+  | 'team'
   | 'users'
   | 'roles'
   | 'settings'
@@ -52,6 +54,7 @@ interface NavItem {
   label: string
   icon: ReactNode
   badge?: string
+  group: string
   /** Capability required to even see this nav entry. */
   capability?: Capability
   /** Restrict to super_admin only (regardless of capability map). */
@@ -59,85 +62,32 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Overview', icon: <House size={20} weight="duotone" /> },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: <ChartLineUp size={20} weight="duotone" />,
-    capability: 'analytics:view',
-  },
-  {
-    id: 'membership',
-    label: 'Membership',
-    icon: <Users size={20} weight="duotone" />,
-    capability: 'members:view',
-  },
-  {
-    id: 'receipts',
-    label: 'Receipts',
-    icon: <Receipt size={20} weight="duotone" />,
-    capability: 'receipts:view',
-  },
-  {
-    id: 'events',
-    label: 'Events',
-    icon: <CalendarBlank size={20} weight="duotone" />,
-    capability: 'events:view',
-  },
-  {
-    id: 'media',
-    label: 'Media Library',
-    icon: <ImageIcon size={20} weight="duotone" />,
-    capability: 'media:view',
-  },
-  {
-    id: 'rsvps',
-    label: 'RSVPs',
-    icon: <ClipboardText size={20} weight="duotone" />,
-    capability: 'rsvps:view',
-  },
-  {
-    id: 'tickets',
-    label: 'Ticket Bookings',
-    icon: <Ticket size={20} weight="duotone" />,
-    capability: 'tickets:view',
-  },
-  {
-    id: 'donations',
-    label: 'Donations',
-    icon: <HandCoins size={20} weight="duotone" />,
-    capability: 'donations:view',
-  },
-  {
-    id: 'causes',
-    label: 'Special Causes',
-    icon: <Heart size={20} weight="duotone" />,
-    capability: 'causes:view',
-  },
-  {
-    id: 'services',
-    label: 'Services',
-    icon: <Sparkle size={20} weight="duotone" />,
-    capability: 'services:view',
-  },
-  {
-    id: 'users',
-    label: 'Team & Access',
-    icon: <UserCircleGear size={20} weight="duotone" />,
-    capability: 'users:view',
-  },
-  {
-    id: 'roles',
-    label: 'Roles & Permissions',
-    icon: <Lock size={20} weight="duotone" />,
-    superAdminOnly: true,
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: <Gear size={20} weight="duotone" />,
-    capability: 'settings:view',
-  },
+  // ── Overview ──────────────────────────────────────────────────────────────
+  { group: 'Overview', id: 'dashboard',  label: 'Overview',  icon: <House size={20} weight="duotone" /> },
+  { group: 'Overview', id: 'analytics',  label: 'Analytics', icon: <ChartLineUp size={20} weight="duotone" />, capability: 'analytics:view' },
+
+  // ── Events & Bookings ─────────────────────────────────────────────────────
+  { group: 'Events & Bookings', id: 'events',  label: 'Events',          icon: <CalendarBlank size={20} weight="duotone" />, capability: 'events:view' },
+  { group: 'Events & Bookings', id: 'rsvps',   label: 'RSVPs',           icon: <ClipboardText size={20} weight="duotone" />, capability: 'rsvps:view' },
+  { group: 'Events & Bookings', id: 'tickets', label: 'Ticket Bookings', icon: <Ticket size={20} weight="duotone" />,        capability: 'tickets:view' },
+
+  // ── Finance ───────────────────────────────────────────────────────────────
+  { group: 'Finance', id: 'membership', label: 'Membership',     icon: <Users size={20} weight="duotone" />,    capability: 'members:view' },
+  { group: 'Finance', id: 'receipts',   label: 'Receipts',       icon: <Receipt size={20} weight="duotone" />,  capability: 'receipts:view' },
+  { group: 'Finance', id: 'donations',  label: 'Donations',      icon: <HandCoins size={20} weight="duotone" />, capability: 'donations:view' },
+  { group: 'Finance', id: 'causes',     label: 'Special Causes', icon: <Heart size={20} weight="duotone" />,    capability: 'causes:view' },
+
+  // ── Content ───────────────────────────────────────────────────────────────
+  { group: 'Content', id: 'services', label: 'Services',      icon: <Sparkle size={20} weight="duotone" />,   capability: 'services:view' },
+  { group: 'Content', id: 'media',    label: 'Media Library', icon: <ImageIcon size={20} weight="duotone" />, capability: 'media:view' },
+
+  // ── People ────────────────────────────────────────────────────────────────
+  { group: 'People', id: 'team',  label: 'Board & Committee', icon: <IdentificationBadge size={20} weight="duotone" />, capability: 'team:view' },
+  { group: 'People', id: 'users', label: 'Team & Access',     icon: <UserCircleGear size={20} weight="duotone" />,      capability: 'users:view' },
+  { group: 'People', id: 'roles', label: 'Roles & Permissions', icon: <Lock size={20} weight="duotone" />,              superAdminOnly: true },
+
+  // ── System ────────────────────────────────────────────────────────────────
+  { group: 'System', id: 'settings', label: 'Settings', icon: <Gear size={20} weight="duotone" />, capability: 'settings:view' },
 ]
 
 interface AdminLayoutProps {
@@ -235,47 +185,63 @@ export function AdminLayout({ active, onNavigate, children }: AdminLayoutProps) 
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-            {visibleItems.map((item) => {
-              const isActive = active === item.id
-              return (
-                <Link
-                  key={item.id}
-                  to={`/admin/${item.id}`}
-                  onClick={() => handleNavigate(item.id)}
-                  className={cn(
-                    'group flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-all duration-150',
-                    isActive
-                      ? 'bg-linear-to-r from-orange-500/25 to-amber-400/15 text-white shadow-sm ring-1 ring-orange-400/30'
-                      : 'text-orange-200/80 hover:bg-white/8 hover:text-white',
-                  )}
-                >
-                  {/* Icon pill */}
-                  <span
-                    className={cn(
-                      'h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors',
-                      isActive
-                        ? 'bg-orange-500/30 text-orange-100'
-                        : 'bg-white/5 text-orange-300 group-hover:bg-white/10 group-hover:text-white',
-                    )}
-                  >
-                    {item.icon}
-                  </span>
-
-                  <span className="flex-1 truncate">{item.label}</span>
-
-                  {item.badge && (
-                    <Badge className="bg-amber-500 text-white text-[10px] h-4 px-1.5 leading-none">
-                      {item.badge}
-                    </Badge>
-                  )}
-
-                  {isActive && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
-                  )}
-                </Link>
-              )
-            })}
+          <nav className="flex-1 overflow-y-auto py-3 px-2">
+            {(() => {
+              const groups: string[] = []
+              for (const item of visibleItems) {
+                if (!groups.includes(item.group)) groups.push(item.group)
+              }
+              return groups.map((group, gi) => {
+                const groupItems = visibleItems.filter((i) => i.group === group)
+                return (
+                  <div key={group} className={gi > 0 ? 'mt-4' : ''}>
+                    <div className="px-2.5 pb-1 pt-0.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-orange-400/60">
+                        {group}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      {groupItems.map((item) => {
+                        const isActive = active === item.id
+                        return (
+                          <Link
+                            key={item.id}
+                            to={`/admin/${item.id}`}
+                            onClick={() => handleNavigate(item.id)}
+                            className={cn(
+                              'group flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-all duration-150',
+                              isActive
+                                ? 'bg-linear-to-r from-orange-500/25 to-amber-400/15 text-white shadow-sm ring-1 ring-orange-400/30'
+                                : 'text-orange-200/80 hover:bg-white/8 hover:text-white',
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors',
+                                isActive
+                                  ? 'bg-orange-500/30 text-orange-100'
+                                  : 'bg-white/5 text-orange-300 group-hover:bg-white/10 group-hover:text-white',
+                              )}
+                            >
+                              {item.icon}
+                            </span>
+                            <span className="flex-1 truncate">{item.label}</span>
+                            {item.badge && (
+                              <Badge className="bg-amber-500 text-white text-[10px] h-4 px-1.5 leading-none">
+                                {item.badge}
+                              </Badge>
+                            )}
+                            {isActive && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })
+            })()}
           </nav>
 
           {/* Footer actions */}
@@ -427,36 +393,61 @@ function SidebarNav({
   active: AdminSectionId
   onNavigate: (id: AdminSectionId) => void
 }) {
+  // Build ordered groups, preserving first-seen order
+  const groups: string[] = []
+  for (const item of items) {
+    if (!groups.includes(item.group)) groups.push(item.group)
+  }
+
   return (
-    <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-      {items.map((item) => {
-        const isActive = active === item.id
+    <nav className="flex-1 overflow-y-auto py-3 px-2">
+      {groups.map((group, gi) => {
+        const groupItems = items.filter((i) => i.group === group)
         return (
-          <Link
-            key={item.id}
-            to={`/admin/${item.id}`}
-            onClick={() => onNavigate(item.id)}
-            title={collapsed ? item.label : undefined}
-            className={cn(
-              'w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-              isActive
-                ? 'bg-orange-50 text-orange-900 shadow-md'
-                : 'text-orange-100 hover:bg-orange-800/50 hover:text-white',
-              collapsed && 'justify-center px-0',
-            )}
-          >
-            <span className="shrink-0">{item.icon}</span>
+          <div key={group} className={gi > 0 ? 'mt-4' : ''}>
             {!collapsed && (
-              <>
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.badge && (
-                  <Badge className="bg-amber-500 text-white text-[10px] h-5 px-1.5">
-                    {item.badge}
-                  </Badge>
-                )}
-              </>
+              <div className="px-3 pb-1 pt-0.5">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-orange-400/70">
+                  {group}
+                </span>
+              </div>
             )}
-          </Link>
+            {collapsed && gi > 0 && (
+              <div className="my-2 mx-3 h-px bg-orange-800/40" />
+            )}
+            <div className="space-y-0.5">
+              {groupItems.map((item) => {
+                const isActive = active === item.id
+                return (
+                  <Link
+                    key={item.id}
+                    to={`/admin/${item.id}`}
+                    onClick={() => onNavigate(item.id)}
+                    title={collapsed ? item.label : undefined}
+                    className={cn(
+                      'w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-orange-50 text-orange-900 shadow-md'
+                        : 'text-orange-100 hover:bg-orange-800/50 hover:text-white',
+                      collapsed && 'justify-center px-0',
+                    )}
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 text-left">{item.label}</span>
+                        {item.badge && (
+                          <Badge className="bg-amber-500 text-white text-[10px] h-5 px-1.5">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
         )
       })}
     </nav>

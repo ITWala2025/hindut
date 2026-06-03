@@ -31,8 +31,6 @@ import {
   ArrowDown,
   Image as ImageIcon,
   Article,
-  CheckCircle,
-  Link,
   TextAlignLeft,
   Tag,
   Check,
@@ -73,7 +71,7 @@ import {
 import { toast } from 'sonner'
 import { useServices, type ServiceInput } from '@/hooks/useServices'
 import { useServiceCategories } from '@/hooks/useServiceCategories'
-import { useMedia } from '@/hooks/useMedia'
+import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog'
 import { useAuth } from '@/lib/auth'
 import { KpiCard, SectionCard, EmptyState } from '@/components/admin/adminUi'
 import type { ServiceRecord } from '@/lib/types'
@@ -106,7 +104,6 @@ export function ServicesSection() {
   const canWrite = canCreate || canUpdate || canDelete
   const { services, loading, error, create, update, remove, reorder } = useServices()
   const { categories, create: createCat, rename: renameCat, remove: removeCat } = useServiceCategories()
-  const { media } = useMedia()
 
   // Category management state
   const [newCatName, setNewCatName] = useState('')
@@ -122,7 +119,8 @@ export function ServicesSection() {
   const [saving, setSaving] = useState(false)
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [activeTab, setActiveTab] = useState('details')
-  const [mediaSearch, setMediaSearch] = useState('')
+  const [imagePickerOpen, setImagePickerOpen] = useState(false)
+  const [imageSearch, setImageSearch] = useState('')
   const editorRef = useRef<TinyMCEEditor | null>(null)
   // Stable initial content for TinyMCE - must not change after editor mounts or
   // @tinymce/tinymce-react will call resetContent() and jump the cursor to top-left.
@@ -140,7 +138,7 @@ export function ServicesSection() {
     editorInitialContentRef.current = ''
     setSlugManuallyEdited(false)
     setActiveTab('details')
-    setMediaSearch('')
+    setImageSearch('')
     setDialogOpen(true)
   }
 
@@ -159,7 +157,7 @@ export function ServicesSection() {
     })
     setSlugManuallyEdited(true)
     setActiveTab('details')
-    setMediaSearch('')
+    setImageSearch('')
     setDialogOpen(true)
   }
 
@@ -702,91 +700,52 @@ export function ServicesSection() {
             </TabsContent>
 
             {/* ── IMAGE TAB ── */}
-            <TabsContent value="image" className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              {/* URL input */}
-              <div className="space-y-1.5">
-                <Label htmlFor="svc-image" className="flex items-center gap-1.5">
-                  <Link size={14} weight="bold" />
-                  Image URL
-                </Label>
-                <Input
-                  id="svc-image"
-                  type="url"
-                  value={form.imageUrl}
-                  onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-                  placeholder="https://... or select from media library below"
-                />
-              </div>
-
-              {/* Selected preview */}
-              {form.imageUrl && (
-                <div className="relative rounded-xl overflow-hidden border border-slate-200 h-44 bg-slate-50">
+            <TabsContent value="image" className="flex-1 overflow-y-auto px-6 py-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                Service image
+              </p>
+              {form.imageUrl ? (
+                <div className="relative rounded-xl overflow-hidden border border-slate-200 h-48 group">
                   <img
                     src={form.imageUrl}
-                    alt="Selected"
-                    className="h-full w-full object-cover"
+                    alt="Service image"
+                    className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
-                  <button
-                    onClick={() => setForm((f) => ({ ...f, imageUrl: '' }))}
-                    className="absolute top-2 right-2 bg-white/90 hover:bg-white text-slate-700 rounded-full px-2 py-0.5 text-xs font-medium shadow"
-                  >
-                    Clear
-                  </button>
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => { setImageSearch(''); setImagePickerOpen(true) }}
+                      className="bg-white/90 text-slate-800 hover:bg-white"
+                    >
+                      <ImageIcon size={14} className="mr-1.5" />
+                      Change
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setForm((f) => ({ ...f, imageUrl: '' }))}
+                      className="bg-white/90 text-red-600 hover:bg-white hover:text-red-700"
+                    >
+                      <X size={14} className="mr-1.5" />
+                      Remove
+                    </Button>
+                  </div>
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setImageSearch(''); setImagePickerOpen(true) }}
+                  className="w-full h-36 rounded-xl border-2 border-dashed border-slate-300 hover:border-orange-400 hover:bg-orange-50/50 transition-all flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-orange-600"
+                >
+                  <ImageIcon size={32} weight="duotone" />
+                  <span className="text-sm font-medium">Select from Media Library</span>
+                  <span className="text-xs text-slate-400">Click to browse uploaded images</span>
+                </button>
               )}
-
-              {/* Media library picker */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-1.5">
-                    <ImageIcon size={14} weight="duotone" />
-                    Pick from Media Library
-                  </Label>
-                  <Input
-                    className="w-48 h-7 text-xs"
-                    placeholder="Search..."
-                    value={mediaSearch}
-                    onChange={(e) => setMediaSearch(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 max-h-64 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50 p-2">
-                  {media
-                    .filter((m) =>
-                      !mediaSearch ||
-                      m.title.toLowerCase().includes(mediaSearch.toLowerCase()) ||
-                      m.filename.toLowerCase().includes(mediaSearch.toLowerCase())
-                    )
-                    .map((m) => {
-                      const selected = form.imageUrl === m.url
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => setForm((f) => ({ ...f, imageUrl: m.url }))}
-                          className={`relative group aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                            selected
-                              ? 'border-orange-500 ring-2 ring-orange-200'
-                              : 'border-transparent hover:border-slate-300'
-                          }`}
-                          title={m.title}
-                        >
-                          <img src={m.url} alt={m.alt} className="h-full w-full object-cover" />
-                          {selected && (
-                            <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
-                              <CheckCircle size={20} weight="fill" className="text-orange-600 drop-shadow" />
-                            </div>
-                          )}
-                        </button>
-                      )
-                    })}
-                  {media.length === 0 && (
-                    <p className="col-span-full text-center text-xs text-muted-foreground py-8">
-                      No media items found. Upload images in the Media Library section.
-                    </p>
-                  )}
-                </div>
-              </div>
             </TabsContent>
 
             {/* ── CONTENT TAB ── */}
@@ -918,6 +877,17 @@ export function ServicesSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MediaPickerDialog
+        open={imagePickerOpen}
+        onOpenChange={setImagePickerOpen}
+        selectedUrl={form.imageUrl}
+        onSelect={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+        onRemove={() => setForm((f) => ({ ...f, imageUrl: '' }))}
+        description="Click an image to use it for this service."
+        search={imageSearch}
+        onSearchChange={setImageSearch}
+      />
     </div>
   )
 }

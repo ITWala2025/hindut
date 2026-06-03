@@ -24,7 +24,7 @@ export function PaymentSuccessPage({ variant }: PaymentSuccessPageProps) {
   // ── Ticket confirmation ──────────────────────────────────────────────────
   if (variant === 'ticket') {
     return (
-      <section className="min-h-[70vh] flex items-center justify-center bg-linear-to-br from-orange-50 via-amber-50 to-white px-6 py-16">
+      <section className="min-h-[70vh] flex items-center justify-center bg-linear-to-br from-orange-50 via-amber-50 to-white px-6 pt-24 md:pt-32 pb-16">
         <div className="max-w-xl w-full rounded-3xl bg-white/90 backdrop-blur border border-orange-200 shadow-xl p-8 md:p-12 text-center space-y-6">
           <div className="flex justify-center">
             <div className="rounded-full bg-linear-to-br from-orange-100 to-amber-100 p-6 glow-saffron-intense">
@@ -117,7 +117,7 @@ export function PaymentSuccessPage({ variant }: PaymentSuccessPageProps) {
   const copy = COPY[variant as 'donation' | 'membership']
 
   return (
-    <section className="min-h-[70vh] flex items-center justify-center bg-linear-to-br from-orange-50 via-amber-50 to-white px-6 py-16">
+    <section className="min-h-[70vh] flex items-center justify-center bg-linear-to-br from-orange-50 via-amber-50 to-white px-6 pt-24 md:pt-32 pb-16">
       <SeoMeta
         title="Payment Successful"
         description="Your payment was processed successfully. Thank you for supporting the Hindu Association of Ireland."

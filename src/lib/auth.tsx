@@ -54,6 +54,7 @@ export type AdminModule =
   | 'causes'
   | 'media'
   | 'services'
+  | 'team'
   | 'users'
   | 'settings'
 
@@ -68,6 +69,7 @@ export const MODULE_LABELS: Record<AdminModule, string> = {
   causes:    'Special Causes',
   media:     'Media Library',
   services:  'Services',
+  team:      'Team Management',
   users:     'Team & Access',
   settings:  'Settings',
 }
@@ -83,6 +85,7 @@ export const ADMIN_MODULES: AdminModule[] = [
   'causes',
   'media',
   'services',
+  'team',
   'users',
   'settings',
 ]
@@ -175,6 +178,7 @@ const DEFAULT_PERMISSIONS: Record<AdminRole, RolePermissionMap> = {
     causes:    { view: true,  create: true,  update: true,  delete: true  },
     media:     { view: true,  create: true,  update: true,  delete: true  },
     services:  { view: true,  create: true,  update: true,  delete: true  },
+    team:      { view: true,  create: true,  update: true,  delete: true  },
     users:     { view: true,  create: true,  update: true,  delete: true  },
     settings:  { view: true,  create: false, update: true,  delete: false },
   },
@@ -187,6 +191,7 @@ const DEFAULT_PERMISSIONS: Record<AdminRole, RolePermissionMap> = {
     causes:    { view: true,  create: false, update: false, delete: false },
     media:     { view: true,  create: true,  update: true,  delete: false },
     services:  { view: true,  create: true,  update: true,  delete: false },
+    team:      { view: true,  create: true,  update: true,  delete: false },
   },
 }
 

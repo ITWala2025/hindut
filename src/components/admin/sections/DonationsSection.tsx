@@ -14,8 +14,9 @@ import {
   Timer,
   Trash,
 } from '@phosphor-icons/react'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
-import { useDonations, type DonationRow, type NewDonation } from '@/hooks/useDonations'
+import { useDonations, useRecurringDonationHistory, type DonationRow, type NewDonation } from '@/hooks/useDonations'
 import { useReceiptFlags } from '@/hooks/useReceipts'
 import { downloadReceiptPdf } from '@/lib/receiptPdf'
 import { KpiCard, SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
@@ -55,6 +56,122 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+
+// ── Recurring donation payment timeline ──────────────────────────────────────
+
+type DonationTimelineEntry = {
+  key:       string
+  date:      string
+  amountEur: number
+  status:    'succeeded' | 'pending' | 'failed' | 'refunded' | 'scheduled'
+}
+
+function deriveUpcomingDonations(
+  amountEur:  number,
+  billingDay: number,
+  paidDates:  Set<string>,
+  maxMonths = 6,
+): DonationTimelineEntry[] {
+  const today = new Date()
+  const entries: DonationTimelineEntry[] = []
+
+  for (let i = 0; i <= maxMonths && entries.length < 6; i++) {
+    const y = today.getUTCFullYear()
+    const m = today.getUTCMonth() + i
+    // Clamp billing day to the last day of this month (handles Feb, 30-day months)
+    const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+    const day = Math.min(billingDay, lastDay)
+    const d = new Date(Date.UTC(y, m, day))
+    const dateStr = d.toISOString().slice(0, 10)
+    if (d > today && !paidDates.has(dateStr)) {
+      entries.push({
+        key:       `scheduled-${dateStr}`,
+        date:      dateStr,
+        amountEur,
+        status:    'scheduled',
+      })
+    }
+  }
+  return entries
+}
+
+function DonationPaymentTimeline({
+  stripeSubscriptionId,
+  amountEur,
+  startDate,
+}: {
+  stripeSubscriptionId: string
+  amountEur:            number
+  startDate:            string  // ISO — used to derive billing day-of-month
+}) {
+  const { charges, loading } = useRecurringDonationHistory(stripeSubscriptionId)
+
+  const entries = useMemo<DonationTimelineEntry[]>(() => {
+    const past: DonationTimelineEntry[] = charges.map((c) => ({
+      key:       c.id,
+      date:      c.date,
+      amountEur: c.amountEur,
+      status:    c.status,
+    }))
+
+    // Billing day comes from the initial charge date (or subscription start)
+    const billingDay = new Date(startDate).getUTCDate() || 1
+    const paidDates  = new Set(charges.map((c) => c.date))
+    const upcoming   = deriveUpcomingDonations(amountEur, billingDay, paidDates)
+
+    return [...past, ...upcoming].sort((a, b) => a.date.localeCompare(b.date))
+  }, [charges, amountEur, startDate])
+
+  const STYLES: Record<DonationTimelineEntry['status'], { dot: string; badge: string; label: string }> = {
+    succeeded: { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Paid'      },
+    pending:   { dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 border-amber-200',       label: 'Pending'   },
+    failed:    { dot: 'bg-red-500',     badge: 'bg-red-50 text-red-700 border-red-200',             label: 'Failed'    },
+    refunded:  { dot: 'bg-slate-400',   badge: 'bg-slate-50 text-slate-600 border-slate-200',       label: 'Refunded'  },
+    scheduled: { dot: 'bg-blue-400',    badge: 'bg-blue-50 text-blue-700 border-blue-200',          label: 'Scheduled' },
+  }
+
+  if (loading) return <div className="text-xs text-slate-400 py-4 text-center">Loading payment history…</div>
+  if (entries.length === 0) return <div className="text-xs text-slate-400 py-4 text-center">No charges found for this subscription.</div>
+
+  return (
+    <div className="relative">
+      <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" />
+      <div className="space-y-3">
+        {entries.map((e) => {
+          const s = STYLES[e.status]
+          const isUpcoming = e.status === 'scheduled'
+          return (
+            <div key={e.key} className="flex items-start gap-3">
+              <div className={cn(
+                'mt-1.5 h-3.5 w-3.5 rounded-full border-2 border-white shrink-0 z-10',
+                s.dot,
+                isUpcoming && 'opacity-60',
+              )} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className={cn('text-sm font-medium', isUpcoming ? 'text-slate-400' : 'text-slate-800')}>
+                    Monthly donation
+                  </span>
+                  <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold border', s.badge)}>
+                    {s.label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="text-xs text-slate-500">{e.date}</span>
+                  <span className={cn('text-xs font-bold', isUpcoming ? 'text-slate-400' : 'text-slate-700')}>
+                    €{e.amountEur.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 type StatusFilter = 'all' | 'pending' | 'succeeded' | 'failed' | 'refunded'
 type GatewayFilter = 'all' | 'stripe' | 'manual'
@@ -568,6 +685,32 @@ export function DonationsSection() {
                     {detail.stripe_payment_intent_id}
                   </span>
                 </div>
+              )}
+              {detail.stripe_subscription_id && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-muted-foreground shrink-0">Stripe Subscription ID</span>
+                  <span className="font-mono text-xs text-slate-700 break-all text-right">
+                    {detail.stripe_subscription_id}
+                  </span>
+                </div>
+              )}
+              {detail.recurring && detail.stripe_subscription_id && (
+                <>
+                  <hr className="border-slate-100" />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <ArrowsClockwise size={14} weight="bold" className="text-slate-500" />
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+                        Payment History
+                      </span>
+                    </div>
+                    <DonationPaymentTimeline
+                      stripeSubscriptionId={detail.stripe_subscription_id}
+                      amountEur={detail.amount_eur}
+                      startDate={detail.created_at}
+                    />
+                  </div>
+                </>
               )}
               {detail.description && (
                 <>

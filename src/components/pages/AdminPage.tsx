@@ -14,6 +14,7 @@ import { MembershipManagement } from '@/components/admin/sections/MembershipMana
 import { ReceiptsSection } from '@/components/admin/sections/ReceiptsSection'
 import { MediaSection } from '@/components/admin/sections/MediaSection'
 import { ServicesSection } from '@/components/admin/sections/ServicesSection'
+import { TeamManagementSection } from '@/components/admin/sections/TeamManagementSection'
 import { UsersSection } from '@/components/admin/sections/UsersSection'
 import { RolesSection } from '@/components/admin/sections/RolesSection'
 import { SettingsSection } from '@/components/admin/sections/SettingsSection'
@@ -47,6 +48,7 @@ const SECTION_VIEW_CAPABILITY: Partial<Record<AdminSectionId, string>> = {
   causes:     'causes:view',
   media:      'media:view',
   services:   'services:view',
+  team:       'team:view',
   users:      'users:view',
   settings:   'settings:view',
 }
@@ -128,6 +130,8 @@ function renderSection(
       return <MediaSection />
     case 'services':
       return <ServicesSection />
+    case 'team':
+      return <TeamManagementSection />
     case 'users':
       return <UsersSection />
     case 'roles':

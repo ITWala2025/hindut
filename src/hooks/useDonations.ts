@@ -6,6 +6,7 @@ export interface DonationRow {
   donor_name: string | null
   donor_email: string | null
   stripe_payment_intent_id: string | null
+  stripe_subscription_id: string | null
   gateway: 'stripe' | 'manual'
   amount_eur: number
   currency: string
@@ -65,7 +66,7 @@ export function useDonations(filters?: DonationFilters) {
     let query = supabase
       .from('donations')
       .select(
-        'id, donor_name, donor_email, stripe_payment_intent_id, gateway, amount_eur, currency, recurring, status, description, created_at, updated_at',
+        'id, donor_name, donor_email, stripe_payment_intent_id, stripe_subscription_id, gateway, amount_eur, currency, recurring, status, description, created_at, updated_at',
       )
       .order('created_at', { ascending: false })
       // Exclude phantom pending recurring rows (no real payment taken yet)
@@ -141,4 +142,49 @@ export function useDonations(filters?: DonationFilters) {
     addDonation,
     deleteDonation,
   }
+}
+
+export interface RecurringDonationCharge {
+  id:        string
+  date:      string  // YYYY-MM-DD
+  amountEur: number
+  status:    'pending' | 'succeeded' | 'failed' | 'refunded'
+}
+
+/**
+ * Fetches all charge rows for a recurring donation subscription.
+ * Queries by stripe_subscription_id so the admin can see the full history
+ * of monthly charges tied to a single recurring-donation subscription.
+ */
+export function useRecurringDonationHistory(stripeSubscriptionId: string | null | undefined) {
+  const [charges, setCharges]   = useState<RecurringDonationCharge[]>([])
+  const [loading, setLoading]   = useState(!!stripeSubscriptionId)
+
+  useEffect(() => {
+    if (!stripeSubscriptionId) { setCharges([]); setLoading(false); return }
+
+    setLoading(true)
+    supabase
+      .from('donations')
+      .select('id, amount_eur, status, created_at')
+      .eq('stripe_subscription_id', stripeSubscriptionId)
+      .order('created_at', { ascending: false })
+      .then(({ data, error: err }) => {
+        if (err) {
+          console.error('[useRecurringDonationHistory] fetch error:', err.message)
+        } else {
+          setCharges(
+            (data ?? []).map((row: { id: string; amount_eur: number; status: string; created_at: string }) => ({
+              id:        row.id,
+              date:      row.created_at.slice(0, 10),
+              amountEur: Number(row.amount_eur),
+              status:    row.status as RecurringDonationCharge['status'],
+            })),
+          )
+        }
+        setLoading(false)
+      })
+  }, [stripeSubscriptionId])
+
+  return { charges, loading }
 }

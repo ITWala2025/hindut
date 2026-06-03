@@ -8,7 +8,6 @@ import {
   DownloadSimple,
   X,
   Image as ImageIcon,
-  Check,
   CalendarBlank,
   Clock,
   MapPin,
@@ -31,14 +30,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -58,7 +49,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { useEvents, sortByDate, toSlug } from '@/hooks/useEvents'
-import { useMedia } from '@/hooks/useMedia'
+import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog'
 import {
   CATEGORY_LABELS,
   type EventCategory,
@@ -68,7 +59,6 @@ import {
 import { useAuth } from '@/lib/auth'
 import { SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 import { cn } from '@/lib/utils'
-import type { MediaItem } from '@/lib/types'
 import { useTicketBookings, type TicketBookingRow } from '@/hooks/useTicketBookings'
 
 const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
@@ -90,7 +80,6 @@ const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
 export function EventsSection() {
   const { can } = useAuth()
   const { events, addEvent, updateEvent, deleteEvent } = useEvents()
-  const { media } = useMedia()
   const canCreate = can('events:create')
   const canUpdate = can('events:update')
   const canDelete = can('events:delete')
@@ -146,15 +135,6 @@ export function EventsSection() {
     setSlugManuallyEdited(true)
     setOpen(true)
   }
-
-  const imagePickerImages = useMemo(() => {
-    const q = imageSearch.toLowerCase()
-    return media.filter(
-      (m) =>
-        /\.(jpe?g|png|webp|gif|avif|svg)$/i.test(m.filename) &&
-        (!q || m.title.toLowerCase().includes(q) || m.filename.toLowerCase().includes(q)),
-    )
-  }, [media, imageSearch])
 
   const save = async (ev: React.FormEvent) => {
     ev.preventDefault()
@@ -861,87 +841,16 @@ export function EventsSection() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Media Library image picker */}
-      <Dialog open={imagePickerOpen} onOpenChange={setImagePickerOpen}>
-        <DialogContent className="sm:max-w-[780px] max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
-              Select image from Media Library
-            </DialogTitle>
-            <DialogDescription>
-              Click an image to use it as the event cover.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="relative mb-3">
-            <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search images…"
-              value={imageSearch}
-              onChange={(e) => setImageSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {imagePickerImages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-                <ImageIcon size={40} weight="duotone" />
-                <p className="text-sm">No images found. Upload images in the Media Library first.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {imagePickerImages.map((item: MediaItem) => {
-                  const isSelected = form.image === item.url
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        setForm((f) => ({ ...f, image: item.url }))
-                        setImagePickerOpen(false)
-                      }}
-                      className={cn(
-                        'relative rounded-lg overflow-hidden border-2 aspect-square focus:outline-none transition-all hover:border-orange-400',
-                        isSelected ? 'border-orange-500 ring-2 ring-orange-300' : 'border-transparent',
-                      )}
-                    >
-                      <img
-                        src={item.url}
-                        alt={item.alt}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                      {isSelected && (
-                        <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
-                          <div className="bg-orange-500 text-white rounded-full p-1">
-                            <Check size={16} weight="bold" />
-                          </div>
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1.5 py-1 truncate">
-                        {item.title}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-          <DialogFooter className="mt-3">
-            <Button variant="outline" onClick={() => setImagePickerOpen(false)}>
-              Cancel
-            </Button>
-            {form.image && (
-              <Button
-                variant="ghost"
-                onClick={() => { setForm((f) => ({ ...f, image: undefined })); setImagePickerOpen(false) }}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <X size={16} className="mr-1" /> Remove image
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MediaPickerDialog
+        open={imagePickerOpen}
+        onOpenChange={setImagePickerOpen}
+        selectedUrl={form.image}
+        onSelect={(url) => setForm((f) => ({ ...f, image: url }))}
+        onRemove={() => setForm((f) => ({ ...f, image: undefined }))}
+        description="Click an image to use it as the event cover."
+        search={imageSearch}
+        onSearchChange={setImageSearch}
+      />
     </div>
   )
 }

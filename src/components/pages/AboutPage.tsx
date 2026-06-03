@@ -5,15 +5,17 @@ import { Heart, Users, BookOpen, Lightbulb, HandsPraying, MapPin, StarIcon, Comp
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useTeam } from '@/hooks/useTeam'
+import { useOperationalCommittee } from '@/hooks/useOperationalCommittee'
 
-type AboutTarget = 'story' | 'values' | 'team' | 'vision'
+type AboutTarget = 'story' | 'values' | 'team' | 'vision' | 'ops'
 
 export function AboutPage() {
   const [highlightedId, setHighlightedId] = useState<AboutTarget | null>(null)
   const { teamMembers, loading: teamLoading } = useTeam()
+  const { members: opMembers, loading: opLoading } = useOperationalCommittee()
 
   const scrollToSection = (target: AboutTarget) => {
-    const elId = target === 'story' ? 'story-section' : target === 'values' ? 'values-section' : target === 'vision' ? 'vision-section' : 'team-section'
+    const elId = target === 'story' ? 'story-section' : target === 'values' ? 'values-section' : target === 'vision' ? 'vision-section' : target === 'ops' ? 'ops-section' : 'team-section'
     const el = document.getElementById(elId)
     if (!el) return
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -406,19 +408,19 @@ export function AboutPage() {
             <div className="text-center mb-14 md:mb-16">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-100 text-orange-800 text-xs font-semibold uppercase tracking-wider mb-5">
                 <Users size={14} weight="fill" />
-                Leadership & Community
+                Board of Directors
               </div>
               <h2
                 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900 tracking-tight"
                 style={{ fontFamily: 'var(--font-heading)' }}
               >
-                Meet the people behind HAI
+                Board of Directors
               </h2>
               <div className="mx-auto w-16 h-1 rounded-full bg-linear-to-r from-orange-500 to-amber-500 mb-5" />
               <p className="text-base md:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-                A volunteer-led team of professionals and community organisers from
-                across India and Sri Lanka, bringing the Hindu Association of Ireland
-                to life in Limerick.
+                A volunteer led board of professionals and community organisers from
+                across India and Sri Lanka, guiding the Hindu Association of Ireland
+                with vision and dedication.
               </p>
             </div>
 
@@ -505,7 +507,140 @@ export function AboutPage() {
                         {/* Footer */}
                         <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/60">
                           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                            HAI Volunteer
+                            Board of Directors
+                          </span>
+                        </div>
+                      </article>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Operational Committee */}
+      <section id="ops-section" className={cn('relative scroll-mt-32 py-10 md:py-14 bg-linear-to-b from-orange-50/40 via-amber-50/20 to-white overflow-hidden transition-shadow', highlightedId === 'ops' && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron')}>
+        {/* subtle background pattern */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 1px 1px, rgb(194 65 12) 1px, transparent 0)',
+            backgroundSize: '32px 32px',
+          }}
+        />
+
+        <div className="container mx-auto px-6 md:px-12 lg:px-24 relative">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-14 md:mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold uppercase tracking-wider mb-5">
+                <Users size={14} weight="fill" />
+                Operational Committee
+              </div>
+              <h2
+                className="text-4xl md:text-5xl font-bold mb-4 text-slate-900 tracking-tight"
+                style={{ fontFamily: 'var(--font-heading)' }}
+              >
+                Operational Committee
+              </h2>
+              <div className="mx-auto w-16 h-1 rounded-full bg-linear-to-r from-amber-500 to-orange-500 mb-5" />
+              <p className="text-base md:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                Dedicated individuals who drive the day-to-day activities of HAI from
+                organising events, coordinating outreach, and keeping the community
+                running smoothly.
+              </p>
+            </div>
+
+            {/* Ops marquee */}
+            <div className="relative overflow-hidden">
+              {/* Fade edges */}
+              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-orange-50/80 to-transparent" />
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-orange-50/80 to-transparent" />
+
+              <div className="team-marquee-track gap-6 py-4">
+                {opLoading ? (
+                  <p className="text-slate-500 px-8 py-8">Loading committee…</p>
+                ) : opMembers.length === 0 ? (
+                  <p className="text-slate-400 px-8 py-8 text-sm italic">No committee members listed yet.</p>
+                ) : (
+                  [...opMembers, ...opMembers].map((member, idx) => {
+                    const initials = member.name
+                      .split(' ')
+                      .filter((p) => !p.endsWith('.'))
+                      .slice(0, 2)
+                      .map((p) => p[0])
+                      .join('')
+                      .toUpperCase()
+                    return (
+                      <article
+                        key={`${member.id}-${idx}`}
+                        className="group relative flex-shrink-0 w-60 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_24px_48px_-12px_rgba(194,65,12,0.18)] hover:border-amber-300 transition-all duration-300 overflow-hidden"
+                      >
+                        {/* Accent bar */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-amber-500 via-orange-500 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                        {/* Photo / avatar */}
+                        <div className="relative h-44 bg-linear-to-br from-amber-50 via-orange-50 to-amber-100/60 overflow-hidden">
+                          {member.image_url ? (
+                            <img
+                              src={member.image_url}
+                              alt={member.name}
+                              className="w-full h-full object-cover object-top"
+                            />
+                          ) : (
+                            <>
+                              <div
+                                aria-hidden
+                                className="absolute inset-0 opacity-40"
+                                style={{
+                                  backgroundImage:
+                                    'radial-gradient(circle at 20% 30%, rgba(245,158,11,0.25), transparent 50%), radial-gradient(circle at 80% 60%, rgba(251,146,60,0.18), transparent 55%)',
+                                }}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="relative">
+                                  <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-amber-500 to-orange-500 blur-md opacity-40 group-hover:opacity-70 transition-opacity" />
+                                  <div className="relative w-20 h-20 rounded-2xl bg-linear-to-br from-amber-500 to-orange-500 text-white font-bold text-2xl flex items-center justify-center shadow-lg ring-4 ring-white">
+                                    {initials}
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-5 py-4">
+                          <h3
+                            className="font-bold text-base text-slate-900 leading-tight tracking-tight"
+                            style={{ fontFamily: 'var(--font-heading)' }}
+                          >
+                            {member.name}
+                          </h3>
+                          <p className="text-[13px] font-semibold text-amber-700 mt-0.5 leading-snug">
+                            {member.role}
+                          </p>
+
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-[11px] text-slate-600 font-medium">
+                            <MapPin size={11} weight="fill" className="text-amber-600" />
+                            {member.origin}
+                          </div>
+
+                          <Separator className="my-3 bg-slate-100" />
+
+                          <p className="text-[12.5px] text-slate-600 leading-relaxed line-clamp-4">
+                            {member.bio}
+                          </p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/60">
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                            Operational Committee
                           </span>
                         </div>
                       </article>
