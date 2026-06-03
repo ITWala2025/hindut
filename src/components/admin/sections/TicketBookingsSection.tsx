@@ -112,7 +112,7 @@ export function TicketBookingsSection() {
     if (!flag) { toast.error('No receipt generated yet for this booking.'); return }
     const r = await fetchReceiptById(flag.id)
     if (!r) { toast.error('Could not load receipt.'); return }
-    downloadReceiptPdf(r)
+    await downloadReceiptPdf(r)
   }
 
   const { events } = useEvents()

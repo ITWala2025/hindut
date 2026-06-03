@@ -564,7 +564,7 @@ export function MembersSection() {
     if (!flag) { toast.error('No receipt generated yet for this membership.'); return }
     const r = await fetchReceiptById(flag.id)
     if (!r) { toast.error('Could not load receipt.'); return }
-    downloadReceiptPdf(r)
+    await downloadReceiptPdf(r)
   }
 
   const [search, setSearch] = useState('')

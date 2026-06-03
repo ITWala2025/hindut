@@ -39,6 +39,10 @@ import {
   buildMonthlyReminderEmailText,
   type MonthlyReminderEmailParams,
 } from './lib/monthlyReminderEmailTemplate.js'
+import {
+  buildDonationEmailHtml,
+  buildDonationEmailText,
+} from './lib/donationEmailTemplate.js'
 
 // ---------------------------------------------------------------------------
 // SMTP helpers (same credentials as rsvp-submit)
@@ -179,6 +183,26 @@ export const handler: Handler = async (event) => {
               .eq('id', donationId)
             console.log('[stripe-webhook] one-time donation', donationId, '→ succeeded',
               onetimeCauseId ? `cause ${onetimeCauseId}` : '')
+
+            // ── Send donation confirmation email ─────────────────────────
+            const onetimeDonorName  = session.metadata?.donorName  ?? ''
+            const onetimeDonorEmail = session.metadata?.donorEmail ?? ''
+            const onetimeAmountEur  = (session.amount_total ?? 0) / 100
+            if (onetimeDonorEmail) {
+              try {
+                const transporter = createMailTransporter()
+                await transporter.sendMail({
+                  from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+                  to:      onetimeDonorEmail,
+                  subject: `Thank you for your donation — Hindu Association of Ireland`,
+                  html:    buildDonationEmailHtml({ donorName: onetimeDonorName, donorEmail: onetimeDonorEmail, amountEur: onetimeAmountEur, recurring: false }),
+                  text:    buildDonationEmailText({ donorName: onetimeDonorName, donorEmail: onetimeDonorEmail, amountEur: onetimeAmountEur, recurring: false }),
+                })
+                console.log('[stripe-webhook] donation confirmation email sent to', onetimeDonorEmail)
+              } catch (emailErr) {
+                console.error('[stripe-webhook] failed to send donation email:', emailErr)
+              }
+            }
           } else {
             // ── Recurring donation: create the first row immediately ─────
             // Subsequent monthly charges are handled by invoice.paid.
@@ -214,6 +238,23 @@ export const handler: Handler = async (event) => {
               console.log('[stripe-webhook] recurring donation', (newDon as { id: string })?.id,
                 'created for', donorEmail, 'stripe sub', subscriptionId,
                 recurringCauseId ? `cause ${recurringCauseId}` : '')
+
+              // ── Send donation confirmation email ───────────────────────
+              if (donorEmail) {
+                try {
+                  const transporter = createMailTransporter()
+                  await transporter.sendMail({
+                    from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+                    to:      donorEmail,
+                    subject: `Thank you for your monthly donation — Hindu Association of Ireland`,
+                    html:    buildDonationEmailHtml({ donorName, donorEmail, amountEur, recurring: true }),
+                    text:    buildDonationEmailText({ donorName, donorEmail, amountEur, recurring: true }),
+                  })
+                  console.log('[stripe-webhook] recurring donation confirmation email sent to', donorEmail)
+                } catch (emailErr) {
+                  console.error('[stripe-webhook] failed to send recurring donation email:', emailErr)
+                }
+              }
             }
           }
         } else if (kind === 'membership') {

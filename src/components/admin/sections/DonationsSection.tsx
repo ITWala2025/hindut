@@ -245,7 +245,7 @@ export function DonationsSection() {
     if (!flag) { toast.error('No receipt generated yet for this donation.'); return }
     const r = await fetchReceiptById(flag.id)
     if (!r) { toast.error('Could not load receipt.'); return }
-    downloadReceiptPdf(r)
+    await downloadReceiptPdf(r)
   }
 
   const filtered = useMemo(() => {

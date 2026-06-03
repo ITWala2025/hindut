@@ -242,9 +242,9 @@ export function ReceiptsSection() {
     }
   }
 
-  const handleDownload = (r: ReceiptRecord) => {
+  const handleDownload = async (r: ReceiptRecord) => {
     try {
-      downloadReceiptPdf(r)
+      await downloadReceiptPdf(r)
     } catch (err) {
       toast.error((err as Error).message ?? 'PDF generation failed.')
     }

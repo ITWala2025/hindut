@@ -4,6 +4,8 @@
  * Edit the brand colours, copy, and layout here — no code changes needed elsewhere.
  */
 
+import { logoRow, footerInner } from './emailBase.js'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -112,13 +114,15 @@ export function buildEmailHtml(p: RsvpEmailParams): string {
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
              style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
+        ${logoRow()}
+
         <!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
         <tr>
-          <td style="background:linear-gradient(135deg,#c2410c 0%,#d97706 100%);padding:40px 40px 32px;text-align:center;">
-            <p style="margin:0 0 6px;font-size:12px;color:rgba(255,255,255,0.75);letter-spacing:3px;text-transform:uppercase;font-family:Arial,sans-serif;">
+          <td style="background:linear-gradient(135deg,#c2410c 0%,#d97706 100%);padding:28px 40px 24px;text-align:center;">
+            <p style="margin:0 0 6px;font-size:12px;color:rgba(255,255,255,0.75);letter-spacing:2.5px;text-transform:uppercase;font-family:Arial,sans-serif;">
               Hindu Association of Ireland
             </p>
-            <h1 style="margin:0 0 10px;font-size:26px;color:#ffffff;font-family:Georgia,serif;font-weight:normal;">
+            <h1 style="margin:0 0 8px;font-size:26px;color:#ffffff;font-family:Georgia,serif;font-weight:normal;">
               RSVP Confirmed ✓
             </h1>
             <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.88);font-family:Arial,sans-serif;">
@@ -216,14 +220,11 @@ export function buildEmailHtml(p: RsvpEmailParams): string {
 
         <!-- ══════════════════════════════ FOOTER ════════════════════════════════ -->
         <tr>
-          <td style="background:#fafaf8;border-top:1px solid #f5f5f4;padding:28px 40px;text-align:center;">
-            <p style="margin:0 0 6px;font-size:12px;color:#a8a29e;font-family:Arial,sans-serif;">
-              Hindu Association of Ireland · Ahane, Pallaskenry &amp; Mungret, Limerick
-            </p>
-            <p style="margin:0;font-size:11px;color:#d6d3d1;font-family:Arial,sans-serif;">
-              This email was sent because you submitted an RSVP on our website.<br/>
-              Your data is processed in accordance with GDPR and will not be shared with third parties.
-            </p>
+          <td style="background:#fafaf8;border-top:1px solid #f5f5f4;padding:24px 40px;text-align:center;">
+            ${footerInner({
+              mainText: 'Hindu Association of Ireland · Ahane, Pallaskenry &amp; Mungret, Limerick',
+              subText:  'This email was sent because you submitted an RSVP on our website. Your data is processed in accordance with GDPR and will not be shared with third parties.',
+            })}
           </td>
         </tr>
 

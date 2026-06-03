@@ -5,6 +5,8 @@
  * contribution charge. Triggered by the Stripe invoice.upcoming webhook.
  */
 
+import { logoRow, footerInner } from './emailBase.js'
+
 export interface MonthlyReminderEmailParams {
   memberName:   string  // e.g. "Priya Sharma"
   memberEmail:  string  // recipient address
@@ -29,18 +31,20 @@ export function buildMonthlyReminderEmailHtml(p: MonthlyReminderEmailParams): st
                style="max-width:600px;background:#ffffff;border-radius:12px;
                       box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;">
 
+          ${logoRow()}
+
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#ea580c,#d97706);padding:36px 40px;text-align:center;">
-              <p style="margin:0 0 6px;font-size:13px;letter-spacing:2px;text-transform:uppercase;
-                         color:#fed7aa;font-family:Arial,sans-serif;">
+            <td style="background:linear-gradient(135deg,#ea580c,#d97706);padding:28px 40px 24px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;
+                         color:rgba(255,255,255,0.75);font-family:Arial,sans-serif;">
                 Om Shree Ganeshaya Namah
               </p>
-              <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;
                           line-height:1.3;">
                 Upcoming Monthly Contribution
               </h1>
-              <p style="margin:12px 0 0;font-size:14px;color:#fed7aa;font-family:Arial,sans-serif;">
+              <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);font-family:Arial,sans-serif;">
                 Hindu Association of Ireland
               </p>
             </td>
@@ -160,13 +164,11 @@ export function buildMonthlyReminderEmailHtml(p: MonthlyReminderEmailParams): st
           <!-- Footer -->
           <tr>
             <td style="background:#fafaf9;border-top:1px solid #e7e5e4;
-                        padding:20px 40px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#a8a29e;font-family:Arial,sans-serif;">
-                Om Shanti &mdash; May you be blessed with peace and prosperity.
-              </p>
-              <p style="margin:8px 0 0;font-size:11px;color:#a8a29e;font-family:Arial,sans-serif;">
-                Hindu Association of Ireland &middot; Limerick, Ireland
-              </p>
+                        padding:24px 40px;text-align:center;">
+              ${footerInner({
+                mainText: 'Om Shanti &mdash; May you be blessed with peace and prosperity.',
+                subText:  'Hindu Association of Ireland &middot; Limerick, Ireland',
+              })}
             </td>
           </tr>
 

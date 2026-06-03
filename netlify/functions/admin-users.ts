@@ -18,6 +18,7 @@ import type { Handler } from '@netlify/functions'
 import { randomBytes } from 'crypto'
 import nodemailer from 'nodemailer'
 import { supabaseAdmin, jsonHeaders } from './lib/stripe.js'
+import { logoRow, footerInner } from './lib/emailBase.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -111,10 +112,11 @@ async function sendRoleAssignmentEmail(opts: {
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafaf9;padding:32px 16px;">
   <tr><td align="center">
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+      ${logoRow()}
       <!-- Header -->
-      <tr><td style="background:linear-gradient(135deg,#ea580c,#d97706);padding:32px 32px 24px;text-align:center;">
-        <p style="margin:0 0 8px;font-size:13px;color:#fed7aa;letter-spacing:1px;text-transform:uppercase;font-family:Arial,sans-serif;">Hindu Association of Ireland</p>
-        <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;">Admin Portal Access</h1>
+      <tr><td style="background:linear-gradient(135deg,#ea580c,#d97706);padding:24px 32px;text-align:center;">
+        <p style="margin:0 0 6px;font-size:12px;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif;">Hindu Association of Ireland</p>
+        <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;">Admin Portal Access</h1>
       </td></tr>
       <!-- Body -->
       <tr><td style="padding:32px;">
@@ -135,7 +137,7 @@ async function sendRoleAssignmentEmail(opts: {
       </td></tr>
       <!-- Footer -->
       <tr><td style="padding:20px 32px;border-top:1px solid #f5f5f4;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#a8a29e;font-family:Arial,sans-serif;">Hindu Association of Ireland · Limerick</p>
+        ${footerInner({ mainText: 'Hindu Association of Ireland · Limerick, Ireland' })}
       </td></tr>
     </table>
   </td></tr>
