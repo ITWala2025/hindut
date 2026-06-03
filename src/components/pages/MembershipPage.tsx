@@ -679,50 +679,67 @@ export function MembershipPage() {
           <DialogOverlay />
           <DialogPrimitive.Content
             className={cn(
-              'fixed z-50 bg-white focus:outline-none overflow-y-auto',
+              'fixed z-50 bg-[#FEF6E4] focus:outline-none overflow-y-auto',
               'inset-0 rounded-none',
               'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-full',
               'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-full',
               'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
               'lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2',
-              'lg:w-full lg:max-w-[540px] lg:max-h-[90vh] lg:rounded-3xl lg:shadow-2xl lg:overflow-hidden',
+              'lg:w-full lg:max-w-[540px] lg:max-h-[90vh] lg:overflow-y-auto lg:rounded-3xl lg:shadow-2xl',
               'lg:data-[state=open]:slide-in-from-bottom-0 lg:data-[state=open]:zoom-in-95',
               'lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=closed]:zoom-out-95',
               'lg:duration-200',
             )}
           >
-            <DialogPrimitive.Close
-              className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center text-slate-600 hover:text-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
-              aria-label="Close"
-            >
-              <X size={16} weight="bold" />
-            </DialogPrimitive.Close>
-            <div className="h-1.5 bg-linear-to-r from-orange-500 via-amber-400 to-orange-600" />
+            {/* Sticky header */}
+            <div className="sticky top-0 z-20 bg-[#FEF6E4]">
+              <div className="h-1 bg-linear-to-r from-orange-500 via-amber-400 to-orange-600" />
+              <div className="relative px-8 pt-5 pb-4 pr-14">
+                <DialogPrimitive.Close
+                  className="absolute top-4 right-4 z-30 h-8 w-8 rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center text-slate-600 hover:text-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+                  aria-label="Close"
+                >
+                  <X size={16} weight="bold" />
+                </DialogPrimitive.Close>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-orange-600 flex items-center justify-center shrink-0 shadow-sm">
+                    {step === 'details'
+                      ? <Crown size={22} weight="fill" className="text-white" />
+                      : <CreditCard size={22} weight="duotone" className="text-white" />
+                    }
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl font-bold text-orange-900 leading-tight">
+                      {step === 'details' ? (selected?.name ?? 'Annual Membership') : 'Review & Pay'}
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-amber-700 mt-0.5">
+                      {step === 'details'
+                        ? `€${selected?.price ?? '—'} · ${selected?.durationLabel ?? ''}`
+                        : 'Secure checkout via Stripe'
+                      }
+                    </DialogDescription>
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <div className="flex-1 h-1 rounded-full bg-orange-500" />
+                  <div className={cn('flex-1 h-1 rounded-full', step === 'payment' ? 'bg-orange-500' : 'bg-slate-200')} />
+                </div>
+              </div>
+            </div>
+
             <div className="p-8">
 
             {/* Step 1: Details */}
             {step === 'details' && selected && (
               <>
-                <DialogHeader className="mb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0">
-                      <Crown size={22} weight="duotone" className="text-orange-600" />
-                    </div>
-                    <div>
-                      <DialogTitle className="text-xl font-bold text-slate-900">
-                        Annual Membership
-                      </DialogTitle>
-                      <DialogDescription className="text-sm text-slate-500">
-                        €{selected.price} · {selected.durationLabel}
-                      </DialogDescription>
-                    </div>
-                  </div>
-                  {/* Step indicator */}
-                  <div className="flex gap-1.5">
-                    <div className="flex-1 h-1 rounded-full bg-orange-500" />
-                    <div className="flex-1 h-1 rounded-full bg-slate-200" />
-                  </div>
-                </DialogHeader>
+                {/* Temple image band */}
+                <div className="-mx-8 -mt-8 mb-6 overflow-hidden bg-orange-50" style={{ height: '260px' }}>
+                  <img
+                    src="/favicon.png"
+                    alt="Hindu Temple"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
 
                 <form onSubmit={submitDetails} className="space-y-4">
                   <div>
@@ -879,27 +896,6 @@ export function MembershipPage() {
             {/* Step 2: Payment summary */}
             {step === 'payment' && selected && (
               <>
-                <DialogHeader className="mb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0">
-                      <CreditCard size={22} weight="duotone" className="text-orange-600" />
-                    </div>
-                    <div>
-                      <DialogTitle className="text-xl font-bold text-slate-900">
-                        Review &amp; Pay
-                      </DialogTitle>
-                      <DialogDescription className="text-sm text-slate-500">
-                        Secure checkout via Stripe
-                      </DialogDescription>
-                    </div>
-                  </div>
-                  {/* Step indicator */}
-                  <div className="flex gap-1.5">
-                    <div className="flex-1 h-1 rounded-full bg-orange-500" />
-                    <div className="flex-1 h-1 rounded-full bg-orange-500" />
-                  </div>
-                </DialogHeader>
-
                 {/* Order summary */}
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 mb-4 space-y-3">
                   <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">

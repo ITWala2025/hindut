@@ -434,6 +434,24 @@ export const handler: Handler = async (event) => {
               )
             }
           }
+        } else if (kind === 'rsvp_service') {
+          // ── RSVP service payment ────────────────────────────────────────
+          const rsvpId    = session.metadata?.rsvpId
+          const sessionId = session.id
+          if (!rsvpId) {
+            console.error('[stripe-webhook] rsvp_service missing rsvpId in metadata')
+            break
+          }
+          const { error: updateErr } = await supabase
+            .from('event_rsvp_service_payments')
+            .update({ status: 'paid', paid_at: new Date().toISOString() })
+            .eq('stripe_session_id', sessionId)
+            .eq('status', 'pending')
+          if (updateErr) {
+            console.error('[stripe-webhook] rsvp_service payment update error:', updateErr.message)
+          } else {
+            console.log('[stripe-webhook] rsvp_service payments → paid for rsvpId', rsvpId, 'session', sessionId)
+          }
         } else if (kind === 'ticket') {
           // ── Ticket booking ──────────────────────────────────────────────
           const meta = session.metadata ?? {}
@@ -538,6 +556,13 @@ export const handler: Handler = async (event) => {
               .eq('status', 'pending') // only update if still pending
             console.log('[stripe-webhook] membership', membershipId, '→ canceled (session expired)')
           }
+        } else if (kind === 'rsvp_service') {
+          await supabase
+            .from('event_rsvp_service_payments')
+            .update({ status: 'failed' })
+            .eq('stripe_session_id', session.id)
+            .eq('status', 'pending')
+          console.log('[stripe-webhook] rsvp_service payments → failed (session expired)', session.id)
         }
         break
       }

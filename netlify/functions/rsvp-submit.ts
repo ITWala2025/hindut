@@ -292,6 +292,7 @@ export const handler: Handler = async (event) => {
       headers,
       body: JSON.stringify({
         success:         true,
+        rsvpId:          rsvpId as string,
         referenceNumber: reference,
         message:         'RSVP confirmed! A confirmation email has been sent.',
       }),

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { EventCategory, TempleEvent, TicketTier } from '@/data/events'
+import type { EventCategory, EventService, TempleEvent, TicketTier } from '@/data/events'
 
 export function toSlug(title: string): string {
   return title
@@ -22,6 +22,7 @@ interface EventRow {
   ticket_price_eur: number | null
   stripe_product_id: string | null
   ticket_tiers: TicketTier[] | null
+  event_services: EventService[] | null
   category: string | null
   time_display: string | null
   published: boolean
@@ -43,6 +44,7 @@ function toTempleEvent(row: EventRow): TempleEvent {
     image: row.image_url ?? undefined,
     stripeProductId: row.stripe_product_id ?? undefined,
     ticketTiers: row.ticket_tiers ?? undefined,
+    eventServices: row.event_services ?? undefined,
     published: row.published,
   }
 }
@@ -88,6 +90,7 @@ export function useEvents() {
         ticket_price_eur: event.price ?? null,
         stripe_product_id: event.stripeProductId ?? null,
         ticket_tiers: event.ticketTiers ?? null,
+        event_services: event.isPaid ? [] : (event.eventServices ?? []),
         image_url: event.image ?? null,
         published: true,
         slug: event.slug || toSlug(event.title),
@@ -102,18 +105,19 @@ export function useEvents() {
   const updateEvent = useCallback(
     async (id: string, patch: Partial<Omit<TempleEvent, 'id'>>) => {
       const update: Record<string, unknown> = {}
-      if (patch.title !== undefined)         update.title           = patch.title
-      if (patch.description !== undefined)   update.description     = patch.description
-      if (patch.date !== undefined)          update.start_date      = patch.date
-      if (patch.location !== undefined)      update.location        = patch.location
-      if (patch.category !== undefined)      update.category        = patch.category
-      if (patch.time !== undefined)          update.time_display    = patch.time
-      if (patch.isPaid !== undefined)        update.is_paid         = patch.isPaid
-      if (patch.price !== undefined)         update.ticket_price_eur= patch.price
+      if (patch.title !== undefined)         update.title            = patch.title
+      if (patch.description !== undefined)   update.description      = patch.description
+      if (patch.date !== undefined)          update.start_date       = patch.date
+      if (patch.location !== undefined)      update.location         = patch.location
+      if (patch.category !== undefined)      update.category         = patch.category
+      if (patch.time !== undefined)          update.time_display     = patch.time
+      if (patch.isPaid !== undefined)        update.is_paid          = patch.isPaid
+      if (patch.price !== undefined)         update.ticket_price_eur = patch.price
       if (patch.stripeProductId !== undefined) update.stripe_product_id = patch.stripeProductId
-      if (patch.ticketTiers !== undefined)   update.ticket_tiers    = patch.ticketTiers
-      if ('image' in patch)                  update.image_url       = patch.image ?? null
-      if (patch.slug !== undefined)          update.slug            = patch.slug || toSlug(patch.title ?? '')
+      if (patch.ticketTiers !== undefined)   update.ticket_tiers     = patch.ticketTiers
+      if (patch.eventServices !== undefined) update.event_services   = patch.isPaid ? [] : patch.eventServices
+      if ('image' in patch)                  update.image_url        = patch.image ?? null
+      if (patch.slug !== undefined)          update.slug             = patch.slug || toSlug(patch.title ?? '')
       const { error: err } = await supabase.from('events').update(update).eq('id', id)
       if (err) throw new Error(err.message)
       await fetchEvents()

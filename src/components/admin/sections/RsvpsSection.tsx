@@ -10,6 +10,8 @@ import {
   Users,
   CheckCircle,
   Prohibit,
+  CurrencyEur,
+  ChartBar,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,9 +41,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { useRsvps, type RsvpRow } from '@/hooks/useRsvps'
 import { useEvents, sortByDate } from '@/hooks/useEvents'
 import { useAuth } from '@/lib/auth'
+import { useRsvpServicePayments, useEventServiceSummary } from '@/hooks/useRsvpServicePayments'
 import { KpiCard, SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
 
 type StatusFilter = 'all' | 'confirmed' | 'cancelled'
@@ -76,6 +80,18 @@ export function RsvpsSection() {
   const [exporting,      setExporting]   = useState(false)
   const [page,           setPage]        = useState(1)
   const pageSize = 15
+
+  // Service payment detail (loaded when detail sheet opens)
+  const { payments: detailPayments, loading: detailPaymentsLoading } = useRsvpServicePayments(detail?.id ?? null)
+
+  // Per-event service revenue summary (loaded when an event filter is selected)
+  const summaryEventId = eventFilter !== 'all' ? eventFilter : null
+  const {
+    summary: serviceSummary,
+    totalRevenue: serviceRevenue,
+    pendingRevenue: servicePendingRevenue,
+    loading: summaryLoading,
+  } = useEventServiceSummary(summaryEventId)
 
   const { rsvps, loading, error, refetch, cancelRsvp, exportCsv } = useRsvps({
     eventId:  eventFilter  !== 'all' ? eventFilter  : undefined,
@@ -173,6 +189,65 @@ export function RsvpsSection() {
           accent="blue"
         />
       </div>
+
+      {/* Service revenue summary (shown when an event is selected) */}
+      {summaryEventId && (
+        <SectionCard
+          title="Service Revenue"
+          description={`Paid service bookings for this event. Pending = RSVP'd but payment not yet completed.`}
+          actions={
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-muted-foreground">
+                Collected: <span className="font-semibold text-emerald-700">€{serviceRevenue.toFixed(2)}</span>
+              </span>
+              {servicePendingRevenue > 0 && (
+                <span className="text-muted-foreground">
+                  Pending: <span className="font-semibold text-amber-600">€{servicePendingRevenue.toFixed(2)}</span>
+                </span>
+              )}
+            </div>
+          }
+        >
+          {summaryLoading ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">Loading service data…</div>
+          ) : serviceSummary.length === 0 ? (
+            <EmptyState
+              icon={<ChartBar size={28} className="text-orange-300" />}
+              title="No service payments"
+              description="No services have been selected for RSVPs on this event yet."
+            />
+          ) : (
+            <DataTable>
+              <thead>
+                <tr>
+                  <Th>Service</Th>
+                  <Th>Selections</Th>
+                  <Th>Collected</Th>
+                  <Th>Pending</Th>
+                  <Th>Total billed</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {serviceSummary.map((s) => (
+                  <tr key={s.service_name} className="border-t border-slate-100 text-sm">
+                    <Td><span className="font-semibold text-slate-800">{s.service_name}</span></Td>
+                    <Td>{s.count}</Td>
+                    <Td><span className="text-emerald-700 font-semibold">€{s.paid_eur.toFixed(2)}</span></Td>
+                    <Td>
+                      {(s.total_eur - s.paid_eur) > 0 ? (
+                        <span className="text-amber-600">€{(s.total_eur - s.paid_eur).toFixed(2)}</span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </Td>
+                    <Td>€{s.total_eur.toFixed(2)}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          )}
+        </SectionCard>
+      )}
 
       {/* Main table section */}
       <SectionCard
@@ -453,6 +528,43 @@ export function RsvpsSection() {
                   Full phone and email are encrypted at rest. Export CSV (admin only) to
                   access decrypted contact details.
                 </p>
+
+                {/* Service payments for this RSVP */}
+                {detailPaymentsLoading ? (
+                  <p className="text-xs text-muted-foreground">Loading service payments…</p>
+                ) : detailPayments.length > 0 && (
+                  <div className="mt-2">
+                    <hr className="border-slate-100 mb-3" />
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                      <CurrencyEur size={13} className="text-orange-500" />
+                      Services booked
+                    </p>
+                    <div className="space-y-1.5">
+                      {detailPayments.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between text-sm">
+                          <span className="text-slate-700">{p.service_name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-900">€{p.amount_eur.toFixed(2)}</span>
+                            <span className={cn(
+                              'inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium',
+                              p.status === 'paid'    && 'bg-emerald-100 text-emerald-700',
+                              p.status === 'pending' && 'bg-amber-100 text-amber-700',
+                              p.status === 'failed'  && 'bg-rose-100 text-rose-700',
+                            )}>
+                              {p.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold mt-2 pt-2 border-t border-slate-100">
+                      <span className="text-slate-600">Total</span>
+                      <span className="text-slate-900">
+                        €{detailPayments.reduce((s, p) => s + p.amount_eur, 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="px-6 py-4 border-t border-slate-100 shrink-0 flex items-center justify-between gap-3">

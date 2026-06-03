@@ -10,6 +10,13 @@ export type EventCategory =
   | 'community'
   | 'cultural'
 
+export interface EventService {
+  id: string        // local entry UUID (stable reference in event_services array)
+  serviceId: string // soft-ref to public.services.id
+  name: string      // denormalized from services.title at time of linking
+  amountEur: number
+}
+
 export interface TempleEvent {
   id: string
   slug: string
@@ -24,6 +31,7 @@ export interface TempleEvent {
   image?: string
   stripeProductId?: string
   ticketTiers?: TicketTier[]
+  eventServices?: EventService[]
   published: boolean
 }
 

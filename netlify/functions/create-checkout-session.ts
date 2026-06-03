@@ -70,7 +70,22 @@ const TicketSchema = z.object({
   consentGdpr:    z.literal(true),
 })
 
-const BodySchema = z.discriminatedUnion('kind', [DonationSchema, MembershipSchema, TicketSchema])
+const RsvpServiceItemSchema = z.object({
+  serviceId:  z.string().min(1).max(64),
+  name:       z.string().min(1).max(200),
+  amountEur:  z.number().min(0.01).max(10000),
+})
+
+const RsvpServiceSchema = z.object({
+  kind:       z.literal('rsvp_service'),
+  rsvpId:     z.string().uuid('Invalid RSVP ID'),
+  eventId:    z.string().uuid('Invalid event ID'),
+  services:   z.array(RsvpServiceItemSchema).min(1).max(20),
+  successUrl: z.string().url().optional(),
+  cancelUrl:  z.string().url().optional(),
+})
+
+const BodySchema = z.discriminatedUnion('kind', [DonationSchema, MembershipSchema, TicketSchema, RsvpServiceSchema])
 
 // ---------------------------------------------------------------------------
 // Ticket helpers
@@ -355,6 +370,121 @@ export const handler: Handler = async (event) => {
       console.log('[create-checkout-session] ticket ref', reference, '→ session', ticketSession.id, 'mode:', ctx.mode)
 
       return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ url: ticketSession.url, sessionId: ticketSession.id, mode: ctx.mode }) }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // RSVP SERVICE PAYMENT
+    // ─────────────────────────────────────────────────────────────────────
+    if (parsed.data.kind === 'rsvp_service') {
+      const s = parsed.data
+
+      // Verify RSVP exists and is confirmed
+      const { data: rsvpRow, error: rsvpErr } = await supabase
+        .from('event_rsvps')
+        .select('id, event_id, status')
+        .eq('id', s.rsvpId)
+        .single()
+
+      if (rsvpErr || !rsvpRow) {
+        return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'RSVP not found' }) }
+      }
+      const rsvp = rsvpRow as { id: string; event_id: string; status: string }
+      if (rsvp.status !== 'confirmed') {
+        return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'RSVP is not confirmed' }) }
+      }
+
+      // Verify event is free and published, and server-side validate service amounts
+      const { data: evtRow, error: evtErr } = await supabase
+        .from('events')
+        .select('id, title, is_paid, published, event_services')
+        .eq('id', s.eventId)
+        .single()
+
+      if (evtErr || !evtRow) {
+        return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
+      }
+      const evt = evtRow as {
+        id: string; title: string; is_paid: boolean; published: boolean
+        event_services: Array<{ id: string; serviceId: string; name: string; amountEur: number }> | null
+      }
+      if (evt.is_paid) {
+        return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Service payments only available for free events' }) }
+      }
+      if (!evt.published) {
+        return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
+      }
+
+      // Server-side price validation: amounts must match DB values exactly
+      const dbServiceMap = new Map((evt.event_services ?? []).map((es) => [es.serviceId, es]))
+      const validatedServices = s.services.map((svc) => {
+        const dbSvc = dbServiceMap.get(svc.serviceId)
+        const serverAmount = dbSvc?.amountEur ?? svc.amountEur
+        return { ...svc, amountEur: serverAmount, name: dbSvc?.name ?? svc.name }
+      })
+
+      const totalEur = validatedServices.reduce((sum, svc) => sum + svc.amountEur, 0)
+      if (totalEur <= 0) {
+        return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Total amount must be greater than zero' }) }
+      }
+
+      // Insert pending payment rows
+      const paymentRows = validatedServices.map((svc) => ({
+        rsvp_id:          s.rsvpId,
+        event_id:         s.eventId,
+        service_id:       svc.serviceId || null,
+        service_name:     svc.name,
+        amount_eur:       svc.amountEur,
+        status:           'pending',
+      }))
+
+      const { data: insertedPayments, error: insertErr } = await supabase
+        .from('event_rsvp_service_payments')
+        .insert(paymentRows)
+        .select('id')
+
+      if (insertErr) {
+        console.error('[create-checkout-session] service payments insert error:', insertErr)
+        return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Failed to create payment records' }) }
+      }
+
+      const paymentIds = (insertedPayments as { id: string }[]).map((r) => r.id).join(',')
+
+      const lineItems = validatedServices.map((svc) => ({
+        quantity: 1,
+        price_data: {
+          currency:    'eur',
+          unit_amount: Math.round(svc.amountEur * 100),
+          product_data: { name: `${svc.name} – ${evt.title}` },
+        },
+      }))
+
+      const serviceSession = await ctx.stripe.checkout.sessions.create({
+        mode:           'payment',
+        customer_email: undefined,
+        line_items:     lineItems,
+        success_url: s.successUrl ?? `${origin}/events?rsvp_service_payment=success`,
+        cancel_url:  s.cancelUrl  ?? `${origin}/events?rsvp_service_payment=cancelled`,
+        metadata: {
+          kind:        'rsvp_service',
+          rsvpId:      s.rsvpId,
+          eventId:     s.eventId,
+          paymentIds,
+          totalEur:    String(totalEur),
+        },
+        payment_intent_data: {
+          metadata: { kind: 'rsvp_service', rsvpId: s.rsvpId, eventId: s.eventId },
+        },
+      })
+
+      // Stamp stripe_session_id onto the pending payment rows
+      await supabase
+        .from('event_rsvp_service_payments')
+        .update({ stripe_session_id: serviceSession.id })
+        .in('id', (insertedPayments as { id: string }[]).map((r) => r.id))
+
+      console.log('[create-checkout-session] rsvp_service rsvpId', s.rsvpId, '→ session', serviceSession.id, 'total €', totalEur)
+
+      return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ url: serviceSession.url, sessionId: serviceSession.id, mode: ctx.mode }) }
     }
 
     // ─────────────────────────────────────────────────────────────────────

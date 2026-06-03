@@ -2,6 +2,13 @@
  * RsvpDialog.tsx
  * Modal form for free-event RSVPs. Uses react-hook-form + zod for
  * real-time client-side validation mirroring server-side rules.
+ *
+ * When an event has optional services (eventServices), the form shows a
+ * service selection step. If the user selects any services:
+ *   1. RSVP is submitted and confirmed immediately (event is free).
+ *   2. A Stripe Checkout session is created for the selected services.
+ *   3. User is redirected to Stripe to complete payment.
+ * If no services are selected the existing RSVP-only flow is unchanged.
  */
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -29,10 +36,11 @@ import {
   CalendarBlank,
   ClipboardText,
   Warning,
+  CreditCard,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import type { TempleEvent } from '@/data/events'
+import type { EventService, TempleEvent } from '@/data/events'
 
 // ---------------------------------------------------------------------------
 // Validation schema (mirrors edge-function schema exactly)
@@ -117,6 +125,22 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
   const [step, setStep] = useState<Step>('form')
   const [referenceNumber, setReferenceNumber] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set())
+
+  const availableServices: EventService[] = event.eventServices ?? []
+  const hasServices = availableServices.length > 0
+
+  const selectedServices = availableServices.filter((s) => selectedServiceIds.has(s.serviceId))
+  const servicesTotal = selectedServices.reduce((sum, s) => sum + s.amountEur, 0)
+
+  const toggleService = (serviceId: string) => {
+    setSelectedServiceIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(serviceId)) next.delete(serviceId)
+      else next.add(serviceId)
+      return next
+    })
+  }
 
   const {
     register,
@@ -138,10 +162,10 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
 
   const handleClose = (v: boolean) => {
     if (!v) {
-      // Reset form when closing so it's fresh next time
       setTimeout(() => {
         reset()
         setStep('form')
+        setSelectedServiceIds(new Set())
       }, 300)
     }
     onOpenChange(v)
@@ -150,6 +174,7 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
   const onSubmit = async (data: RsvpFormData) => {
     setIsSubmitting(true)
     try {
+      // Step 1: Submit RSVP
       const res = await fetch('/.netlify/functions/rsvp-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -168,7 +193,6 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
       const json = await res.json()
 
       if (!res.ok) {
-        // Show field-level errors returned by server
         if (json.details) {
           const firstError = Object.values(json.details as Record<string, string[]>)[0]?.[0]
           toast.error(firstError ?? json.error ?? 'Submission failed. Please check the form.')
@@ -184,6 +208,48 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
       }
 
       setReferenceNumber(json.referenceNumber)
+
+      // Step 2: If services selected, redirect to Stripe Checkout
+      if (selectedServices.length > 0) {
+        if (!json.rsvpId) {
+          toast.error('RSVP saved, but the server did not return an ID needed for payment. Please contact us or restart the dev server.')
+          setStep('success')
+          return
+        }
+
+        const checkoutRes = await fetch('/.netlify/functions/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind:       'rsvp_service',
+            rsvpId:     json.rsvpId,
+            eventId:    event.id,
+            services:   selectedServices.map((s) => ({
+              serviceId: s.serviceId,
+              name:      s.name,
+              amountEur: s.amountEur,
+            })),
+            successUrl: `${window.location.origin}/events/${event.slug}?rsvp_service_payment=success&ref=${encodeURIComponent(json.referenceNumber)}`,
+            cancelUrl:  `${window.location.origin}/events/${event.slug}?rsvp_service_payment=cancelled`,
+          }),
+        })
+
+        const checkoutJson = await checkoutRes.json()
+
+        if (!checkoutRes.ok || !checkoutJson.url) {
+          toast.error(
+            `Your RSVP is confirmed (ref: ${json.referenceNumber}), but the payment setup failed: ${checkoutJson?.error ?? `HTTP ${checkoutRes.status}`}. Please contact us.`,
+            { duration: 20000 },
+          )
+          setStep('success')
+          return
+        }
+
+        // Redirect to Stripe — page navigates away
+        window.location.href = checkoutJson.url
+        return
+      }
+
       setStep('success')
     } catch {
       toast.error('Network error. Please check your connection and try again.')
@@ -332,6 +398,50 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                   </div>
                 </div>
 
+                {/* Optional Services */}
+                {hasServices && (
+                  <div className="rounded-xl border border-orange-200 bg-orange-50/40 p-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-orange-900 mb-0.5">Prayer services</p>
+                      <p className="text-xs text-muted-foreground">
+                        Select any Prayer services you'd like to book. Payment is collected securely via Stripe.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {availableServices.map((svc) => (
+                        <label
+                          key={svc.serviceId}
+                          className={cn(
+                            'flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2.5 cursor-pointer transition-colors',
+                            selectedServiceIds.has(svc.serviceId)
+                              ? 'border-orange-400 bg-orange-50'
+                              : 'border-slate-200 hover:border-orange-300',
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Checkbox
+                              checked={selectedServiceIds.has(svc.serviceId)}
+                              onCheckedChange={() => toggleService(svc.serviceId)}
+                            />
+                            <span className="text-sm font-medium text-slate-800">{svc.name}</span>
+                          </div>
+                          <span className="text-sm font-semibold text-orange-700 shrink-0">
+                            €{svc.amountEur.toFixed(2)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedServices.length > 0 && (
+                      <div className="flex items-center justify-between pt-1 border-t border-orange-200">
+                        <span className="text-xs text-muted-foreground">Services total</span>
+                        <span className="text-sm font-bold text-orange-800">
+                          €{servicesTotal.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* GDPR Consent */}
                 <div
                   className={cn(
@@ -384,7 +494,12 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                   {isSubmitting ? (
                     <>
                       <Spinner size={16} className="mr-2 animate-spin" />
-                      Sending RSVP…
+                      {selectedServices.length > 0 ? 'Confirming & redirecting…' : 'Sending RSVP…'}
+                    </>
+                  ) : selectedServices.length > 0 ? (
+                    <>
+                      <CreditCard size={16} className="mr-2" weight="fill" />
+                      Confirm & Pay €{servicesTotal.toFixed(2)}
                     </>
                   ) : (
                     <>

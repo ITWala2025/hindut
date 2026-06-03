@@ -49,10 +49,12 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { useEvents, sortByDate, toSlug } from '@/hooks/useEvents'
+import { useServices } from '@/hooks/useServices'
 import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog'
 import {
   CATEGORY_LABELS,
   type EventCategory,
+  type EventService,
   type TempleEvent,
   type TicketTier,
 } from '@/data/events'
@@ -74,12 +76,14 @@ const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
   image: undefined,
   stripeProductId: '',
   ticketTiers: [],
+  eventServices: [],
   published: true,
 }
 
 export function EventsSection() {
   const { can } = useAuth()
   const { events, addEvent, updateEvent, deleteEvent } = useEvents()
+  const { services: allServices } = useServices()
   const canCreate = can('events:create')
   const canUpdate = can('events:update')
   const canDelete = can('events:delete')
@@ -131,6 +135,7 @@ export function EventsSection() {
       image: rest.image ?? undefined,
       stripeProductId: rest.stripeProductId ?? '',
       ticketTiers: rest.ticketTiers ?? [],
+      eventServices: rest.eventServices ?? [],
     })
     setSlugManuallyEdited(true)
     setOpen(true)
@@ -159,6 +164,7 @@ export function EventsSection() {
       price: form.isPaid ? Number(form.price) || 0 : undefined,
       stripeProductId: form.isPaid ? form.stripeProductId?.trim() || undefined : undefined,
       ticketTiers: form.isPaid ? form.ticketTiers : undefined,
+      eventServices: form.isPaid ? [] : (form.eventServices ?? []),
     }
     try {
       if (editing) {
@@ -209,6 +215,33 @@ export function EventsSection() {
     setForm((f) => ({
       ...f,
       ticketTiers: (f.ticketTiers ?? []).filter((t) => t.id !== id),
+    }))
+  }
+
+  const addEventService = (svc: { id: string; title: string }) => {
+    if ((form.eventServices ?? []).some((es) => es.serviceId === svc.id)) return
+    setForm((f) => ({
+      ...f,
+      eventServices: [
+        ...(f.eventServices ?? []),
+        { id: `esvc-${Date.now()}`, serviceId: svc.id, name: svc.title, amountEur: 10 },
+      ],
+    }))
+  }
+
+  const updateEventService = (id: string, patch: Partial<EventService>) => {
+    setForm((f) => ({
+      ...f,
+      eventServices: (f.eventServices ?? []).map((es) =>
+        es.id === id ? { ...es, ...patch } : es,
+      ),
+    }))
+  }
+
+  const removeEventService = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      eventServices: (f.eventServices ?? []).filter((es) => es.id !== id),
     }))
   }
 
@@ -717,6 +750,85 @@ export function EventsSection() {
                 </div>
               )}
             </div>
+
+            {/* Event Services — free events only */}
+            {!form.isPaid && (
+              <>
+                <Separator />
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Optional services
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Attendees can add these during RSVP and pay online.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Service picker */}
+                  {allServices.filter((s) => s.published).length > 0 && (
+                    <div className="mb-3">
+                      <Label className="text-sm font-semibold mb-1.5 block">Add a service</Label>
+                      <select
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value=""
+                        onChange={(e) => {
+                          const svc = allServices.find((s) => s.id === e.target.value)
+                          if (svc) addEventService(svc)
+                        }}
+                      >
+                        <option value="">— Select a service to add —</option>
+                        {allServices
+                          .filter((s) => s.published && !(form.eventServices ?? []).some((es) => es.serviceId === s.id))
+                          .map((s) => (
+                            <option key={s.id} value={s.id}>{s.title}</option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {(form.eventServices ?? []).length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">
+                      No services added — this event will be RSVP-only.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-12 gap-2 px-1">
+                        <span className="col-span-7 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Service</span>
+                        <span className="col-span-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Fee €</span>
+                        <span className="col-span-1" />
+                      </div>
+                      {(form.eventServices ?? []).map((es) => (
+                        <div key={es.id} className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-7 text-sm font-medium text-slate-700 truncate px-1">
+                            {es.name}
+                          </div>
+                          <Input
+                            className="col-span-4"
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={es.amountEur}
+                            onChange={(e) => updateEventService(es.id, { amountEur: Number(e.target.value) })}
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="col-span-1 h-9 w-9 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => removeEventService(es.id)}
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </form>
 
           {/* Sticky footer */}

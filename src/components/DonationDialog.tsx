@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Heart, CheckCircle, CreditCard, ArrowLeft, Spinner, ShieldCheck, X } from '@phosphor-icons/react'
+import { Heart, CheckCircle, CreditCard, ArrowLeft, Spinner, ShieldCheck, X, Star, HandCoins, Users, Leaf } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -111,7 +111,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
         <DialogPrimitive.Content
           className={cn(
             // ── Shared ─────────────────────────────────────────────────────
-            'fixed z-50 bg-gradient-to-br from-orange-50 via-white to-amber-50',
+            'fixed z-50 bg-[#FEF6E4]',
             'overflow-y-auto focus:outline-none',
 
             // ── Mobile / tablet — full-screen overlay ──────────────────────
@@ -152,6 +152,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
             <X size={20} />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
+
         {/* Amount Selection Step */}
         {step === 'amount' && (
           <>
@@ -170,6 +171,15 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                 </div>
               </div>
             </DialogHeader>
+
+            {/* Temple image band */}
+            <div className="-mx-6 mt-3 overflow-hidden bg-orange-50" style={{ height: '260px' }}>
+              <img
+                src="/favicon.png"
+                alt="Hindu Temple"
+                className="w-full h-full object-cover"
+              />
+            </div>
 
             <div className="space-y-6 mt-4">
               <div>
@@ -244,10 +254,35 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
 
               <Button
                 onClick={handleAmountNext}
-                className="w-full h-12 text-base font-semibold bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 hover-glow-saffron"
+                className="w-full h-12 text-base font-semibold bg-linear-to-r from-orange-700 to-amber-700 text-white hover:from-orange-800 hover:to-amber-800 hover-glow-saffron"
               >
                 Continue to Payment
               </Button>
+
+              {/* Our Values */}
+              <div className="pt-5 border-t border-orange-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-orange-200" />
+                  <span className="text-xs font-semibold text-amber-700 tracking-widest uppercase">Our Values</span>
+                  <div className="flex-1 h-px bg-orange-200" />
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { Icon: Star,      label: 'Dharma',  sub: 'Righteousness'      },
+                    { Icon: HandCoins, label: 'Seva',    sub: 'Selfless Service'   },
+                    { Icon: Users,     label: 'Satsang', sub: 'Spiritual Community'},
+                    { Icon: Leaf,      label: 'Sanskar', sub: 'Values & Culture'   },
+                  ].map(({ Icon, label, sub }) => (
+                    <div key={label} className="flex flex-col items-center text-center gap-1">
+                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                        <Icon size={20} weight="thin" className="text-orange-700" />
+                      </div>
+                      <span className="text-xs font-semibold text-orange-900">{label}</span>
+                      <span className="text-[10px] text-amber-700 leading-tight">{sub}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </>
         )}
