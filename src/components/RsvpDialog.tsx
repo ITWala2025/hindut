@@ -224,13 +224,15 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
             kind:       'rsvp_service',
             rsvpId:     json.rsvpId,
             eventId:    event.id,
+            email:      data.email,
+            firstName:  data.firstName,
+            lastName:   data.lastName,
             services:   selectedServices.map((s) => ({
               serviceId: s.serviceId,
               name:      s.name,
               amountEur: s.amountEur,
             })),
-            successUrl: `${window.location.origin}/events/${event.slug}?rsvp_service_payment=success&ref=${encodeURIComponent(json.referenceNumber)}`,
-            cancelUrl:  `${window.location.origin}/events/${event.slug}?rsvp_service_payment=cancelled`,
+            cancelUrl: `${window.location.origin}/events/${event.slug}?rsvp_service_payment=cancelled`,
           }),
         })
 

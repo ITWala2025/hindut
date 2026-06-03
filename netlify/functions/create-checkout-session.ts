@@ -80,6 +80,9 @@ const RsvpServiceSchema = z.object({
   kind:       z.literal('rsvp_service'),
   rsvpId:     z.string().uuid('Invalid RSVP ID'),
   eventId:    z.string().uuid('Invalid event ID'),
+  email:      z.string().email().max(254).optional(),
+  firstName:  z.string().max(100).optional(),
+  lastName:   z.string().max(100).optional(),
   services:   z.array(RsvpServiceItemSchema).min(1).max(20),
   successUrl: z.string().url().optional(),
   cancelUrl:  z.string().url().optional(),
@@ -458,11 +461,23 @@ export const handler: Handler = async (event) => {
         },
       }))
 
+      const serviceNames = validatedServices.map((svc) => svc.name).join(', ')
+      const fullName    = [s.firstName, s.lastName].filter(Boolean).join(' ')
+
+      const defaultSuccessUrl =
+        `${origin}/rsvp-service-success` +
+        `?ref=${encodeURIComponent(s.rsvpId)}` +
+        `&event=${encodeURIComponent(evt.title)}` +
+        `&amount=${totalEur}` +
+        `&services=${encodeURIComponent(serviceNames)}` +
+        (fullName ? `&name=${encodeURIComponent(fullName)}` : '') +
+        `&session_id={CHECKOUT_SESSION_ID}`
+
       const serviceSession = await ctx.stripe.checkout.sessions.create({
         mode:           'payment',
-        customer_email: undefined,
+        ...(s.email ? { customer_email: s.email } : {}),
         line_items:     lineItems,
-        success_url: s.successUrl ?? `${origin}/events?rsvp_service_payment=success`,
+        success_url: s.successUrl ?? defaultSuccessUrl,
         cancel_url:  s.cancelUrl  ?? `${origin}/events?rsvp_service_payment=cancelled`,
         metadata: {
           kind:        'rsvp_service',

@@ -102,6 +102,7 @@ function AppShell() {
           <Route path="/donation-success" element={<Suspense fallback={<PageLoader />}><PaymentSuccessPage variant="donation" /></Suspense>} />
           <Route path="/membership-success" element={<Suspense fallback={<PageLoader />}><PaymentSuccessPage variant="membership" /></Suspense>} />
           <Route path="/ticket-success" element={<Suspense fallback={<PageLoader />}><PaymentSuccessPage variant="ticket" /></Suspense>} />
+          <Route path="/rsvp-service-success" element={<Suspense fallback={<PageLoader />}><PaymentSuccessPage variant="rsvp_service" /></Suspense>} />
           <Route path="/activate-role" element={<Suspense fallback={<PageLoader />}><ActivateRolePage /></Suspense>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,10 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
-import { CheckCircle, House, Heart, Ticket, Users, Baby, CalendarBlank } from '@phosphor-icons/react'
+import { CheckCircle, House, Heart, Ticket, Users, Baby, CalendarBlank, ClipboardText } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { SeoMeta } from '@/lib/seo'
 
 interface PaymentSuccessPageProps {
-  variant: 'donation' | 'membership' | 'ticket'
+  variant: 'donation' | 'membership' | 'ticket' | 'rsvp_service'
 }
 
 export function PaymentSuccessPage({ variant }: PaymentSuccessPageProps) {
@@ -13,6 +13,85 @@ export function PaymentSuccessPage({ variant }: PaymentSuccessPageProps) {
     const val = parseFloat(search.get('monthly_eur') ?? '')
     return !isNaN(val) && val > 0 ? val : null
   })()
+
+  // ── RSVP service payment confirmation ──────────────────────────────────────
+  if (variant === 'rsvp_service') {
+    const ref        = search.get('ref')
+    const eventTitle = search.get('event')
+    const amount     = search.get('amount')
+    const services   = search.get('services')
+    const name       = search.get('name')
+
+    return (
+      <section className="min-h-[70vh] flex items-center justify-center bg-linear-to-br from-orange-50 via-amber-50 to-white px-6 pt-24 md:pt-32 pb-16">
+        <SeoMeta title="Services Booked" description="Your service payment was successful." noIndex />
+        <div className="max-w-xl w-full rounded-3xl bg-white/90 backdrop-blur border border-orange-200 shadow-xl p-8 md:p-12 text-center space-y-6">
+          <div className="flex justify-center">
+            <div className="rounded-full bg-linear-to-br from-orange-100 to-amber-100 p-6 glow-saffron-intense">
+              <CheckCircle size={64} weight="fill" className="text-orange-600" />
+            </div>
+          </div>
+          <h1
+            className="text-3xl md:text-4xl font-bold text-orange-800"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
+            Services Booked!
+          </h1>
+          <p className="text-muted-foreground text-base leading-relaxed">
+            Your payment was successful and your services have been booked.
+          </p>
+
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-5 text-left space-y-3">
+            {eventTitle && (
+              <div className="flex items-center gap-2 text-sm">
+                <CalendarBlank size={15} className="text-amber-600 shrink-0" />
+                <span className="font-semibold text-amber-900">{decodeURIComponent(eventTitle)}</span>
+              </div>
+            )}
+            {name && (
+              <div className="flex items-center gap-2 text-sm text-slate-700">
+                <Users size={15} className="text-amber-600 shrink-0" />
+                <span>Booked for <strong>{decodeURIComponent(name)}</strong></span>
+              </div>
+            )}
+            {services && (
+              <div className="flex items-start gap-2 text-sm text-slate-700">
+                <ClipboardText size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                <span>{decodeURIComponent(services)}</span>
+              </div>
+            )}
+            {ref && (
+              <div className="pt-2 border-t border-amber-200">
+                <p className="text-[11px] text-amber-700 uppercase tracking-widest mb-1">RSVP Reference</p>
+                <p className="font-bold font-mono text-lg tracking-widest text-amber-900">{ref}</p>
+              </div>
+            )}
+            {amount && (
+              <div className="flex justify-between text-sm border-t border-amber-200 pt-3">
+                <span className="text-slate-600">Amount paid</span>
+                <span className="font-bold text-amber-900">EUR {Number(amount).toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Button asChild className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold">
+              <Link to="/events">
+                <Ticket weight="fill" className="mr-2" />
+                Browse More Events
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+              <Link to="/">Return Home</Link>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground pt-4 border-t border-orange-100">
+            Om Shanti - May you be blessed with peace and prosperity.
+          </p>
+        </div>
+      </section>
+    )
+  }
 
   // Ticket params (passed by finaliseBooking in TicketBookingDialog)
   const name       = search.get('name')
