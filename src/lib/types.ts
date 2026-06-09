@@ -87,3 +87,19 @@ export interface ServiceRecord {
   createdAt: string
   updatedAt: string
 }
+
+export type NewsCategory = 'announcement' | 'milestone' | 'initiative' | 'community'
+
+export interface NewsUpdate {
+  id: string
+  slug: string
+  title: string
+  excerpt: string
+  content: string
+  imageUrl: string | null
+  category: NewsCategory
+  published: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}

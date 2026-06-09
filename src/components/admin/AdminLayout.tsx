@@ -22,6 +22,7 @@ import {
   Heart,
   Lock,
   IdentificationBadge,
+  MegaphoneSimple,
 } from '@phosphor-icons/react'
 import type { Capability } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,7 @@ export type AdminSectionId =
   | 'causes'
   | 'media'
   | 'services'
+  | 'news'
   | 'team'
   | 'users'
   | 'roles'
@@ -78,8 +80,9 @@ const NAV_ITEMS: NavItem[] = [
   { group: 'Finance', id: 'causes',     label: 'Special Causes', icon: <Heart size={20} weight="duotone" />,    capability: 'causes:view' },
 
   // ── Content ───────────────────────────────────────────────────────────────
-  { group: 'Content', id: 'services', label: 'Services',      icon: <Sparkle size={20} weight="duotone" />,   capability: 'services:view' },
-  { group: 'Content', id: 'media',    label: 'Media Library', icon: <ImageIcon size={20} weight="duotone" />, capability: 'media:view' },
+  { group: 'Content', id: 'services', label: 'Services',       icon: <Sparkle size={20} weight="duotone" />,        capability: 'services:view' },
+  { group: 'Content', id: 'news',     label: 'News & Updates', icon: <MegaphoneSimple size={20} weight="duotone" />, capability: 'services:view' },
+  { group: 'Content', id: 'media',    label: 'Media Library',  icon: <ImageIcon size={20} weight="duotone" />,       capability: 'media:view' },
 
   // ── People ────────────────────────────────────────────────────────────────
   { group: 'People', id: 'team',  label: 'Board & Committee', icon: <IdentificationBadge size={20} weight="duotone" />, capability: 'team:view' },

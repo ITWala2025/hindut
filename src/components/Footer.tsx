@@ -2,12 +2,63 @@ import { MapPin, Phone, Envelope, InstagramLogo, FacebookLogo, TwitterLogo } fro
 import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
 import { openCookiePreferences } from '@/components/CookieConsentBanner'
+import { useNewsUpdates } from '@/hooks/useNewsUpdates'
+import { useMemo } from 'react'
+
+function LatestNewsColumn() {
+  const { newsUpdates, loading } = useNewsUpdates()
+  const latest = useMemo(
+    () => newsUpdates.filter((n) => n.published).slice(0, 4),
+    [newsUpdates],
+  )
+
+  return (
+    <div>
+      <p className="text-sm font-semibold mb-4 text-orange-800">Latest News</p>
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-10 rounded-lg bg-orange-200/40 animate-pulse" />
+          ))}
+        </div>
+      ) : latest.length === 0 ? (
+        <p className="text-xs text-orange-600/60 italic">No updates yet.</p>
+      ) : (
+        <ul className="space-y-3">
+          {latest.map((item) => (
+            <li key={item.id}>
+              <Link
+                to={`/news/${item.slug}`}
+                className="group block text-sm text-orange-700/80 hover:text-orange-700 transition-colors"
+              >
+                <span className="font-medium leading-snug line-clamp-1 group-hover:text-orange-800">
+                  {item.title}
+                </span>
+                <span className="text-xs text-orange-500/70 mt-0.5 block">
+                  {new Date(item.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </Link>
+            </li>
+          ))}
+          <li>
+            <Link
+              to="/news"
+              className="text-xs font-semibold text-orange-600 hover:text-orange-800 transition-colors inline-flex items-center gap-1"
+            >
+              View all updates →
+            </Link>
+          </li>
+        </ul>
+      )}
+    </div>
+  )
+}
 
 export function Footer() {
   return (
     <footer className="border-t border-orange-200/40 bg-linear-to-b from-orange-50 via-amber-50 to-orange-100 shadow-inner shadow-orange-200/50">
       <div className="container mx-auto px-6 md:px-12 lg:px-24 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           <div>
             <div className="flex items-center space-x-3 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md glow-saffron overflow-hidden">
@@ -84,8 +135,10 @@ export function Footer() {
             </ul>
           </div>
 
+          <LatestNewsColumn />
+
           <div>
-            <p className="text-sm font-semibold mb-4 text-orange-800">Contact Info</p>
+            <p className="text-sm font-semibold mb-4 text-orange-800">Contact</p>
             <ul className="space-y-3 text-sm text-orange-700/80">
               <li className="flex items-start gap-2">
                 <MapPin className="mt-0.5 shrink-0 text-orange-600" size={16} />

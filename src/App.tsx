@@ -22,6 +22,8 @@ const RefundPolicyPage     = lazy(() => import('@/components/pages/RefundPolicyP
 const PaymentSuccessPage   = lazy(() => import('@/components/pages/PaymentSuccessPage').then(m => ({ default: m.PaymentSuccessPage })))
 const ActivateRolePage     = lazy(() => import('@/components/pages/ActivateRolePage').then(m => ({ default: m.ActivateRolePage })))
 const EventDetailPage      = lazy(() => import('@/components/pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })))
+const NewsPage             = lazy(() => import('@/components/pages/NewsPage').then(m => ({ default: m.NewsPage })))
+const NewsDetailPage       = lazy(() => import('@/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
 import { Toaster } from '@/components/ui/sonner'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
@@ -91,6 +93,8 @@ function AppShell() {
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:slug" element={<Suspense fallback={<PageLoader />}><EventDetailPage /></Suspense>} />
+          <Route path="/news" element={<Suspense fallback={<PageLoader />}><NewsPage /></Suspense>} />
+          <Route path="/news/:slug" element={<Suspense fallback={<PageLoader />}><NewsDetailPage /></Suspense>} />
           <Route path="/causes" element={<Suspense fallback={<PageLoader />}><CausesPage /></Suspense>} />
           <Route path="/causes/:slug" element={<Suspense fallback={<PageLoader />}><CauseDetailPage /></Suspense>} />
           <Route path="/membership" element={<MembershipPage />} />
