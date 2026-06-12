@@ -44,26 +44,35 @@ export function logoRow(): string {
 /**
  * Returns the inner HTML for a footer <td>.
  * Renders a small favicon trust seal followed by standard legal text.
+ * Uses table-based layout for maximum Outlook compatibility.
  */
 export function footerInner(opts: { mainText: string; subText?: string }): string {
   return `
-          <!-- Favicon trust seal -->
-          <div style="margin:0 0 12px;">
-            <img src="${getFaviconUrl()}"
-                 alt="" width="22" height="22"
-                 style="display:inline-block;vertical-align:middle;border-radius:4px;
-                        margin-right:7px;opacity:0.85;" />
-            <span style="font-size:12px;font-weight:700;color:#92400e;
-                          font-family:Arial,sans-serif;vertical-align:middle;
-                          letter-spacing:0.3px;">
-              Hindu Association of Ireland
-            </span>
-          </div>
-          <p style="margin:0;font-size:11px;color:#a8a29e;font-family:Arial,sans-serif;">
+          <!-- Favicon trust seal (Outlook-safe table layout) -->
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">
+            <tr>
+              <td style="padding:0;vertical-align:middle;">
+                <img src="${getFaviconUrl()}"
+                     alt="" width="22" height="22" border="0"
+                     style="display:block;vertical-align:middle;margin-right:7px;opacity:0.85;
+                            border:none;line-height:100%;" />
+              </td>
+              <td style="padding:0;vertical-align:middle;">
+                <span style="font-size:12px;font-weight:700;color:#92400e;
+                              font-family:Arial,sans-serif;display:block;
+                              line-height:1.4;">
+                  Hindu Association of Ireland
+                </span>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:0;padding:0;font-size:11px;color:#a8a29e;font-family:Arial,sans-serif;
+                     line-height:1.5;">
             ${opts.mainText}
           </p>
           ${opts.subText
-            ? `<p style="margin:6px 0 0;font-size:11px;color:#d6d3d1;font-family:Arial,sans-serif;">${opts.subText}</p>`
+            ? `<p style="margin:6px 0 0;padding:0;font-size:11px;color:#d6d3d1;font-family:Arial,sans-serif;
+                         line-height:1.5;">${opts.subText}</p>`
             : ''
           }`
 }

@@ -30,7 +30,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
   const timeRow = p.eventTime
     ? `<tr>
         <td style="padding:10px 0;border-bottom:1px solid #f5f5f4;vertical-align:top;width:30%;">
-          <span style="font-size:12px;color:#78716c;text-transform:uppercase;letter-spacing:1px;font-family:Arial,sans-serif;">Time</span>
+          <span style="font-size:12px;color:#78716c;text-transform:uppercase;font-family:Arial,sans-serif;">Time</span>
         </td>
         <td style="padding:10px 0;border-bottom:1px solid #f5f5f4;vertical-align:top;">
           <span style="font-size:15px;color:#1c1917;font-family:Arial,sans-serif;">${p.eventTime}</span>
@@ -43,35 +43,31 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>Ticket Confirmation – ${p.eventTitle}</title>
 </head>
-<body style="margin:0;padding:0;background:#fafaf9;font-family:Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#fafaf9;font-family:Arial,sans-serif;width:100%;">
 
   <!-- Wrapper -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafaf9;padding:32px 16px;">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fafaf9;padding:32px 16px;">
     <tr>
-      <td align="center">
+      <td align="center" style="padding:0;">
 
-        <!-- Card -->
-        <table width="600" cellpadding="0" cellspacing="0"
-               style="max-width:600px;background:#ffffff;border-radius:12px;
-                      box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;">
+        <!-- Card (Outlook-safe: no border-radius, no box-shadow, no max-width) -->
+        <table width="600" border="0" cellpadding="0" cellspacing="0" style="background:#ffffff;width:600px;">
 
           ${logoRow()}
 
-          <!-- Header -->
+          <!-- Header (solid background instead of gradient) -->
           <tr>
-            <td style="background:linear-gradient(135deg,#ea580c,#d97706);padding:28px 40px 24px;text-align:center;">
-              <p style="margin:0 0 6px;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;
-                         color:rgba(255,255,255,0.75);font-family:Arial,sans-serif;">
+            <td style="background:#ea580c;padding:28px 40px 24px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;color:#ffffff;font-family:Arial,sans-serif;line-height:1.2;">
                 Event Ticket
               </p>
-              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;
-                          font-family:Arial,sans-serif;line-height:1.3;">
+              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;line-height:1.3;">
                 Ticket Confirmed ✓
               </h1>
-              <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);
-                         font-family:Arial,sans-serif;">
+              <p style="margin:0;font-size:13px;color:#fff7ed;font-family:Arial,sans-serif;">
                 Thank you, ${p.buyerName}. Your ticket is ready!
               </p>
             </td>
@@ -80,12 +76,10 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
           <!-- Reference Banner -->
           <tr>
             <td style="background:#fff7ed;border-bottom:2px solid #fed7aa;padding:22px 40px;text-align:center;">
-              <p style="margin:0 0 4px;font-size:11px;color:#9a3412;letter-spacing:2px;
-                         text-transform:uppercase;font-family:Arial,sans-serif;">
+              <p style="margin:0 0 4px;font-size:11px;color:#9a3412;text-transform:uppercase;font-family:Arial,sans-serif;">
                 Ticket Reference
               </p>
-              <p style="margin:0;font-size:26px;font-weight:bold;color:#7c2d12;
-                         font-family:'Courier New',Courier,monospace;letter-spacing:5px;">
+              <p style="margin:0;font-size:26px;font-weight:bold;color:#7c2d12;font-family:'Courier New',Courier,monospace;">
                 ${p.referenceNumber}
               </p>
               <p style="margin:6px 0 0;font-size:11px;color:#c2410c;font-family:Arial,sans-serif;">
@@ -97,7 +91,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
           <!-- Body -->
           <tr>
             <td style="padding:36px 40px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
 
                 <!-- Greeting -->
                 <tr>
@@ -111,10 +105,8 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                 <!-- Intro -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <p style="margin:0;font-size:15px;line-height:1.7;color:#44403c;
-                               font-family:Arial,sans-serif;">
-                      Thank you for your ticket purchase! Your order has been confirmed and
-                      your ticket is ready. Please keep this email for your records.
+                    <p style="margin:0;font-size:15px;line-height:1.7;color:#44403c;font-family:Arial,sans-serif;">
+                      Thank you for your ticket purchase! Your order has been confirmed and your ticket is ready. Please keep this email for your records.
                     </p>
                   </td>
                 </tr>
@@ -122,15 +114,13 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                 <!-- Event Details -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <h2 style="margin:0 0 16px;font-size:18px;color:#1c1917;font-family:Arial,sans-serif;
-                                border-bottom:2px solid #ffedd5;padding-bottom:8px;">
+                    <h2 style="margin:0 0 16px;font-size:18px;color:#1c1917;font-family:Arial,sans-serif;border-bottom:2px solid #ffedd5;padding-bottom:8px;">
                       ${p.eventTitle}
                     </h2>
-                    <table width="100%" cellpadding="0" cellspacing="0">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="padding:10px 0;border-bottom:1px solid #f5f5f4;vertical-align:top;width:30%;">
-                          <span style="font-size:12px;color:#78716c;text-transform:uppercase;
-                                       letter-spacing:1px;font-family:Arial,sans-serif;">Date</span>
+                          <span style="font-size:12px;color:#78716c;text-transform:uppercase;font-family:Arial,sans-serif;">Date</span>
                         </td>
                         <td style="padding:10px 0;border-bottom:1px solid #f5f5f4;vertical-align:top;">
                           <span style="font-size:15px;color:#1c1917;font-family:Arial,sans-serif;">
@@ -141,8 +131,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                       ${timeRow}
                       <tr>
                         <td style="padding:10px 0;border-bottom:1px solid #f5f5f4;vertical-align:top;">
-                          <span style="font-size:12px;color:#78716c;text-transform:uppercase;
-                                       letter-spacing:1px;font-family:Arial,sans-serif;">Venue</span>
+                          <span style="font-size:12px;color:#78716c;text-transform:uppercase;font-family:Arial,sans-serif;">Venue</span>
                         </td>
                         <td style="padding:10px 0;border-bottom:1px solid #f5f5f4;vertical-align:top;">
                           <span style="font-size:15px;color:#1c1917;font-family:Arial,sans-serif;">
@@ -152,8 +141,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                       </tr>
                       <tr>
                         <td style="padding:10px 0;border-bottom:1px solid #f5f5f4;vertical-align:top;">
-                          <span style="font-size:12px;color:#78716c;text-transform:uppercase;
-                                       letter-spacing:1px;font-family:Arial,sans-serif;">Tickets</span>
+                          <span style="font-size:12px;color:#78716c;text-transform:uppercase;font-family:Arial,sans-serif;">Tickets</span>
                         </td>
                         <td style="padding:10px 0;border-bottom:1px solid #f5f5f4;vertical-align:top;">
                           <span style="font-size:15px;color:#1c1917;font-family:Arial,sans-serif;">
@@ -163,12 +151,10 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                       </tr>
                       <tr>
                         <td style="padding:10px 0;vertical-align:top;">
-                          <span style="font-size:12px;color:#78716c;text-transform:uppercase;
-                                       letter-spacing:1px;font-family:Arial,sans-serif;">Total</span>
+                          <span style="font-size:12px;color:#78716c;text-transform:uppercase;font-family:Arial,sans-serif;">Total</span>
                         </td>
                         <td style="padding:10px 0;vertical-align:top;">
-                          <span style="font-size:18px;font-weight:700;color:#ea580c;
-                                       font-family:Arial,sans-serif;">
+                          <span style="font-size:18px;font-weight:700;color:#ea580c;font-family:Arial,sans-serif;">
                             €${p.totalPrice.toFixed(2)}
                           </span>
                         </td>
@@ -180,14 +166,11 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                 <!-- Important info -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0"
-                           style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #86efac;">
                       <tr>
                         <td style="padding:16px 20px;">
-                          <p style="margin:0;font-size:13px;color:#15803d;font-family:Arial,sans-serif;
-                                     line-height:1.6;">
-                            <strong>📍 Arrive Early:</strong> Please arrive 15-20 minutes before the event
-                            begins to allow time for check-in and seating.
+                          <p style="margin:0;font-size:13px;color:#15803d;font-family:Arial,sans-serif;line-height:1.6;">
+                            <strong>📍 Arrive Early:</strong> Please arrive 15-20 minutes before the event begins to allow time for check-in and seating.
                           </p>
                         </td>
                       </tr>
@@ -198,10 +181,8 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                 <!-- Closing -->
                 <tr>
                   <td style="padding:0 0 8px;border-top:1px solid #e7e5e4;padding-top:20px;">
-                    <p style="margin:0;font-size:15px;line-height:1.7;color:#44403c;
-                               font-family:Arial,sans-serif;">
-                      We look forward to seeing you at the event! If you have any questions,
-                      please don't hesitate to reach out to us.
+                    <p style="margin:0;font-size:15px;line-height:1.7;color:#44403c;font-family:Arial,sans-serif;">
+                      We look forward to seeing you at the event! If you have any questions, please don't hesitate to reach out to us.
                     </p>
                   </td>
                 </tr>
@@ -211,8 +192,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                     <p style="margin:0 0 4px;font-size:15px;color:#44403c;font-family:Arial,sans-serif;">
                       Warm regards,
                     </p>
-                    <p style="margin:0;font-size:16px;font-weight:700;color:#ea580c;
-                               font-family:Arial,sans-serif;">
+                    <p style="margin:0;font-size:16px;font-weight:700;color:#ea580c;font-family:Arial,sans-serif;">
                       Team HAI
                     </p>
                     <p style="margin:4px 0 0;font-size:13px;color:#78716c;font-family:Arial,sans-serif;">

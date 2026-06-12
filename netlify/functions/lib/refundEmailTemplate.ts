@@ -33,8 +33,7 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
   const referenceRow = p.referenceNumber
     ? `<tr>
         <td style="padding:8px 0;border-bottom:1px solid #f5f5f4;">
-          <span style="font-size:12px;color:#78716c;text-transform:uppercase;
-                       letter-spacing:1px;font-family:Arial,sans-serif;">Reference</span>
+          <span style="font-size:12px;color:#78716c;text-transform:uppercase;font-family:Arial,sans-serif;">Reference</span>
           &nbsp; <span style="font-size:14px;color:#1c1917;font-family:Arial,sans-serif;">
             ${p.referenceNumber}
           </span>
@@ -47,33 +46,29 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Refund Processed – Hindu Association of Ireland</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Refund Processed \u2013 Hindu Association of Ireland</title>
 </head>
-<body style="margin:0;padding:0;background:#fafaf9;font-family:Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#fafaf9;font-family:Arial,sans-serif;width:100%;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafaf9;padding:32px 16px;">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fafaf9;padding:32px 16px;">
     <tr>
-      <td align="center">
+      <td align="center" style="padding:0;">
 
-        <table width="600" cellpadding="0" cellspacing="0"
-               style="max-width:600px;background:#ffffff;border-radius:12px;
-                      box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;">
+        <table width="600" border="0" cellpadding="0" cellspacing="0" style="background:#ffffff;width:600px;">
 
           ${logoRow()}
 
-          <!-- Header - Green/Success theme -->
+          <!-- Header - Green/Success theme (Outlook-safe solid color) -->
           <tr>
-            <td style="background:linear-gradient(135deg,#059669,#047857);padding:28px 40px 24px;text-align:center;">
-              <p style="margin:0 0 6px;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;
-                         color:rgba(255,255,255,0.75);font-family:Arial,sans-serif;">
+            <td style="background:#059669;padding:28px 40px 24px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;color:#ffffff;font-family:Arial,sans-serif;line-height:1.2;">
                 Refund Confirmation
               </p>
-              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;
-                          font-family:Arial,sans-serif;line-height:1.3;">
-                Refund Processed ✓
+              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;line-height:1.3;">
+                Refund Processed \u2713
               </h1>
-              <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);
-                         font-family:Arial,sans-serif;">
+              <p style="margin:0;font-size:13px;color:#d1fae5;font-family:Arial,sans-serif;">
                 Your refund has been issued
               </p>
             </td>
@@ -82,7 +77,7 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
           <!-- Body -->
           <tr>
             <td style="padding:36px 40px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
 
                 <!-- Greeting -->
                 <tr>
@@ -96,8 +91,7 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
                 <!-- Message -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <p style="margin:0;font-size:15px;line-height:1.7;color:#44403c;
-                               font-family:Arial,sans-serif;">
+                    <p style="margin:0;font-size:15px;line-height:1.7;color:#44403c;font-family:Arial,sans-serif;">
                       We have processed your refund. ${estimatedText}
                       ${p.reason ? ` <strong>Reason:</strong> ${p.reason}` : ''}
                     </p>
@@ -107,45 +101,35 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
                 <!-- Refund details box -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0"
-                           style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #86efac;">
                       <tr>
                         <td style="padding:20px 24px;">
-                          <p style="margin:0 0 12px;font-size:12px;text-transform:uppercase;
-                                     letter-spacing:1px;color:#15803d;font-family:Arial,sans-serif;">
+                          <p style="margin:0 0 12px;font-size:12px;text-transform:uppercase;color:#15803d;font-family:Arial,sans-serif;">
                             Refund Summary
                           </p>
-                          <table width="100%" cellpadding="0" cellspacing="0">
+                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
                             <tr>
-                              <td style="font-size:13px;color:#047857;font-family:Arial,sans-serif;
-                                          padding-bottom:8px;">
+                              <td style="font-size:13px;color:#047857;font-family:Arial,sans-serif;padding-bottom:8px;">
                                 <strong>Item:</strong>
                               </td>
-                              <td style="font-size:13px;color:#047857;font-family:Arial,sans-serif;
-                                          padding-bottom:8px;text-align:right;">
+                              <td style="font-size:13px;color:#047857;font-family:Arial,sans-serif;padding-bottom:8px;text-align:right;">
                                 ${p.itemDescription}
                               </td>
                             </tr>
                             <tr>
-                              <td style="font-size:13px;color:#047857;font-family:Arial,sans-serif;
-                                          padding-bottom:8px;">
+                              <td style="font-size:13px;color:#047857;font-family:Arial,sans-serif;padding-bottom:8px;">
                                 <strong>Original Amount:</strong>
                               </td>
-                              <td style="font-size:13px;color:#047857;font-family:Arial,sans-serif;
-                                          padding-bottom:8px;text-align:right;">
-                                €${p.originalAmount.toFixed(2)}
+                              <td style="font-size:13px;color:#047857;font-family:Arial,sans-serif;padding-bottom:8px;text-align:right;">
+                                \u20ac${p.originalAmount.toFixed(2)}
                               </td>
                             </tr>
                             <tr>
-                              <td style="font-size:14px;font-weight:700;color:#15803d;
-                                          font-family:Arial,sans-serif;padding-top:8px;
-                                          border-top:1px solid #86efac;">
+                              <td style="font-size:14px;font-weight:700;color:#15803d;font-family:Arial,sans-serif;padding-top:8px;border-top:1px solid #86efac;">
                                 <strong>Refund Amount:</strong>
                               </td>
-                              <td style="font-size:18px;font-weight:700;color:#15803d;
-                                          font-family:Arial,sans-serif;padding-top:8px;
-                                          border-top:1px solid #86efac;text-align:right;">
-                                €${p.refundAmount.toFixed(2)}
+                              <td style="font-size:18px;font-weight:700;color:#15803d;font-family:Arial,sans-serif;padding-top:8px;border-top:1px solid #86efac;text-align:right;">
+                                \u20ac${p.refundAmount.toFixed(2)}
                               </td>
                             </tr>
                           </table>
@@ -158,13 +142,11 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
                 <!-- Processing info -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0"
-                           style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #93c5fd;">
                       <tr>
                         <td style="padding:16px 20px;">
-                          <p style="margin:0;font-size:13px;color:#1e40af;font-family:Arial,sans-serif;
-                                     line-height:1.6;">
-                            <strong>💳 Processing Time:</strong><br/>
+                          <p style="margin:0;font-size:13px;color:#1e40af;font-family:Arial,sans-serif;line-height:1.6;">
+                            <strong>\ud83d\udcb3 Processing Time:</strong><br/>
                             Your refund will be returned to your original payment method.
                             ${estimatedText}
                           </p>
@@ -177,21 +159,17 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
                 <!-- Contact info -->
                 <tr>
                   <td style="padding:0 0 12px;">
-                    <p style="margin:0;font-size:14px;font-weight:700;color:#1c1917;
-                               font-family:Arial,sans-serif;">
+                    <p style="margin:0;font-size:14px;font-weight:700;color:#1c1917;font-family:Arial,sans-serif;">
                       Have questions?
                     </p>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:0 0 8px;border-top:1px solid #e7e5e4;margin-top:20px;
-                              padding-top:20px;">
-                    <p style="margin:0;font-size:14px;color:#44403c;font-family:Arial,sans-serif;
-                               line-height:1.6;">
+                  <td style="padding:0 0 8px;border-top:1px solid #e7e5e4;margin-top:20px;padding-top:20px;">
+                    <p style="margin:0;font-size:14px;color:#44403c;font-family:Arial,sans-serif;line-height:1.6;">
                       If you don't see the refund in your account after the expected time,
                       or if you have any questions, please contact us at
-                      <a href="mailto:info@hindutemple.ie"
-                         style="color:#059669;text-decoration:none;">info@hindutemple.ie</a>
+                      <a href="mailto:info@hindutemple.ie" style="color:#059669;text-decoration:none;">info@hindutemple.ie</a>
                     </p>
                   </td>
                 </tr>
