@@ -43,6 +43,19 @@ import {
   buildDonationEmailHtml,
   buildDonationEmailText,
 } from './lib/donationEmailTemplate.js'
+import {
+  buildPaymentFailedEmailHtml,
+  buildPaymentFailedEmailText,
+  buildSubscriptionCanceledEmailHtml,
+  buildSubscriptionCanceledEmailText,
+  type PaymentFailedEmailParams,
+  type PaymentCanceledEmailParams,
+} from './lib/paymentStatusEmailTemplate.js'
+import {
+  buildRefundEmailHtml,
+  buildRefundEmailText,
+  type RefundEmailParams,
+} from './lib/refundEmailTemplate.js'
 
 // ---------------------------------------------------------------------------
 // SMTP helpers (same credentials as rsvp-submit)
@@ -612,11 +625,47 @@ export const handler: Handler = async (event) => {
       case 'payment_intent.payment_failed': {
         const pi = stripeEvent.data.object as Stripe.PaymentIntent
         const donationId = pi.metadata?.donationId
+        
         if (donationId) {
-          await supabase
+          // Update donation status
+          const { data: donation } = await supabase
             .from('donations')
             .update({ status: 'failed', stripe_payment_intent_id: pi.id, updated_at: new Date().toISOString() })
             .eq('id', donationId)
+            .select()
+            .single()
+
+          // Send payment failed email
+          if (donation && process.env.SMTP_HOST) {
+            try {
+              const transporter = createMailTransporter()
+              const failureReason = pi.last_payment_error?.message || 'Your payment method was declined. Please try again.'
+              
+              const emailParams: PaymentFailedEmailParams = {
+                customerName: pi.metadata?.customerName || 'Valued Donor',
+                customerEmail: pi.receipt_email || pi.metadata?.email || '',
+                itemType: 'donation',
+                itemName: pi.metadata?.itemName || 'Donation',
+                amount: pi.amount_received ? pi.amount_received / 100 : donation.amount_eur,
+                failureReason,
+              }
+
+              if (emailParams.customerEmail) {
+                await transporter.sendMail({
+                  from: process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
+                  to: emailParams.customerEmail,
+                  subject: 'Payment Failed – Donation to Hindu Association of Ireland',
+                  html: buildPaymentFailedEmailHtml(emailParams),
+                  text: buildPaymentFailedEmailText(emailParams),
+                  replyTo: 'info@hindutemple.ie',
+                })
+                console.log('[stripe-webhook] ✅ Payment failed email sent to', emailParams.customerEmail)
+              }
+            } catch (emailErr) {
+              const msg = emailErr instanceof Error ? emailErr.message : String(emailErr)
+              console.error('[stripe-webhook] ⚠️ Failed to send payment failed email:', msg)
+            }
+          }
         }
         break
       }
@@ -628,14 +677,57 @@ export const handler: Handler = async (event) => {
           ? charge.payment_intent
           : charge.payment_intent?.id
         if (!piId) break
-        await supabase
+
+        // Update donations
+        const { data: donations } = await supabase
           .from('donations')
           .update({ status: 'refunded', updated_at: new Date().toISOString() })
           .eq('stripe_payment_intent_id', piId)
+          .select()
+
+        // Update tickets
         await supabase
           .from('ticket_bookings')
           .update({ status: 'refunded', updated_at: new Date().toISOString() })
           .eq('payment_reference', piId)
+
+        // Send refund emails
+        if (process.env.SMTP_HOST) {
+          try {
+            const transporter = createMailTransporter()
+            
+            // Send refund email for donations if any
+            if (donations && donations.length > 0) {
+              for (const donation of donations) {
+                const emailParams: RefundEmailParams = {
+                  customerName: donation.donor_name || 'Valued Donor',
+                  customerEmail: donation.donor_email || '',
+                  itemType: 'donation',
+                  itemDescription: 'Donation to Hindu Association of Ireland',
+                  originalAmount: donation.amount_eur,
+                  refundAmount: charge.refunded ? (charge.refunded / 100) : donation.amount_eur,
+                  reason: 'Payment refunded',
+                  estimatedDays: 3,
+                }
+
+                if (emailParams.customerEmail) {
+                  await transporter.sendMail({
+                    from: process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
+                    to: emailParams.customerEmail,
+                    subject: 'Refund Processed – Hindu Association of Ireland',
+                    html: buildRefundEmailHtml(emailParams),
+                    text: buildRefundEmailText(emailParams),
+                    replyTo: 'info@hindutemple.ie',
+                  })
+                  console.log('[stripe-webhook] ✅ Donation refund email sent to', emailParams.customerEmail)
+                }
+              }
+            }
+          } catch (emailErr) {
+            const msg = emailErr instanceof Error ? emailErr.message : String(emailErr)
+            console.error('[stripe-webhook] ⚠️ Failed to send refund email:', msg)
+          }
+        }
         break
       }
 
@@ -759,6 +851,14 @@ export const handler: Handler = async (event) => {
             ? null
             : new Date(((sub as unknown) as { current_period_end: number }).current_period_end * 1000).toISOString()
 
+        // Get membership and member details before updating
+        const { data: membership } = await supabase
+          .from('memberships')
+          .select('member_id')
+          .eq('id', membershipId)
+          .single()
+
+        // Update membership status
         await supabase
           .from('memberships')
           .update({
@@ -767,6 +867,39 @@ export const handler: Handler = async (event) => {
             updated_at: new Date().toISOString(),
           })
           .eq('id', membershipId)
+
+        // Send subscription canceled email
+        if (process.env.SMTP_HOST) {
+          try {
+            const memberEmail = sub.metadata?.memberEmail ?? ''
+            const memberName = sub.metadata?.memberName ?? ''
+            const planName = sub.metadata?.planName ?? ''
+            
+            const emailParams: PaymentCanceledEmailParams = {
+              customerName: memberName || 'Member',
+              customerEmail: memberEmail,
+              itemType: 'membership',
+              itemName: planName || 'Membership',
+              cancelReason: 'Your membership subscription has been canceled',
+            }
+
+            if (emailParams.customerEmail) {
+              const transporter = createMailTransporter()
+              await transporter.sendMail({
+                from: process.env.EMAIL_FROM ?? `"HAI Membership" <${process.env.SMTP_USER}>`,
+                to: emailParams.customerEmail,
+                subject: 'Membership Canceled – Hindu Association of Ireland',
+                html: buildSubscriptionCanceledEmailHtml(emailParams),
+                text: buildSubscriptionCanceledEmailText(emailParams),
+                replyTo: 'info@hindutemple.ie',
+              })
+              console.log('[stripe-webhook] ✅ Membership canceled email sent to', emailParams.customerEmail)
+            }
+          } catch (emailErr) {
+            const msg = emailErr instanceof Error ? emailErr.message : String(emailErr)
+            console.error('[stripe-webhook] ⚠️ Failed to send membership canceled email:', msg)
+          }
+        }
         break
       }
 

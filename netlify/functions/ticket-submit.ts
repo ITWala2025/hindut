@@ -15,9 +15,15 @@
 import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
+import nodemailer from 'nodemailer'
 import { z } from 'zod'
 import ws from 'ws'
 import { resolveStripe } from './lib/stripe.js'
+import {
+  buildTicketEmailHtml,
+  buildTicketEmailText,
+  type TicketEmailParams,
+} from './lib/ticketEmailTemplate.js'
 
 // ---------------------------------------------------------------------------
 // Validation schema
@@ -71,6 +77,21 @@ function generateReference(eventSlug?: string | null, eventId?: string): string 
     code = 'EVT'
   }
   return `HAI-TKT-${code}-${suffix}`
+}
+
+/**
+ * Create SMTP transporter for sending ticket emails
+ */
+function createMailTransporter() {
+  return nodemailer.createTransport({
+    host:   process.env.SMTP_HOST,
+    port:   Number(process.env.SMTP_PORT ?? 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +238,56 @@ export const handler: Handler = async (event) => {
       .eq('id', bookingId)
 
     console.log('[ticket-submit] Booking saved:', reference, 'id:', bookingId, 'pi:', paymentReference)
+
+    // -- Send ticket confirmation email
+    try {
+      const { data: eventDetails } = await supabase
+        .from('events')
+        .select('title, date, time, location')
+        .eq('id', data.eventId)
+        .single()
+
+      if (eventDetails && process.env.SMTP_HOST) {
+        const transporter = createMailTransporter()
+        
+        // Format event date
+        const eventDate = new Date(eventDetails.date)
+        const eventDateStr = eventDate.toLocaleDateString('en-IE', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+
+        const emailParams: TicketEmailParams = {
+          buyerName: firstName,
+          buyerEmail: data.email,
+          eventTitle: eventDetails.title,
+          eventDate: eventDateStr,
+          eventTime: eventDetails.time || '',
+          eventLocation: eventDetails.location,
+          ticketTier: evtRow.ticket_price_eur ? 'General Admission' : 'Free',
+          quantity: data.numAdults + (data.numChildren || 0),
+          totalPrice: data.amountEur,
+          referenceNumber: reference,
+        }
+
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM ?? `"HAI Events" <${process.env.SMTP_USER}>`,
+          to: data.email,
+          subject: `Ticket Confirmed – ${eventDetails.title}`,
+          html: buildTicketEmailHtml(emailParams),
+          text: buildTicketEmailText(emailParams),
+          replyTo: 'info@hindutemple.ie',
+        })
+
+        console.log('[ticket-submit] ✅ Ticket email sent to', data.email)
+      }
+    } catch (emailErr) {
+      const emailMessage = emailErr instanceof Error ? emailErr.message : String(emailErr)
+      console.error('[ticket-submit] ⚠️ Failed to send ticket email:', emailMessage)
+      // Don't fail the entire request if email fails - the booking was already saved
+    }
 
     return {
       statusCode: 200,
