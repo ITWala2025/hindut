@@ -58,7 +58,8 @@ function sanitiseText(s: string): string {
 /**
  * SMTP transporter configured for Zoho email
  */
-function createTransporter() {\n  const host = process.env.SMTP_HOST
+function createTransporter() {
+  const host = process.env.SMTP_HOST
   const port = Number(process.env.SMTP_PORT ?? 587)
   const secure = process.env.SMTP_SECURE === 'true'
   const user = process.env.SMTP_USER
