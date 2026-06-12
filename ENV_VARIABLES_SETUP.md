@@ -5,12 +5,12 @@
 Copy and paste these key-value pairs into your Netlify Environment Variables:
 
 ```
-SMTP_HOST=smtp.zoho.eu
-SMTP_PORT=587
-SMTP_SECURE=false
+SMTP_HOST=smtppro.zoho.eu
+SMTP_PORT=465
+SMTP_SECURE=true
 SMTP_USER=donation@hindutemple.ie
 SMTP_PASS=Haidonation2026$
-EMAIL_FROM="HAI Donations <donation@hindutemple.ie>"
+EMAIL_FROM=donation@hindutemple.ie
 CONTACT_ADMIN_EMAIL=info@hindutemple.ie
 ```
 
@@ -35,19 +35,19 @@ Click "Add variable" for each:
 #### Variable 1: SMTP_HOST
 ```
 Key:   SMTP_HOST
-Value: smtp.zoho.eu
+Value: smtppro.zoho.eu
 ```
 
 #### Variable 2: SMTP_PORT
 ```
 Key:   SMTP_PORT
-Value: 587
+Value: 465
 ```
 
 #### Variable 3: SMTP_SECURE
 ```
 Key:   SMTP_SECURE
-Value: false
+Value: true
 ```
 
 #### Variable 4: SMTP_USER
@@ -65,7 +65,7 @@ Value: Haidonation2026$
 #### Variable 6: EMAIL_FROM
 ```
 Key:   EMAIL_FROM
-Value: "HAI Donations <donation@hindutemple.ie>"
+Value: donation@hindutemple.ie
 ```
 
 #### Variable 7: CONTACT_ADMIN_EMAIL

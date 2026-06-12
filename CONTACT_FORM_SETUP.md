@@ -20,16 +20,16 @@ Choose the appropriate SMTP server based on your region:
 
 #### **For EU/Ireland (Recommended)**
 ```
-SMTP Host:   smtp.zoho.eu
-SMTP Port:   587
-Secure:      false (STARTTLS)
+SMTP Host:   smtppro.zoho.eu
+SMTP Port:   465
+Secure:      true (SSL)
 ```
 
 #### **For Worldwide**
 ```
-SMTP Host:   smtp.zoho.com
-SMTP Port:   587
-Secure:      false (STARTTLS)
+SMTP Host:   smtppro.zoho.com
+SMTP Port:   465
+Secure:      true (SSL)
 ```
 
 ---
@@ -43,12 +43,12 @@ Go to **Netlify Dashboard → Settings → Build & deploy → Environment**
 Add the following variables:
 
 ```
-SMTP_HOST=smtp.zoho.eu
-SMTP_PORT=587
-SMTP_SECURE=false
+SMTP_HOST=smtppro.zoho.eu
+SMTP_PORT=465
+SMTP_SECURE=true
 SMTP_USER=donation@hindutemple.ie
 SMTP_PASS=Haidonation2026$
-EMAIL_FROM="HAI Donations <donation@hindutemple.ie>"
+EMAIL_FROM=donation@hindutemple.ie
 CONTACT_ADMIN_EMAIL=info@hindutemple.ie
 ```
 
@@ -56,9 +56,9 @@ CONTACT_ADMIN_EMAIL=info@hindutemple.ie
 
 | Variable | Value | Description |
 |----------|-------|-------------|
-| `SMTP_HOST` | `smtp.zoho.eu` or `smtp.zoho.com` | Zoho's SMTP server |
-| `SMTP_PORT` | `587` | Standard STARTTLS port |
-| `SMTP_SECURE` | `false` | Use STARTTLS (not SSL) |
+| `SMTP_HOST` | `smtppro.zoho.eu` or `smtppro.zoho.com` | Zoho's SMTP server |
+| `SMTP_PORT` | `465` | SSL port |
+| `SMTP_SECURE` | `true` | Use SSL (not STARTTLS) |
 | `SMTP_USER` | `donation@hindutemple.ie` | Your Zoho email account |
 | `SMTP_PASS` | `Haidonation2026$` | Your Zoho email password |
 | `EMAIL_FROM` | `"HAI Donations <donation@hindutemple.ie>"` | Display name and sender email |

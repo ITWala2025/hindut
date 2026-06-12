@@ -40,9 +40,9 @@ You **MUST** do this for the system to work:
 
 | Key | Value |
 |-----|-------|
-| `SMTP_HOST` | `smtp.zoho.eu` |
-| `SMTP_PORT` | `587` |
-| `SMTP_SECURE` | `false` |
+| `SMTP_HOST` | `smtppro.zoho.eu` |
+| `SMTP_PORT` | `465` |
+| `SMTP_SECURE` | `true` |
 | `SMTP_USER` | `donation@hindutemple.ie` |
 | `SMTP_PASS` | `Haidonation2026$` |
 | `EMAIL_FROM` | `"HAI Donations <donation@hindutemple.ie>"` |

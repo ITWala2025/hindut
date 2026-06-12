@@ -109,12 +109,12 @@ To verify all variables are set correctly:
 
 | Variable | Should Be |
 |----------|-----------|
-| `SMTP_HOST` | `smtp.zoho.eu` |
-| `SMTP_PORT` | `587` |
-| `SMTP_SECURE` | `false` |
+| `SMTP_HOST` | `smtppro.zoho.eu` |
+| `SMTP_PORT` | `465` |
+| `SMTP_SECURE` | `true` |
 | `SMTP_USER` | `donation@hindutemple.ie` |
 | `SMTP_PASS` | `Haidonation2026$` |
-| `EMAIL_FROM` | `HAI Donations <donation@hindutemple.ie>` |
+| `EMAIL_FROM` | `donation@hindutemple.ie` |
 | `CONTACT_ADMIN_EMAIL` | `info@hindutemple.ie` |
 
 ---
@@ -125,13 +125,13 @@ To verify Zoho credentials work outside of the form:
 
 ### On Mac/Linux Terminal:
 ```bash
-telnet smtp.zoho.eu 587
+telnet smtppro.zoho.eu 465
 ```
 You should see a response starting with `220`.
 
 ### To test with openssl:
 ```bash
-echo "test" | openssl s_client -connect smtp.zoho.eu:587 -starttls smtp
+echo "test" | openssl s_client -connect smtppro.zoho.eu:465
 ```
 
 ---
