@@ -66,6 +66,11 @@ export function ContactPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        // Show detailed validation errors if available
+        if (data.details && Array.isArray(data.details)) {
+          const details = data.details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join(' • ')
+          throw new Error(`${data.error}: ${details}`)
+        }
         throw new Error(data.error || 'Failed to submit form')
       }
 
