@@ -239,7 +239,7 @@ export const handler: Handler = async (event) => {
             }
           : {
               payment_intent_data: {
-                metadata: { kind: 'donation', donationId: donationId ?? '', donorEmail: d.donorEmail },
+                metadata: { kind: 'donation', donationId: donationId ?? '', donorName: d.donorName, donorEmail: d.donorEmail },
               },
             }),
       })

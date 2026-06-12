@@ -30,17 +30,14 @@ export function buildDonationEmailHtml(p: DonationEmailParams): string {
                 <!-- Recurring info -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0"
-                           style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #86efac;">
                       <tr>
-                        <td style="padding:14px 18px;">
-                          <p style="margin:0;font-size:14px;color:#15803d;
-                                     font-family:Arial,sans-serif;line-height:1.6;">
+                        <td bgcolor="f0fdf4" style="background:#f0fdf4;padding:14px 18px;">
+                          <p style="margin:0;font-size:14px;color:#15803d;font-family:Arial,sans-serif;line-height:1.6;">
                             🔄 Your <strong>monthly donation of &euro;${p.amountEur.toFixed(2)}</strong>
                             will be charged automatically each month. To cancel or update, please
                             contact us at
-                            <a href="mailto:info@hindutemple.ie"
-                               style="color:#15803d;text-decoration:none;">info@hindutemple.ie</a>.
+                            <a href="mailto:info@hindutemple.ie" style="color:#15803d;text-decoration:none;">info@hindutemple.ie</a>.
                           </p>
                         </td>
                       </tr>
@@ -64,26 +61,21 @@ export function buildDonationEmailHtml(p: DonationEmailParams): string {
       <td align="center">
 
         <!-- Card -->
-        <table width="600" cellpadding="0" cellspacing="0"
-               style="max-width:600px;background:#ffffff;border-radius:12px;
-                      box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0"
+               style="background:#ffffff;overflow:hidden;">
 
           ${logoRow()}
 
-          <!-- Header -->
+          <!-- Header (Outlook-safe solid color) -->
           <tr>
-            <td style="background:linear-gradient(135deg,#ea580c,#d97706);
-                        padding:28px 40px 24px;text-align:center;">
-              <p style="margin:0 0 6px;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;
-                         color:rgba(255,255,255,0.75);font-family:Arial,sans-serif;">
+            <td bgcolor="ea580c" style="background:#ea580c;padding:28px 40px 24px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;color:#ffffff;font-family:Arial,sans-serif;">
                 Om Shree Ganeshaya Namah
               </p>
-              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;
-                          font-family:Arial,sans-serif;line-height:1.3;">
+              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;line-height:1.3;">
                 Thank You for Your Donation!
               </h1>
-              <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);
-                         font-family:Arial,sans-serif;">
+              <p style="margin:0;font-size:13px;color:#fecaca;font-family:Arial,sans-serif;">
                 Your generosity makes a real difference.
               </p>
             </td>
@@ -119,22 +111,18 @@ export function buildDonationEmailHtml(p: DonationEmailParams): string {
                 <!-- Donation summary box -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0"
-                           style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fff7ed;border:1px solid #fdba74;">
                       <tr>
-                        <td style="padding:20px 24px;">
-                          <p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;
-                                     letter-spacing:1px;color:#9a3412;font-family:Arial,sans-serif;">
+                        <td bgcolor="fff7ed" style="background:#fff7ed;padding:20px 24px;">
+                          <p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#9a3412;font-family:Arial,sans-serif;">
                             Donation Received
                           </p>
-                          <p style="margin:0 0 16px;font-size:28px;font-weight:700;color:#ea580c;
-                                     font-family:Arial,sans-serif;">
+                          <p style="margin:0 0 16px;font-size:28px;font-weight:700;color:#ea580c;font-family:Arial,sans-serif;">
                             &euro;${p.amountEur.toFixed(2)}
                           </p>
-                          <table width="100%" cellpadding="0" cellspacing="0">
+                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
                             <tr>
-                              <td style="font-size:13px;color:#92400e;font-family:Arial,sans-serif;
-                                          padding-bottom:6px;">
+                              <td style="font-size:13px;color:#92400e;font-family:Arial,sans-serif;padding-bottom:6px;">
                                 <strong>Type:</strong>&nbsp;&nbsp;${typeLabel}
                               </td>
                             </tr>
@@ -223,8 +211,7 @@ export function buildDonationEmailHtml(p: DonationEmailParams): string {
 
           <!-- Footer -->
           <tr>
-            <td style="background:#fafaf9;border-top:1px solid #e7e5e4;
-                        padding:24px 40px;text-align:center;">
+            <td bgcolor="fafaf9" style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
               ${footerInner({
                 mainText: `This receipt was sent to ${p.donorEmail}. Hindu Association of Ireland · Limerick, Ireland.`,
                 subText:  'Your data is handled in accordance with GDPR and will not be shared with third parties.',

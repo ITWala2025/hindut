@@ -60,7 +60,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
 
           <!-- Header (solid background instead of gradient) -->
           <tr>
-            <td style="background:#ea580c;padding:28px 40px 24px;text-align:center;">
+            <td bgcolor="ea580c" style="background:#ea580c;padding:28px 40px 24px;text-align:center;">
               <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;color:#ffffff;font-family:Arial,sans-serif;line-height:1.2;">
                 Event Ticket
               </p>
@@ -75,7 +75,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
 
           <!-- Reference Banner -->
           <tr>
-            <td style="background:#fff7ed;border-bottom:2px solid #fed7aa;padding:22px 40px;text-align:center;">
+            <td bgcolor="fff7ed" style="background:#fff7ed;border-bottom:2px solid #fed7aa;padding:22px 40px;text-align:center;">
               <p style="margin:0 0 4px;font-size:11px;color:#9a3412;text-transform:uppercase;font-family:Arial,sans-serif;">
                 Ticket Reference
               </p>
@@ -168,7 +168,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                   <td style="padding:0 0 24px;">
                     <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #86efac;">
                       <tr>
-                        <td style="padding:16px 20px;">
+                        <td bgcolor="f0fdf4" style="background:#f0fdf4;padding:16px 20px;">
                           <p style="margin:0;font-size:13px;color:#15803d;font-family:Arial,sans-serif;line-height:1.6;">
                             <strong>📍 Arrive Early:</strong> Please arrive 15-20 minutes before the event begins to allow time for check-in and seating.
                           </p>
@@ -207,7 +207,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
 
           <!-- Footer -->
           <tr>
-            <td style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
+            <td bgcolor="fafaf9" style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
               ${footerInner({
                 mainText: `This ticket was sent to ${p.buyerEmail}. Please keep this email safe for check-in at the event.`,
                 subText: 'For support or questions, contact info@hindutemple.ie',

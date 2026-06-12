@@ -642,8 +642,8 @@ export const handler: Handler = async (event) => {
               const failureReason = pi.last_payment_error?.message || 'Your payment method was declined. Please try again.'
               
               const emailParams: PaymentFailedEmailParams = {
-                customerName: pi.metadata?.customerName || 'Valued Donor',
-                customerEmail: pi.receipt_email || pi.metadata?.email || '',
+                customerName: pi.metadata?.donorName || 'Valued Donor',
+                customerEmail: pi.metadata?.donorEmail || '',
                 itemType: 'donation',
                 itemName: pi.metadata?.itemName || 'Donation',
                 amount: pi.amount_received ? pi.amount_received / 100 : donation.amount_eur,
@@ -666,6 +666,53 @@ export const handler: Handler = async (event) => {
               console.error('[stripe-webhook] ⚠️ Failed to send payment failed email:', msg)
             }
           }
+        }
+        break
+      }
+
+      // ─── Recurring donation payment failed ─────────────────────────────
+      case 'invoice.payment_failed': {
+        const invoice = stripeEvent.data.object as Stripe.Invoice
+        const subscription = invoice.subscription
+        if (!subscription || !stripe) break
+
+        // Fetch subscription to get metadata with donor info
+        try {
+          const sub = await stripe.subscriptions.retrieve(typeof subscription === 'string' ? subscription : subscription.id)
+          const donorName = (sub.metadata?.donorName as string | undefined) || 'Valued Donor'
+          const donorEmail = (sub.metadata?.donorEmail as string | undefined) || ''
+          const amountEur = (sub.metadata?.amountEur as string | undefined) ? parseFloat(sub.metadata.amountEur as string) : 0
+
+          if (donorEmail && process.env.SMTP_HOST) {
+            try {
+              const transporter = createMailTransporter()
+              const failureReason = invoice.last_payment_error?.message || 'Your payment method was declined. Please try again.'
+
+              const emailParams: PaymentFailedEmailParams = {
+                customerName: donorName,
+                customerEmail: donorEmail,
+                itemType: 'donation',
+                itemName: 'Monthly recurring donation',
+                amount: amountEur,
+                failureReason,
+              }
+
+              await transporter.sendMail({
+                from: process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
+                to: emailParams.customerEmail,
+                subject: 'Payment Failed – Monthly Donation to Hindu Association of Ireland',
+                html: buildPaymentFailedEmailHtml(emailParams),
+                text: buildPaymentFailedEmailText(emailParams),
+                replyTo: 'info@hindutemple.ie',
+              })
+              console.log('[stripe-webhook] ✅ Recurring donation payment failed email sent to', donorEmail)
+            } catch (emailErr) {
+              const msg = emailErr instanceof Error ? emailErr.message : String(emailErr)
+              console.error('[stripe-webhook] ⚠️ Failed to send recurring payment failed email:', msg)
+            }
+          }
+        } catch (err) {
+          console.error('[stripe-webhook] invoice.payment_failed subscription fetch error:', (err as Error).message)
         }
         break
       }

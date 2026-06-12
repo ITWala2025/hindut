@@ -47,7 +47,7 @@ export function buildVisitorConfirmationHtml(p: ContactEmailParams): string {
 
           <!-- Header (solid color instead of gradient) -->
           <tr>
-            <td style="background:#ea580c;padding:32px 40px;text-align:center;">
+            <td bgcolor="ea580c" style="background:#ea580c;padding:32px 40px;text-align:center;">
               <h1 style="margin:0;font-size:28px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;">
                 Thank You!
               </h1>
@@ -85,7 +85,7 @@ export function buildVisitorConfirmationHtml(p: ContactEmailParams): string {
                   <td style="padding:0 0 24px;\">
                     <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fafaf9;border-left:4px solid #ea580c;padding:16px;\">
                       <tr>
-                        <td style="padding:0;\">
+                        <td bgcolor="fafaf9" style="background:#fafaf9;padding:0;">
                           <p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#a8a29e;font-family:Arial,sans-serif;text-transform:uppercase;\">
                             Your Message
                           </p>
@@ -115,7 +115,7 @@ ${escapeHtml(p.message)}
 
                 <!-- Contact info -->
                 <tr>
-                  <td style="padding:24px;background:#fff7ed;text-align:center;\">
+                  <td style="padding:24px;background:#fff7ed;text-align:center;" bgcolor="fff7ed">
                     <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#a8a29e;font-family:Arial,sans-serif;text-transform:uppercase;\">
                       Our Contact Details
                     </p>
@@ -134,7 +134,7 @@ ${escapeHtml(p.message)}
 
           <!-- Footer -->
           <tr>
-            <td style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;\">
+            <td bgcolor="fafaf9" style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
               ${footerInner({
                 mainText: 'Hindu Association of Ireland \u00b7 Limerick, Ireland',
                 subText: 'This email was sent because you submitted a contact form on our website. Your data is processed in accordance with GDPR.',

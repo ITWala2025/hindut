@@ -50,24 +50,20 @@ export function buildMembershipWelcomeEmailHtml(p: MembershipWelcomeEmailParams)
       <td align="center">
 
         <!-- Card -->
-        <table width="600" cellpadding="0" cellspacing="0"
-               style="max-width:600px;background:#ffffff;border-radius:12px;
-                      box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;overflow:hidden;">
 
           ${logoRow()}
 
-          <!-- Header -->
+          <!-- Header (Outlook-safe solid color) -->
           <tr>
-            <td style="background:linear-gradient(135deg,#ea580c,#d97706);padding:28px 40px 24px;text-align:center;">
-              <p style="margin:0 0 6px;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;
-                         color:rgba(255,255,255,0.75);font-family:Arial,sans-serif;">
+            <td bgcolor="ea580c" style="background:#ea580c;padding:28px 40px 24px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;color:#ffffff;font-family:Arial,sans-serif;">
                 Om Shree Ganeshaya Namah
               </p>
-              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;
-                          line-height:1.3;">
+              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;line-height:1.3;">
                 Welcome to the HAI Community!
               </h1>
-              <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);font-family:Arial,sans-serif;">
+              <p style="margin:0;font-size:13px;color:#fecaca;font-family:Arial,sans-serif;">
                 Hindu Association of Ireland
               </p>
             </td>
@@ -102,16 +98,13 @@ export function buildMembershipWelcomeEmailHtml(p: MembershipWelcomeEmailParams)
                 <!-- Member ID box -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0"
-                           style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:0;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fff7ed;border:1px solid #fdba74;">
                       <tr>
-                        <td style="padding:16px 20px;">
-                          <p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:1px;
-                                     color:#9a3412;font-family:Arial,sans-serif;">
+                        <td bgcolor="fff7ed" style="background:#fff7ed;padding:16px 20px;">
+                          <p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#9a3412;font-family:Arial,sans-serif;">
                             Your Member ID
                           </p>
-                          <p style="margin:0;font-size:22px;font-weight:700;color:#ea580c;
-                                     font-family:'Courier New',monospace;letter-spacing:1px;">
+                          <p style="margin:0;font-size:22px;font-weight:700;color:#ea580c;font-family:'Courier New',monospace;letter-spacing:1px;">
                             ${p.memberCode}
                           </p>
                           <p style="margin:6px 0 0;font-size:12px;color:#92400e;font-family:Arial,sans-serif;">
@@ -135,10 +128,9 @@ export function buildMembershipWelcomeEmailHtml(p: MembershipWelcomeEmailParams)
                 <!-- Benefits list -->
                 <tr>
                   <td style="padding:0 0 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0"
-                           style="background:#fafaf9;border-radius:8px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fafaf9;">
                       <tr>
-                        <td style="padding:16px 20px;">
+                        <td bgcolor="fafaf9" style="background:#fafaf9;padding:16px 20px;">
                           <p style="margin:0 0 10px;font-size:14px;color:#44403c;font-family:Arial,sans-serif;">
                             🪔 <strong>Monthly Nama–Nakshatra Archana</strong> for your family
                           </p>
@@ -215,7 +207,7 @@ export function buildMembershipWelcomeEmailHtml(p: MembershipWelcomeEmailParams)
 
           <!-- Footer -->
           <tr>
-            <td style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
+            <td bgcolor="fafaf9" style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
               ${footerInner({
                 mainText: `This email was sent to ${p.memberEmail} because you joined as a member of the Hindu Association of Ireland.`,
                 subText:  `Please keep your Member ID (${p.memberCode}) safe.`,

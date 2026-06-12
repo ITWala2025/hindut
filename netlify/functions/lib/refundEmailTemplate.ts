@@ -61,7 +61,7 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
 
           <!-- Header - Green/Success theme (Outlook-safe solid color) -->
           <tr>
-            <td style="background:#059669;padding:28px 40px 24px;text-align:center;">
+            <td bgcolor="059669" style="background:#059669;padding:28px 40px 24px;text-align:center;">
               <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;color:#ffffff;font-family:Arial,sans-serif;line-height:1.2;">
                 Refund Confirmation
               </p>
@@ -103,7 +103,7 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
                   <td style="padding:0 0 24px;">
                     <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #86efac;">
                       <tr>
-                        <td style="padding:20px 24px;">
+                        <td bgcolor="f0fdf4" style="background:#f0fdf4;padding:20px 24px;">
                           <p style="margin:0 0 12px;font-size:12px;text-transform:uppercase;color:#15803d;font-family:Arial,sans-serif;">
                             Refund Summary
                           </p>
@@ -144,7 +144,7 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
                   <td style="padding:0 0 24px;">
                     <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #93c5fd;">
                       <tr>
-                        <td style="padding:16px 20px;">
+                        <td bgcolor="eff6ff" style="background:#eff6ff;padding:16px 20px;">
                           <p style="margin:0;font-size:13px;color:#1e40af;font-family:Arial,sans-serif;line-height:1.6;">
                             <strong>\ud83d\udcb3 Processing Time:</strong><br/>
                             Your refund will be returned to your original payment method.
@@ -180,7 +180,7 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
 
           <!-- Footer -->
           <tr>
-            <td style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
+            <td bgcolor="fafaf9" style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
               ${footerInner({
                 mainText: `This confirmation was sent to ${p.customerEmail}.`,
                 subText: 'Thank you for your business.',

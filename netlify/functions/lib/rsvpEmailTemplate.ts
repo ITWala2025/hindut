@@ -112,28 +112,28 @@ export function buildEmailHtml(p: RsvpEmailParams): string {
   <tr>
     <td align="center" style="padding:32px 16px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
-             style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+             style="background:#ffffff;overflow:hidden;">
 
         ${logoRow()}
 
         <!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
         <tr>
-          <td style="background:linear-gradient(135deg,#c2410c 0%,#d97706 100%);padding:28px 40px 24px;text-align:center;">
-            <p style="margin:0 0 6px;font-size:12px;color:rgba(255,255,255,0.75);letter-spacing:2.5px;text-transform:uppercase;font-family:Arial,sans-serif;">
+          <td bgcolor="c2410c" style="background:#c2410c;padding:28px 40px 24px;text-align:center;">
+            <p style="margin:0 0 6px;font-size:12px;color:#ffffff;letter-spacing:1px;text-transform:uppercase;font-family:Arial,sans-serif;">
               Hindu Association of Ireland
             </p>
             <h1 style="margin:0 0 8px;font-size:26px;color:#ffffff;font-family:Georgia,serif;font-weight:normal;">
               RSVP Confirmed ✓
             </h1>
-            <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.88);font-family:Arial,sans-serif;">
+            <p style="margin:0;font-size:14px;color:#fecaca;font-family:Arial,sans-serif;">
               Thank you, ${p.firstName}. Your place is reserved.
             </p>
           </td>
         </tr>
 
-        <!-- ═══════════════════════════ REFERENCE BANNER ═════════════════════════ -->
+        <!-- ═════════════════════════════ REFERENCE BANNER ═════════════════════════ -->
         <tr>
-          <td style="background:#fff7ed;border-bottom:2px solid #fed7aa;padding:22px 40px;text-align:center;">
+          <td bgcolor="fff7ed" style="background:#fff7ed;border-bottom:2px solid #fed7aa;padding:22px 40px;text-align:center;">
             <p style="margin:0 0 4px;font-size:11px;color:#9a3412;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif;">
               Reservation Reference
             </p>
@@ -220,7 +220,7 @@ export function buildEmailHtml(p: RsvpEmailParams): string {
 
         <!-- ══════════════════════════════ FOOTER ════════════════════════════════ -->
         <tr>
-          <td style="background:#fafaf8;border-top:1px solid #f5f5f4;padding:24px 40px;text-align:center;">
+          <td bgcolor="fafaf8" style="background:#fafaf8;border-top:1px solid #f5f5f4;padding:24px 40px;text-align:center;">
             ${footerInner({
               mainText: 'Hindu Association of Ireland · Ahane, Pallaskenry &amp; Mungret, Limerick',
               subText:  'This email was sent because you submitted an RSVP on our website. Your data is processed in accordance with GDPR and will not be shared with third parties.',
