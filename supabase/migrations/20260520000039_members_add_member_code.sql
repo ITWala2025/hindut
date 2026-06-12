@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Migration: 20260520000039_members_add_member_code.sql
--- Purpose : Add human-readable member_code column (HAI-YYYY-MM-XXXX format).
+-- Purpose : Add human-readable member_code column (HAI-M-XXXX format).
 --           One code per email — code is assigned once on first successful
 --           membership payment and never regenerated for repeat payments.
 -- =============================================================================

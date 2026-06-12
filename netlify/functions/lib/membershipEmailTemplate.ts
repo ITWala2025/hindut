@@ -13,7 +13,7 @@ import { logoRow, footerInner } from './emailBase.js'
 // ---------------------------------------------------------------------------
 export interface MembershipWelcomeEmailParams {
   memberName:  string   // e.g. "Priya Sharma"
-  memberCode:  string   // e.g. "HAI-2026-05-0001"
+  memberCode:  string   // e.g. "HAI-M-0001"
   memberEmail: string   // recipient address
   planName:    string   // e.g. "Annual"
   addedMonthly: boolean // true if they also signed up for a monthly donation
