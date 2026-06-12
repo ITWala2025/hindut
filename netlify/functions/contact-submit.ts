@@ -58,18 +58,28 @@ function sanitiseText(s: string): string {
 /**
  * SMTP transporter configured for Zoho email
  */
-function createTransporter() {
-  const host = process.env.SMTP_HOST
+function createTransporter() {\n  const host = process.env.SMTP_HOST
   const port = Number(process.env.SMTP_PORT ?? 587)
   const secure = process.env.SMTP_SECURE === 'true'
   const user = process.env.SMTP_USER
   const pass = process.env.SMTP_PASS
 
   if (!host || !user || !pass) {
+    const missing = []
+    if (!host) missing.push('SMTP_HOST')
+    if (!user) missing.push('SMTP_USER')
+    if (!pass) missing.push('SMTP_PASS')
     throw new Error(
-      'Missing required SMTP configuration: SMTP_HOST, SMTP_USER, SMTP_PASS'
+      `Missing required SMTP configuration: ${missing.join(', ')}`
     )
   }
+
+  console.log('[contact-submit] Creating SMTP transporter with:', {
+    host,
+    port,
+    secure,
+    user: user ? `${user.substring(0, 3)}...` : 'undefined',
+  })
 
   return nodemailer.createTransport({
     host,
@@ -79,6 +89,11 @@ function createTransporter() {
       user,
       pass,
     },
+    pool: {
+      maxConnections: 1,
+    },
+    connectionTimeout: 10000,
+    socketTimeout: 10000,
   })
 }
 
@@ -174,41 +189,74 @@ export const handler: Handler = async (event) => {
     if (process.env.SMTP_HOST) {
       try {
         const transporter = createTransporter()
+        
+        console.log('[contact-submit] Testing SMTP connection...', {
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT,
+          user: process.env.SMTP_USER,
+        })
 
         // Test connection
-        await transporter.verify()
+        try {
+          await transporter.verify()
+          console.log('[contact-submit] ✅ SMTP connection verified successfully')
+        } catch (verifyErr) {
+          const verifyMessage = verifyErr instanceof Error ? verifyErr.message : String(verifyErr)
+          console.error('[contact-submit] ❌ SMTP verification failed:', verifyMessage)
+          throw new Error(`SMTP connection failed: ${verifyMessage}. Check credentials and network connectivity.`)
+        }
 
         // Send confirmation email to visitor
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
-          to: sanitisedData.email,
-          subject: 'We received your message – Hindu Association of Ireland',
-          html: buildVisitorConfirmationHtml(emailParams),
-          text: buildVisitorConfirmationText(emailParams),
-          replyTo: adminEmail,
-        })
-
-        console.log('[contact-submit] Confirmation email sent to', sanitisedData.email)
+        try {
+          await transporter.sendMail({
+            from: process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+            to: sanitisedData.email,
+            subject: 'We received your message – Hindu Association of Ireland',
+            html: buildVisitorConfirmationHtml(emailParams),
+            text: buildVisitorConfirmationText(emailParams),
+            replyTo: adminEmail,
+          })
+          console.log('[contact-submit] ✅ Confirmation email sent to', sanitisedData.email)
+        } catch (confirmErr) {
+          const confirmMessage = confirmErr instanceof Error ? confirmErr.message : String(confirmErr)
+          console.error('[contact-submit] ❌ Failed to send confirmation email:', confirmMessage)
+          throw new Error(`Failed to send confirmation email to ${sanitisedData.email}: ${confirmMessage}`)
+        }
 
         // Send admin notification
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
-          to: adminEmail,
-          subject: `New Contact Form Submission from ${sanitisedData.name}`,
-          html: buildAdminNotificationHtml(emailParams),
-          text: buildAdminNotificationText(emailParams),
-          replyTo: sanitisedData.email,
-        })
-
-        console.log('[contact-submit] Admin notification sent to', adminEmail)
+        try {
+          await transporter.sendMail({
+            from: process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+            to: adminEmail,
+            subject: `New Contact Form Submission from ${sanitisedData.name}`,
+            html: buildAdminNotificationHtml(emailParams),
+            text: buildAdminNotificationText(emailParams),
+            replyTo: sanitisedData.email,
+          })
+          console.log('[contact-submit] ✅ Admin notification sent to', adminEmail)
+        } catch (adminErr) {
+          const adminMessage = adminErr instanceof Error ? adminErr.message : String(adminErr)
+          console.error('[contact-submit] ❌ Failed to send admin notification:', adminMessage)
+          throw new Error(`Failed to send admin notification to ${adminEmail}: ${adminMessage}`)
+        }
       } catch (emailErr) {
-        console.error('[contact-submit] Email error:', emailErr)
+        const errorMessage = emailErr instanceof Error ? emailErr.message : String(emailErr)
+        const errorCode = emailErr instanceof Error && 'code' in emailErr ? (emailErr as any).code : 'UNKNOWN'
+        
+        console.error('[contact-submit] Email error:', {
+          message: errorMessage,
+          code: errorCode,
+          stack: emailErr instanceof Error ? emailErr.stack : undefined,
+        })
+        
         return {
           statusCode: 500,
           headers,
           body: JSON.stringify({
             error: 'Failed to send email',
-            details: emailErr instanceof Error ? emailErr.message : 'Unknown error',
+            details: errorMessage,
+            errorCode: errorCode,
+            timestamp: new Date().toISOString(),
           }),
         }
       }

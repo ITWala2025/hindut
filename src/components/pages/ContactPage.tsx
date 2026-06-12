@@ -66,10 +66,19 @@ export function ContactPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        // Log the full response for debugging
+        console.error('API Response:', { status: response.status, data })
+        
         // Show detailed validation errors if available
-        if (data.details && Array.isArray(data.details)) {
-          const details = data.details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join(' • ')
-          throw new Error(`${data.error}: ${details}`)
+        if (data.details) {
+          if (Array.isArray(data.details)) {
+            // Validation errors (array format)
+            const details = data.details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join(' • ')
+            throw new Error(`${data.error}: ${details}`)
+          } else if (typeof data.details === 'string') {
+            // SMTP or other errors (string format)
+            throw new Error(`${data.error}: ${data.details}`)
+          }
         }
         throw new Error(data.error || 'Failed to submit form')
       }
