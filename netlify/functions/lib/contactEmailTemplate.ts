@@ -30,27 +30,28 @@ export function buildVisitorConfirmationHtml(p: ContactEmailParams): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Message Received – Hindu Association of Ireland</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Message Received \u2013 Hindu Association of Ireland</title>
 </head>
-<body style="margin:0;padding:0;background:#fafaf9;font-family:Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#fafaf9;font-family:Arial,sans-serif;width:100%;">
 
   <!-- Wrapper -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafaf9;padding:32px 16px;">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fafaf9;padding:32px 16px;">
     <tr>
-      <td align="center">
+      <td align="center" style="padding:0;">
 
-        <!-- Card -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.08);overflow:hidden;">
+        <!-- Card (Outlook-safe: fixed width, no border-radius, no box-shadow) -->
+        <table width="600" border="0" cellpadding="0" cellspacing="0" style="background:#ffffff;width:600px;">
 
           ${logoRow()}
 
-          <!-- Header -->
+          <!-- Header (solid color instead of gradient) -->
           <tr>
-            <td style="background:linear-gradient(135deg, #ea580c 0%, #f97316 100%);padding:32px 40px;text-align:center;">
+            <td style="background:#ea580c;padding:32px 40px;text-align:center;">
               <h1 style="margin:0;font-size:28px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;">
                 Thank You!
               </h1>
-              <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);font-family:Arial,sans-serif;">
+              <p style="margin:8px 0 0;font-size:13px;color:#fff7ed;font-family:Arial,sans-serif;\">
                 We've received your message
               </p>
             </td>
@@ -58,13 +59,13 @@ export function buildVisitorConfirmationHtml(p: ContactEmailParams): string {
 
           <!-- Body -->
           <tr>
-            <td style="padding:36px 40px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
+            <td style="padding:36px 40px;\">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
 
                 <!-- Greeting -->
                 <tr>
-                  <td style="padding:0 0 20px;">
-                    <p style="margin:0;font-size:16px;color:#1c1917;font-family:Arial,sans-serif;">
+                  <td style="padding:0 0 20px;\">
+                    <p style="margin:0;font-size:16px;color:#1c1917;font-family:Arial,sans-serif;\">
                       Hi <strong>${escapeHtml(p.visitorName)}</strong>,
                     </p>
                   </td>
@@ -72,8 +73,8 @@ export function buildVisitorConfirmationHtml(p: ContactEmailParams): string {
 
                 <!-- Intro -->
                 <tr>
-                  <td style="padding:0 0 24px;">
-                    <p style="margin:0;font-size:14px;color:#78716c;font-family:Arial,sans-serif;line-height:1.6;">
+                  <td style="padding:0 0 24px;\">
+                    <p style="margin:0;font-size:14px;color:#78716c;font-family:Arial,sans-serif;line-height:1.6;\">
                       Thank you for reaching out to us! We've received your message and will review it carefully.
                     </p>
                   </td>
@@ -81,17 +82,17 @@ export function buildVisitorConfirmationHtml(p: ContactEmailParams): string {
 
                 <!-- Message summary -->
                 <tr>
-                  <td style="padding:0 0 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafaf9;border-left:4px solid #ea580c;border-radius:4px;padding:16px;">
+                  <td style="padding:0 0 24px;\">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fafaf9;border-left:4px solid #ea580c;padding:16px;\">
                       <tr>
-                        <td>
-                          <p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#a8a29e;font-family:Arial,sans-serif;text-transform:uppercase;letter-spacing:0.5px;">
+                        <td style="padding:0;\">
+                          <p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#a8a29e;font-family:Arial,sans-serif;text-transform:uppercase;\">
                             Your Message
                           </p>
-                          <p style="margin:0 0 12px;font-size:13px;color:#1c1917;font-family:Arial,sans-serif;font-weight:600;">
+                          <p style="margin:0 0 12px;font-size:13px;color:#1c1917;font-family:Arial,sans-serif;font-weight:600;\">
                             <strong>Subject:</strong> ${escapeHtml(p.subject)}
                           </p>
-                          <div style="font-size:13px;color:#57534e;font-family:Arial,sans-serif;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;">
+                          <div style="font-size:13px;color:#57534e;font-family:Arial,sans-serif;line-height:1.6;word-wrap:break-word;\">
 ${escapeHtml(p.message)}
                           </div>
                         </td>
@@ -102,11 +103,11 @@ ${escapeHtml(p.message)}
 
                 <!-- Next steps -->
                 <tr>
-                  <td style="padding:0 0 24px;border-top:1px solid #f5f5f4;padding-top:24px;">
-                    <p style="margin:0 0 12px;font-size:14px;color:#78716c;font-family:Arial,sans-serif;line-height:1.6;">
+                  <td style="padding:0 0 24px;border-top:1px solid #f5f5f4;padding-top:24px;\">
+                    <p style="margin:0 0 12px;font-size:14px;color:#78716c;font-family:Arial,sans-serif;line-height:1.6;\">
                       Our team typically responds within 24-48 hours. If your inquiry is urgent, please call us at:
                     </p>
-                    <p style="margin:0;font-size:14px;color:#ea580c;font-family:Arial,sans-serif;font-weight:600;">
+                    <p style="margin:0;font-size:14px;color:#ea580c;font-family:Arial,sans-serif;font-weight:600;\">
                       (087) 495 3334
                     </p>
                   </td>
@@ -114,15 +115,15 @@ ${escapeHtml(p.message)}
 
                 <!-- Contact info -->
                 <tr>
-                  <td style="padding:24px;background:#fff7ed;border-radius:6px;text-align:center;">
-                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#a8a29e;font-family:Arial,sans-serif;text-transform:uppercase;">
+                  <td style="padding:24px;background:#fff7ed;text-align:center;\">
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#a8a29e;font-family:Arial,sans-serif;text-transform:uppercase;\">
                       Our Contact Details
                     </p>
-                    <p style="margin:0;font-size:13px;color:#1c1917;font-family:Arial,sans-serif;">
+                    <p style="margin:0;font-size:13px;color:#1c1917;font-family:Arial,sans-serif;line-height:1.6;\">
                       Hindu Association of Ireland<br />
                       4 Upper Denmark Street<br />
                       Co. Limerick, Ireland<br />
-                      <a href="mailto:donation@hindutemple.ie" style="color:#ea580c;text-decoration:none;">donation@hindutemple.ie</a>
+                      <a href="mailto:donation@hindutemple.ie\" style=\"color:#ea580c;text-decoration:none;\">donation@hindutemple.ie</a>
                     </p>
                   </td>
                 </tr>
@@ -133,9 +134,9 @@ ${escapeHtml(p.message)}
 
           <!-- Footer -->
           <tr>
-            <td style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
+            <td style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;\">
               ${footerInner({
-                mainText: 'Hindu Association of Ireland · Limerick, Ireland',
+                mainText: 'Hindu Association of Ireland \u00b7 Limerick, Ireland',
                 subText: 'This email was sent because you submitted a contact form on our website. Your data is processed in accordance with GDPR.',
               })}
             </td>
