@@ -227,7 +227,7 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                 {/* Temple image band */}
                 <div className="-mx-6 overflow-hidden bg-orange-50" style={{ height: '260px' }}>
                   <img
-                    src="/favicon.png"
+                    src="https://gsqfaguqsmnuoeuhpxro.supabase.co/storage/v1/object/public/public-gallery/branding/Hindu_T.png"
                     alt="Hindu Temple"
                     className="w-full h-full object-cover"
                   />

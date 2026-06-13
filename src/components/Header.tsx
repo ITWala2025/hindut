@@ -159,7 +159,7 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
 
                   <div className="relative z-10 px-5 py-5 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-14 w-14 rounded-2xl overflow-hidden ring-2 ring-white/40 shadow-lg shrink-0 bg-white/15 flex items-center justify-center">
+                      <div className="shrink-0">
                         <Logo size="sm" showText={false} />
                       </div>
                       <div className="min-w-0">
