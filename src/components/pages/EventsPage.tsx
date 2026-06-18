@@ -251,7 +251,7 @@ function EventCard({
       id={`event-${event.id}`}
       onClick={() => navigate(eventUrl)}
       className={cn(
-        'group scroll-mt-32 border-orange-200/60 bg-white/85 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden cursor-pointer',
+        'group scroll-mt-32 border-orange-200/60 bg-white/85 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden cursor-pointer flex flex-col',
         highlighted && 'ring-4 ring-orange-400 shadow-2xl animate-pulse-glow-saffron',
       )}
     >
@@ -269,7 +269,7 @@ function EventCard({
         <div className="h-2 bg-linear-to-r from-orange-400 to-amber-400" />
       )}
 
-      <CardContent className="p-6 space-y-4">
+      <CardContent className="p-6 flex flex-col flex-1 gap-4">
         <div className="flex items-start gap-4">
           <div className="flex flex-col items-center justify-center bg-linear-to-br from-orange-100 to-amber-100 rounded-xl p-3 min-w-[72px] glow-saffron">
             <span className="text-xs font-semibold text-orange-700 tracking-widest">{month}</span>
@@ -314,24 +314,26 @@ function EventCard({
           </li>
         </ul>
 
-        {/* Action button — stopPropagation so card click doesn't fire */}
-        {event.isPaid ? (
-          <Button
-            onClick={(e) => { e.stopPropagation(); onBookTicket() }}
-            className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
-          >
-            <Ticket className="mr-2" weight="fill" />
-            Book ticket
-          </Button>
-        ) : (
-          <Button
-            onClick={(e) => { e.stopPropagation(); onRsvp() }}
-            className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
-          >
-            <ClipboardText className="mr-2" weight="fill" />
-            RSVP
-          </Button>
-        )}
+        {/* Action button — mt-auto pins it to the card bottom regardless of content height */}
+        <div className="mt-auto">
+          {event.isPaid ? (
+            <Button
+              onClick={(e) => { e.stopPropagation(); onBookTicket() }}
+              className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"
+            >
+              <Ticket className="mr-2" weight="fill" />
+              Book ticket
+            </Button>
+          ) : (
+            <Button
+              onClick={(e) => { e.stopPropagation(); onRsvp() }}
+              className="w-full bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+            >
+              <ClipboardText className="mr-2" weight="fill" />
+              RSVP
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

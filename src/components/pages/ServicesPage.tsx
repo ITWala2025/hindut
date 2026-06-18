@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { HandsPrayingIcon, CalendarBlankIcon, GraduationCapIcon, UsersIcon } from '@phosphor-icons/react'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
@@ -26,8 +26,8 @@ function ServiceCardSkeleton() {
 }
 
 export function ServicesPage() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('')
-  const [selectedService, setSelectedService] = useState<ServiceRecord | null>(null)
   const { services, loading: servicesLoading } = useServices()
   const { categories, loading: categoriesLoading } = useServiceCategories()
 
@@ -130,7 +130,7 @@ export function ServicesPage() {
                         : group.items.map((s: ServiceRecord) => (
                           <Card
                             key={s.id}
-                            onClick={() => setSelectedService(s)}
+                            onClick={() => navigate(`/services/${s.slug}`)}
                             className="border-l-4 border-l-orange-500 hover:shadow-xl hover:scale-[1.02] transition-all bg-white/80 backdrop-blur-sm hover-glow-saffron cursor-pointer"
                           >
                             <CardHeader>
@@ -196,54 +196,6 @@ export function ServicesPage() {
         </div>
       </section>
 
-      {/* ── Service Detail Modal ── */}
-      <Dialog open={!!selectedService} onOpenChange={(open) => { if (!open) setSelectedService(null) }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-          {selectedService && (
-            <>
-              {selectedService.imageUrl && (
-                <div className="relative">
-                  <img
-                    src={selectedService.imageUrl}
-                    alt={selectedService.title}
-                    className="w-full h-56 object-cover rounded-t-xl"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent rounded-t-xl" />
-                </div>
-              )}
-              <div className="p-6 space-y-4">
-                <DialogHeader>
-                  <div className="flex items-start gap-3">
-                    <div className="space-y-1">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-                        {selectedService.category}
-                      </span>
-                      <DialogTitle
-                        className="text-2xl font-bold text-orange-800 mt-1"
-                        style={{ fontFamily: 'var(--font-heading)' }}
-                      >
-                        {selectedService.title}
-                      </DialogTitle>
-                    </div>
-                  </div>
-                  {selectedService.excerpt && (
-                    <DialogDescription className="text-base text-muted-foreground leading-relaxed pt-1">
-                      {selectedService.excerpt}
-                    </DialogDescription>
-                  )}
-                </DialogHeader>
-                {selectedService.content && (
-                  <div
-                    className="rich-content text-sm leading-relaxed pt-2 border-t border-orange-100"
-                    dangerouslySetInnerHTML={{ __html: selectedService.content }}
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

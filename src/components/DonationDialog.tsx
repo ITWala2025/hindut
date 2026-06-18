@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { CheckCircle, CreditCard, ArrowLeft, Spinner, ShieldCheck, X, Star, HandCoins, Users, Leaf } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { EmailInput } from '@/components/EmailInput'
 
 // ── Divine decorative helpers ──────────────────────────────────────────────
 
@@ -389,9 +390,8 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
                     <Label htmlFor="donor-email" className="text-sm font-semibold mb-2 block text-orange-800">
                       🪷 Email Address *
                     </Label>
-                    <Input
+                    <EmailInput
                       id="donor-email"
-                      type="email"
                       placeholder="your.email@example.com"
                       value={donorEmail}
                       onChange={(e) => setDonorEmail(e.target.value)}

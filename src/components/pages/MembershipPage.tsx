@@ -46,6 +46,7 @@ import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useMembership } from '@/hooks/useMembership'
 import type { MembershipPlan } from '@/data/membership'
+import { EmailInput } from '@/components/EmailInput'
 
 // ── Icon resolver: maps DB-stored icon names to phosphor components ───────────
 const ICON_MAP: Record<string, PhosphorIcon> = {
@@ -243,6 +244,21 @@ export function MembershipPage() {
       toast.error('Network error. Please check your connection and try again.')
       setProcessing(false)
     }
+  }
+
+  const openForGiving = (tier: GivingTile) => {
+    if (!annualPlan) return
+    setSelected(annualPlan)
+    setStep('details')
+    setFullName('')
+    setEmail('')
+    setPhone('')
+    setGdprConsent(false)
+    setAddMonthly(true)
+    setMonthlyAmount(tier.amount ?? 0)
+    setMonthlyCustom('')
+    setProcessing(false)
+    setDialogOpen(true)
   }
 
   const openGiving = (tier: GivingTile) => {
@@ -540,7 +556,7 @@ export function MembershipPage() {
                         ))}
                       </ul>
                       <Button
-                        onClick={() => openGiving(tier)}
+                        onClick={() => openForGiving(tier)}
                         size="sm"
                         className={cn(
                           'w-full font-semibold rounded-xl text-xs h-8',
@@ -759,9 +775,8 @@ export function MembershipPage() {
                     <Label htmlFor="mem-email" className="text-sm font-medium text-slate-700 mb-1.5 block">
                       Email address <span className="text-red-500">*</span>
                     </Label>
-                    <Input
+                    <EmailInput
                       id="mem-email"
-                      type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
@@ -1066,9 +1081,8 @@ export function MembershipPage() {
                       <Label htmlFor="giving-email" className="text-sm font-medium text-slate-700 mb-1.5 block">
                         Email <span className="text-red-500">*</span>
                       </Label>
-                      <Input
+                      <EmailInput
                         id="giving-email"
-                        type="email"
                         value={givingEmail}
                         onChange={(e) => setGivingEmail(e.target.value)}
                         placeholder="you@example.com"

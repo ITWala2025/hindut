@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Heart, CalendarBlank, Users, HandsPraying, SpeakerHigh, SpeakerSlash, ArrowRight, MapPin, Clock, Sparkle, Sun, BookOpen, MusicNote, Mosque } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
@@ -279,10 +279,13 @@ export function HomePage({ onDonateClick }: HomePageProps) {
                           <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">
                             {service.excerpt}
                           </p>
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 group-hover:gap-2 transition-all duration-200">
+                          <Link
+                            to={`/services/${service.slug}`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 group-hover:gap-2 transition-all duration-200"
+                          >
                             Learn more
                             <ArrowRight size={11} weight="bold" />
-                          </span>
+                          </Link>
                         </div>
                       </article>
                     )

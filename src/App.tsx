@@ -8,6 +8,7 @@ import { DonationDialog } from '@/components/DonationDialog'
 import { HomePage } from '@/components/pages/HomePage'
 import { AboutPage } from '@/components/pages/AboutPage'
 import { ServicesPage } from '@/components/pages/ServicesPage'
+const ServiceDetailPage = lazy(() => import('@/components/pages/ServiceDetailPage').then(m => ({ default: m.ServiceDetailPage })))
 import { EventsPage } from '@/components/pages/EventsPage'
 import { MembershipPage } from '@/components/pages/MembershipPage'
 import { ContactPage } from '@/components/pages/ContactPage'
@@ -91,6 +92,7 @@ function AppShell() {
           <Route path="/" element={<HomePage onDonateClick={openDonation} />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
+          <Route path="/services/:slug" element={<Suspense fallback={<PageLoader />}><ServiceDetailPage /></Suspense>} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:slug" element={<Suspense fallback={<PageLoader />}><EventDetailPage /></Suspense>} />
           <Route path="/news" element={<Suspense fallback={<PageLoader />}><NewsPage /></Suspense>} />
