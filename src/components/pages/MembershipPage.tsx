@@ -172,7 +172,7 @@ export function MembershipPage() {
   const monthlyGivingAmounts = useMemo(
     () =>
       plans
-        .filter((p) => p.category === 'giving' && p.active)
+        .filter((p) => p.category === 'giving' && p.active && p.price > 0)
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((p) => p.price),
     [plans],
@@ -556,7 +556,7 @@ export function MembershipPage() {
                         ))}
                       </ul>
                       <Button
-                        onClick={() => openForGiving(tier)}
+                        onClick={() => openGiving(tier)}
                         size="sm"
                         className={cn(
                           'w-full font-semibold rounded-xl text-xs h-8',
