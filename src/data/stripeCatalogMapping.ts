@@ -50,7 +50,6 @@ export const MEMBERSHIP_CATALOG: StripeCatalogPlan[] = [
       'Annual special-occasion Archana',
       'Karpaga Vriksham leaf entry',
       'Community newsletter & event invitations',
-      'Full AGM voting rights',
       'Annual report and tax receipt',
     ],
     popular: true,

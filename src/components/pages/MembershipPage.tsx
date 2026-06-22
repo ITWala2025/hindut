@@ -48,6 +48,59 @@ import { useMembership } from '@/hooks/useMembership'
 import type { MembershipPlan } from '@/data/membership'
 import { EmailInput } from '@/components/EmailInput'
 
+// ── Divine decorative helpers ──────────────────────────────────────────────
+
+function LotusPetal({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  const outerAngles = [0, 45, 90, 135, 180, 225, 270, 315]
+  const innerAngles = [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5]
+  return (
+    <svg viewBox="0 0 200 200" className={className} style={style} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      {outerAngles.map((angle) => (
+        <ellipse key={angle} cx="100" cy="52" rx="18" ry="52" fill="#8B5A2B" transform={`rotate(${angle} 100 100)`} />
+      ))}
+      {innerAngles.map((angle) => (
+        <ellipse key={angle} cx="100" cy="64" rx="11" ry="36" fill="#C8A96E" transform={`rotate(${angle} 100 100)`} />
+      ))}
+      <circle cx="100" cy="100" r="13" fill="#8B5A2B" />
+    </svg>
+  )
+}
+
+function DivineBg() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#8B5A2B]"
+        style={{ fontSize: '260px', opacity: 0.07, lineHeight: 1, fontFamily: 'serif' }}
+      >
+        ॐ
+      </div>
+      <LotusPetal className="absolute -top-10 -left-10 w-48 h-48" style={{ opacity: 0.10 }} />
+      <LotusPetal className="absolute -bottom-12 -right-12 w-60 h-60" style={{ opacity: 0.08, transform: 'rotate(30deg)' }} />
+      <LotusPetal className="absolute -top-6 -right-6 w-28 h-28" style={{ opacity: 0.06 }} />
+      <LotusPetal className="absolute bottom-16 -left-6 w-24 h-24" style={{ opacity: 0.06, transform: 'rotate(-20deg)' }} />
+    </div>
+  )
+}
+
+function OrnateDivider() {
+  return (
+    <div className="flex items-center gap-3 my-3">
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent to-orange-200" />
+      <span className="text-amber-500 text-xs leading-none">✦</span>
+      <div className="flex-1 h-px bg-gradient-to-l from-transparent to-orange-200" />
+    </div>
+  )
+}
+
+function BlessingText() {
+  return (
+    <p className="text-center text-sm italic text-amber-700 mt-5" style={{ fontFamily: 'var(--font-heading)' }}>
+      🌸 May Mahalakshmi bless your generosity 🌸
+    </p>
+  )
+}
+
 // ── Icon resolver: maps DB-stored icon names to phosphor components ───────────
 const ICON_MAP: Record<string, PhosphorIcon> = {
   Flame, Leaf, Crown, HandCoins, Star, Heart, Sparkle,
@@ -743,7 +796,8 @@ export function MembershipPage() {
               </div>
             </div>
 
-            <div className="p-8">
+            <div className="relative p-8">
+              <DivineBg />
 
             {/* Step 1: Details */}
             {step === 'details' && selected && (
@@ -757,10 +811,12 @@ export function MembershipPage() {
                   />
                 </div>
 
-                <form onSubmit={submitDetails} className="space-y-4">
+                <OrnateDivider />
+
+                <form onSubmit={submitDetails} className="space-y-4 mt-2">
                   <div>
-                    <Label htmlFor="mem-name" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                      Full name <span className="text-red-500">*</span>
+                    <Label htmlFor="mem-name" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                      🌸 Full Name <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="mem-name"
@@ -768,12 +824,12 @@ export function MembershipPage() {
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Your full name"
                       required
-                      className="h-11 rounded-xl border-slate-200"
+                      className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="mem-email" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                      Email address <span className="text-red-500">*</span>
+                    <Label htmlFor="mem-email" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                      🪷 Email Address <span className="text-red-500">*</span>
                     </Label>
                     <EmailInput
                       id="mem-email"
@@ -781,12 +837,12 @@ export function MembershipPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       required
-                      className="h-11 rounded-xl border-slate-200"
+                      className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="mem-phone" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                      Phone number <span className="text-red-500">*</span>
+                    <Label htmlFor="mem-phone" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                      🪔 Phone Number <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="mem-phone"
@@ -795,7 +851,7 @@ export function MembershipPage() {
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+353 87 000 0000"
                       required
-                      className="h-11 rounded-xl border-slate-200"
+                      className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
                     />
                   </div>
 
@@ -812,7 +868,7 @@ export function MembershipPage() {
                         <Switch
                           checked={addMonthly}
                           onCheckedChange={setAddMonthly}
-                          className="data-[state=checked]:bg-amber-500 h-4 w-7 [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-3"
+                          className="data-[state=checked]:bg-gray-400 h-3 w-5 [&>span]:h-2 [&>span]:w-2 [&>span]:data-[state=checked]:translate-x-[10px]"
                         />
                       </div>
                       <p className="text-xs text-slate-500 mb-3">Optional — billed monthly from next month until cancelled. Not charged today.</p>
@@ -905,6 +961,7 @@ export function MembershipPage() {
                     <ArrowRight className="ml-2" size={18} />
                   </Button>
                 </form>
+                <BlessingText />
               </>
             )}
 
@@ -984,6 +1041,7 @@ export function MembershipPage() {
                     )}
                   </Button>
                 </div>
+                <BlessingText />
               </>
             )}
 
@@ -998,7 +1056,7 @@ export function MembershipPage() {
           <DialogOverlay />
           <DialogPrimitive.Content
             className={cn(
-              'fixed z-50 bg-white focus:outline-none overflow-y-auto',
+              'fixed z-50 bg-[#FEF6E4] focus:outline-none overflow-y-auto',
               'inset-0 rounded-none',
               'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-full',
               'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-full',
@@ -1021,8 +1079,9 @@ export function MembershipPage() {
             return (
               <>
                 <div className={cn('h-2 bg-linear-to-r', givingTier.gradient)} />
-                <div className="p-8">
-                  <DialogHeader className="mb-6">
+                <div className="relative p-8">
+                  <DivineBg />
+                  <DialogHeader className="mb-4">
                     <div className="flex items-center gap-3">
                       <div
                         className={cn(
@@ -1033,10 +1092,10 @@ export function MembershipPage() {
                         <Icon size={24} weight="duotone" className="text-white" />
                       </div>
                       <div>
-                        <DialogTitle className="text-xl font-bold text-slate-900">
+                        <DialogTitle className="text-xl font-bold text-orange-900">
                           {givingTier.name} — Monthly Giving
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="text-amber-700">
                           {givingTier.amount
                             ? `€${givingTier.amount}/month recurring`
                             : 'Custom monthly amount'}
@@ -1045,11 +1104,13 @@ export function MembershipPage() {
                     </div>
                   </DialogHeader>
 
-                  <form onSubmit={payGiving} className="space-y-4">
+                  <OrnateDivider />
+
+                  <form onSubmit={payGiving} className="space-y-4 mt-2">
                     {!givingTier.amount && (
                       <div>
-                        <Label htmlFor="giving-custom" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                          Monthly amount (€) <span className="text-red-500">*</span>
+                        <Label htmlFor="giving-custom" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                          🪔 Monthly amount (€) <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="giving-custom"
@@ -1060,13 +1121,13 @@ export function MembershipPage() {
                           min="1"
                           step="0.01"
                           required
-                          className="h-11 rounded-xl"
+                          className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
                         />
                       </div>
                     )}
                     <div>
-                      <Label htmlFor="giving-name" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                        Your name <span className="text-red-500">*</span>
+                      <Label htmlFor="giving-name" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                        🌸 Your Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="giving-name"
@@ -1074,12 +1135,12 @@ export function MembershipPage() {
                         onChange={(e) => setGivingName(e.target.value)}
                         placeholder="Your full name"
                         required
-                        className="h-11 rounded-xl"
+                        className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="giving-email" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                        Email <span className="text-red-500">*</span>
+                      <Label htmlFor="giving-email" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                        🪷 Email <span className="text-red-500">*</span>
                       </Label>
                       <EmailInput
                         id="giving-email"
@@ -1087,15 +1148,15 @@ export function MembershipPage() {
                         onChange={(e) => setGivingEmail(e.target.value)}
                         placeholder="you@example.com"
                         required
-                        className="h-11 rounded-xl"
+                        className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
                       />
                     </div>
-                    <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                    <div className="flex items-start gap-3 rounded-xl bg-orange-50 border border-orange-200 p-4">
                       <Checkbox
                         id="giving-gdpr"
                         checked={givingConsent}
                         onCheckedChange={(v) => setGivingConsent(!!v)}
-                        className="mt-0.5 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                        className="mt-0.5 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
                       />
                       <Label
                         htmlFor="giving-gdpr"
@@ -1141,6 +1202,7 @@ export function MembershipPage() {
                       )}
                     </Button>
                   </form>
+                  <BlessingText />
                 </div>
               </>
             )

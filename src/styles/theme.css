@@ -354,6 +354,12 @@
     animation-play-state: paused;
   }
 
+  @media (max-width: 767px) {
+    .team-marquee-track {
+      animation: none;
+    }
+  }
+
   /* Inside-out reveal animation for hero background */
   .hero-reveal {
     animation: reveal-inside-out 2s ease-out forwards;

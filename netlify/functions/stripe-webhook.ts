@@ -73,7 +73,7 @@ function createMailTransporter() {
 }
 
 /**
- * Generate next HAI-M-XXXX code for the given Supabase client.
+ * Generate next HAI-MMYYYY-XXXX code for the given Supabase client.
  * Uses optimistic insert: if a race produces a duplicate, the unique
  * constraint on member_code ensures at most one code per member.
  */
@@ -83,10 +83,13 @@ async function generateMemberCode(
   const { count } = await supabase
     .from('members')
     .select('id', { count: 'exact', head: true })
-    .like('member_code', 'HAI-M-%')
+    .like('member_code', 'HAI-%')
 
+  const now = new Date()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const yyyy = String(now.getFullYear())
   const seq = String((count ?? 0) + 1).padStart(4, '0')
-  return `HAI-M-${seq}`
+  return `HAI-${mm}${yyyy}-${seq}`
 }
 
 function getStripeForSecret(secretKey: string | undefined): Stripe | null {
