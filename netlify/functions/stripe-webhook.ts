@@ -276,6 +276,8 @@ export const handler: Handler = async (event) => {
           const memberName    = session.metadata?.fullName   ?? 'Member'
           const memberEmail   = session.metadata?.email      ?? null
           const planId        = session.metadata?.planId     ?? 'annual'
+          const familySize    = session.metadata?.familySize ?? null
+          const area          = session.metadata?.area       ?? null
 
           // Resolve the human-readable plan name from membership_plans.
           let planName = 'Membership'
@@ -356,6 +358,17 @@ export const handler: Handler = async (event) => {
               console.log('[stripe-webhook] assigned member_code', memberCode, 'to member', memberId)
             } else {
               console.log('[stripe-webhook] member', memberId, 'already has member_code', memberCode)
+            }
+
+            // Persist family_size and area if present in metadata (belt-and-suspenders)
+            if (familySize || area) {
+              await supabase
+                .from('members')
+                .update({
+                  ...(familySize ? { family_size: familySize } : {}),
+                  ...(area       ? { area }                    : {}),
+                })
+                .eq('id', memberId)
             }
           }
 

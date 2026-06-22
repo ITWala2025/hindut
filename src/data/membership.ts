@@ -42,6 +42,8 @@ export interface MembershipRecord {
   fullName: string
   email: string
   phone?: string
+  familySize?: string
+  area?: string
   startDate: string
   expiresOn: string
   status: 'active' | 'expired' | 'pending'

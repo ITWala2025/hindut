@@ -47,6 +47,8 @@ const MembershipSchema = z.object({
   fullName:               z.string().min(1).max(120),
   email:                  z.string().email().max(254),
   phone:                  z.string().max(40).optional(),
+  familySize:             z.string().max(10).optional(),
+  area:                   z.string().max(100).optional(),
   monthlyContributionEur: z.number().min(1).max(10000).optional(),
   successUrl:             z.string().url().optional(),
   cancelUrl:              z.string().url().optional(),
@@ -540,16 +542,23 @@ export const handler: Handler = async (event) => {
       memberId = (existingMember as { id: string }).id
       await supabase
         .from('members')
-        .update({ full_name: m.fullName, phone: m.phone ?? null })
+        .update({
+          full_name:   m.fullName,
+          phone:       m.phone ?? null,
+          ...(m.familySize ? { family_size: m.familySize } : {}),
+          ...(m.area       ? { area: m.area }               : {}),
+        })
         .eq('id', memberId)
     } else {
       const { data: newMember, error: memberErr } = await supabase
         .from('members')
         .insert({
-          full_name: m.fullName,
-          email:     m.email,
-          phone:     m.phone ?? null,
-          user_id:   null,
+          full_name:   m.fullName,
+          email:       m.email,
+          phone:       m.phone ?? null,
+          family_size: m.familySize ?? null,
+          area:        m.area ?? null,
+          user_id:     null,
         })
         .select('id')
         .single()
@@ -630,6 +639,8 @@ export const handler: Handler = async (event) => {
         planId:       m.planId,
         fullName:     m.fullName,
         email:        m.email,
+        ...(m.familySize            ? { familySize: m.familySize }                                : {}),
+        ...(m.area                  ? { area: m.area }                                             : {}),
         ...(m.monthlyContributionEur ? { monthlyContributionEur: String(m.monthlyContributionEur) } : {}),
       },
       subscription_data: {

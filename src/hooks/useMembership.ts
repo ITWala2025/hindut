@@ -33,6 +33,8 @@ interface MembershipRow {
     email: string | null
     phone: string | null
     member_code: string | null
+    family_size: string | null
+    area: string | null
   } | null
 }
 
@@ -69,6 +71,8 @@ function toRecord(row: MembershipRow): MembershipRecord {
   return {
     id: row.id,
     memberCode: row.members?.member_code ?? undefined,
+    familySize: row.members?.family_size ?? undefined,
+    area:       row.members?.area        ?? undefined,
     planId: row.plan as MembershipPlanId,
     fullName: row.members?.full_name ?? 'Unknown',
     email: row.members?.email ?? '',
@@ -155,7 +159,7 @@ export function useMembership() {
     setLoading(true)
     const { data, error: err } = await supabase
       .from('memberships')
-      .select('*, members(full_name, email, phone, member_code)')
+      .select('*, members(full_name, email, phone, member_code, family_size, area)')
       .order('created_at', { ascending: false })
     if (err) {
       setError(err.message)

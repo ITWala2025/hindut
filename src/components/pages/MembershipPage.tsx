@@ -154,6 +154,22 @@ function planToTile(plan: MembershipPlan): GivingTile {
   }
 }
 
+// ── Data-capture constants ────────────────────────────────────────────────────
+const FAMILY_SIZES = ['1', '2', '3', '4', '5', '6+']
+
+const LIMERICK_AREAS = [
+  'Adare', 'Annacotty', 'Ballinacurra Weston', 'Ballycummin', 'Ballynanty',
+  'Ballyneety', 'Bruff', 'Caherdavin', 'Caherconlish', 'Carew Park',
+  'Castleconnell', 'Castletroy', 'Clarina', 'Clonmacken', 'Coonagh',
+  'Corbally', 'Cratloe (near city boundary)', 'Dooradoyle', 'Drombanna',
+  'Ennis Road', 'Fedamore', 'Galvone', 'Groody', 'Hyde Road', 'Janesboro',
+  'Kilalee', 'Kildimo', 'Kileely', 'Mayorstone', 'Meelick', 'Monaleen',
+  'Moyross', 'Mungret', 'Murroe', 'Newcastle West', 'North Circular Road',
+  'Pallaskenry', 'Parteen', 'Patrickswell', 'Prospect', 'Raheen', 'Rhebogue',
+  'Rosbrien', 'Roxboro', 'Shannon Banks', 'Singland', 'Southill',
+  'Thomondgate', 'Westbury',
+]
+
 // ── FAQ content ───────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
   {
@@ -192,6 +208,8 @@ export function MembershipPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [familySize, setFamilySize] = useState('')
+  const [area, setArea] = useState('')
   const [gdprConsent, setGdprConsent] = useState(false)
   const [addMonthly, setAddMonthly] = useState(false)
   const [monthlyAmount, setMonthlyAmount] = useState<number>(0)
@@ -237,6 +255,8 @@ export function MembershipPage() {
     setFullName('')
     setEmail('')
     setPhone('')
+    setFamilySize('')
+    setArea('')
     setGdprConsent(false)
     setAddMonthly(true)
     const defaultAmt =
@@ -261,6 +281,8 @@ export function MembershipPage() {
     if (!emailRe.test(email)) { toast.error('Please enter a valid email address.'); return }
     const phoneRe = /^\+?[\d\s\-().]{7,20}$/
     if (!phoneRe.test(phone.trim())) { toast.error('Please enter a valid phone number.'); return }
+    if (!familySize) { toast.error('Please select the number of people in your family.'); return }
+    if (!area) { toast.error('Please select your area.'); return }
     if (!gdprConsent) { toast.error('Please accept the data processing consent to continue.'); return }
     setStep('payment')
   }
@@ -281,6 +303,8 @@ export function MembershipPage() {
           fullName: fullName.trim(),
           email: email.trim(),
           phone: phone.trim() || undefined,
+          familySize: familySize || undefined,
+          area: area || undefined,
           ...(effectiveMonthly >= 1 ? { monthlyContributionEur: effectiveMonthly } : {}),
           successUrl: `${window.location.origin}/membership-success`,
           cancelUrl: `${window.location.origin}/membership?cancelled=1`,
@@ -306,6 +330,8 @@ export function MembershipPage() {
     setFullName('')
     setEmail('')
     setPhone('')
+    setFamilySize('')
+    setArea('')
     setGdprConsent(false)
     setAddMonthly(true)
     setMonthlyAmount(tier.amount ?? 0)
@@ -855,6 +881,43 @@ export function MembershipPage() {
                     />
                   </div>
 
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="mem-family" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                        👨‍👩‍👧 Family Size <span className="text-red-500">*</span>
+                      </Label>
+                      <select
+                        id="mem-family"
+                        value={familySize}
+                        onChange={(e) => setFamilySize(e.target.value)}
+                        required
+                        className="w-full h-11 rounded-xl border border-orange-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                      >
+                        <option value="">Select…</option>
+                        {FAMILY_SIZES.map((s) => (
+                          <option key={s} value={s}>{s} {s === '1' ? 'person' : 'people'}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="mem-area" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                        📍 Area <span className="text-red-500">*</span>
+                      </Label>
+                      <select
+                        id="mem-area"
+                        value={area}
+                        onChange={(e) => setArea(e.target.value)}
+                        required
+                        className="w-full h-11 rounded-xl border border-orange-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                      >
+                        <option value="">Select…</option>
+                        {LIMERICK_AREAS.map((a) => (
+                          <option key={a} value={a}>{a}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Optional monthly contribution (annual plan only) */}
                   {selected.id === 'annual' && (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
@@ -862,7 +925,7 @@ export function MembershipPage() {
                         <div className="flex items-center gap-2">
                           <HandCoins size={18} weight="duotone" className="text-amber-600" />
                           <span className="text-sm font-semibold text-slate-800">
-                            Add a monthly contribution?
+                            Support the Temple Through Monthly Seva
                           </span>
                         </div>
                         <Switch
@@ -989,6 +1052,18 @@ export function MembershipPage() {
                     <span>Email</span>
                     <span className="truncate max-w-[180px]">{email}</span>
                   </div>
+                  {familySize && (
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Family size</span>
+                      <span>{familySize} {familySize === '1' ? 'person' : 'people'}</span>
+                    </div>
+                  )}
+                  {area && (
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Area</span>
+                      <span>{area}</span>
+                    </div>
+                  )}
                   {addMonthly && (monthlyAmount > 0 || (monthlyAmount === 0 && !!monthlyCustom)) && (
                     <div className="pt-2 border-t border-amber-200 space-y-1">
                       <div className="flex justify-between text-xs text-amber-700">
