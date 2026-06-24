@@ -160,7 +160,7 @@ async function handleGet(event: HandlerEvent) {
   }
 
   const host = event.headers.host ?? event.headers.Host ?? null
-  const ctx = await resolveStripe(host)
+  const ctx = await resolveStripe({ host })
   const supabase = supabaseAdmin()
   
   // Fetch Stripe products
