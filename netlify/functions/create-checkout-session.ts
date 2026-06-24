@@ -573,26 +573,43 @@ export const handler: Handler = async (event) => {
       memberId = (newMember as { id: string }).id
     }
 
-    // Create pending membership row
-    const { data: memRow, error: memErr } = await supabase
+    // Upsert membership: reuse existing record (any status) or create a new pending one.
+    // The memberships table has a unique constraint on (member_id, plan), so a plain
+    // INSERT fails when the member retries after a previous pending/failed attempt.
+    let membershipId: string | null = null
+    const { data: existingMembership } = await supabase
       .from('memberships')
-      .insert({
-        member_id: memberId,
-        plan:      plan.id,
-        status:    'pending',
-      })
       .select('id')
-      .single()
+      .eq('member_id', memberId)
+      .eq('plan', plan.id)
+      .maybeSingle()
 
-    if (memErr || !memRow) {
-      console.error('[create-checkout-session] membership insert error:', memErr)
-      return {
-        statusCode: 500,
-        headers:    jsonHeaders,
-        body:       JSON.stringify({ error: 'Failed to create membership record' }),
+    if (existingMembership) {
+      membershipId = (existingMembership as { id: string }).id
+      await supabase
+        .from('memberships')
+        .update({ status: 'pending', updated_at: new Date().toISOString() })
+        .eq('id', membershipId)
+    } else {
+      const { data: memRow, error: memErr } = await supabase
+        .from('memberships')
+        .insert({
+          member_id: memberId,
+          plan:      plan.id,
+          status:    'pending',
+        })
+        .select('id')
+        .single()
+      if (memErr || !memRow) {
+        console.error('[create-checkout-session] membership insert error:', memErr)
+        return {
+          statusCode: 500,
+          headers:    jsonHeaders,
+          body:       JSON.stringify({ error: 'Failed to create membership record' }),
+        }
       }
+      membershipId = (memRow as { id: string }).id
     }
-    const membershipId = (memRow as { id: string }).id
 
     // Determine Stripe cadence from database plan
     const cadence = plan.cadence === 'monthly' 

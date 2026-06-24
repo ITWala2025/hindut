@@ -321,6 +321,8 @@ export const handler: Handler = async (event) => {
             .from('memberships')
             .update({
               status:                  'active',
+              gateway:                 'stripe',
+              reference:               session.id,
               stripe_customer_id:      customerId,
               stripe_subscription_id:  subscriptionId,
               started_at:              new Date().toISOString(),
