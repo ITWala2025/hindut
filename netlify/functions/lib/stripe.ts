@@ -50,10 +50,10 @@ export interface ResolvedStripeContext {
 
 // Known hosts:
 //   SANDBOX  — limerickhindutemple.netlify.app  (STRIPE_MODE=test in netlify.toml)
-//   PRODUCTION — www.hindutemple.ie              (live mode, real charges)
+//   PRODUCTION — hindutemple.ie, www.hindutemple.ie  (live mode, real charges)
 // The sandbox site is protected by the STRIPE_MODE=test env override, so it
 // will never go live even if it somehow appears in PRODUCTION_HOSTS.
-const DEFAULT_PRODUCTION_HOSTS: string[] = ['www.hindutemple.ie']
+const DEFAULT_PRODUCTION_HOSTS: string[] = ['hindutemple.ie', 'www.hindutemple.ie']
 
 function productionHosts(): string[] {
   const raw = process.env.PRODUCTION_HOSTS ?? ''
