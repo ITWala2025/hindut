@@ -5,29 +5,31 @@
  *
  *   • Loads secret keys from Netlify env vars (NEVER from the DB).
  *   • Detects which mode to use:
- *       1. STRIPE_MODE env var    (explicit override — set to 'test' for sandbox)
+ *       1. STRIPE_MODE env var    (explicit override — currently unset)
  *       2. Admin DB override      (payment_settings.mode_override = 'test' | 'live')
  *       3. Host header            (matches PRODUCTION_HOSTS env var → live, else test)
  *   • Exposes the matching publishable key + webhook secret.
  *
- * Current setup:
- *   limerickhindutemple.netlify.app is the SANDBOX/test site — always test mode.
- *   www.hindutemple.ie is the PRODUCTION site — set PRODUCTION_HOSTS=www.hindutemple.ie
- *   and live keys (STRIPE_SECRET_KEY_LIVE etc.) in Netlify to enable live mode.
+ * Current setup (PRODUCTION LIVE):
+ *   limerickhindutemple.netlify.app is the PREVIEW/test site — always test mode.
+ *   www.hindutemple.ie is the PRODUCTION site — LIVE MODE ACTIVE ✅
+ *   PRODUCTION_HOSTS=www.hindutemple.ie triggers live Stripe keys.
  *
- * Required Netlify env vars:
- *   STRIPE_SECRET_KEY_TEST          — sk_test_...  (sandbox)
- *   STRIPE_PUBLISHABLE_KEY_TEST     — pk_test_...  (sandbox)
- *   STRIPE_WEBHOOK_SECRET_TEST      — whsec_...    (set after creating test webhook)
+ * Required Netlify env vars (all currently set):
+ *   TEST MODE:
+ *     STRIPE_SECRET_KEY_TEST          — sk_test_...  (sandbox)
+ *     STRIPE_PUBLISHABLE_KEY_TEST     — pk_test_...  (sandbox)
+ *     STRIPE_WEBHOOK_SECRET_TEST      — whsec_...    (test webhook endpoint)
  *
- * Add when production domain is ready:
- *   STRIPE_SECRET_KEY_LIVE          — sk_live_...
- *   STRIPE_PUBLISHABLE_KEY_LIVE     — pk_live_...
- *   STRIPE_WEBHOOK_SECRET_LIVE      — whsec_...
+ *   LIVE MODE (ACTIVE):
+ *     STRIPE_SECRET_KEY_LIVE          — sk_live_...  ✅
+ *     STRIPE_PUBLISHABLE_KEY_LIVE     — pk_live_...  ✅
+ *     STRIPE_WEBHOOK_SECRET_LIVE      — whsec_...    ✅
  *
  * Optional:
- *   STRIPE_MODE                     — 'test' | 'live'  (force mode; recommended: 'test' for now)
+ *   STRIPE_MODE                     — 'test' | 'live'  (force mode; unset for host detection)
  *   PRODUCTION_HOSTS                — comma-separated hostnames that trigger live mode
+ *                                     Currently: www.hindutemple.ie
  *                                     e.g. www.hindutemple.ie
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — required to read DB mode_override.
  */

@@ -18,10 +18,11 @@
 
 [context.production.environment]
   NODE_VERSION = "18"
-  # limerickhindutemple.netlify.app is the SANDBOX/preview site — always test mode.
-  # Production site: https://www.hindutemple.ie
-  # On the production site, remove STRIPE_MODE=test and set PRODUCTION_HOSTS=www.hindutemple.ie
-  STRIPE_MODE = "test"
+  # Production site is now live with real Stripe charges.
+  # PRODUCTION_HOSTS and all live Stripe keys (STRIPE_SECRET_KEY_LIVE, etc.) 
+  # must be set in Netlify environment variables.
+  # STRIPE_MODE is removed here to enable host-based detection:
+  # www.hindutemple.ie → live mode, other hosts → test mode
 
 # SPA fallback so client-side routes (react-router) work on refresh / deep links.
 # Netlify evaluates function routes BEFORE redirect rules, so /.netlify/functions/*
