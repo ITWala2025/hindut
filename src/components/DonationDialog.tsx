@@ -50,9 +50,9 @@ function DivineBg() {
 function OrnateDivider() {
   return (
     <div className="flex items-center gap-3 my-3">
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent to-orange-200" />
+      <div className="flex-1 h-px bg-linear-to-r from-transparent to-orange-200" />
       <span className="text-amber-500 text-xs leading-none">✦</span>
-      <div className="flex-1 h-px bg-gradient-to-l from-transparent to-orange-200" />
+      <div className="flex-1 h-px bg-linear-to-l from-transparent to-orange-200" />
     </div>
   )
 }

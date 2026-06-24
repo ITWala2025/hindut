@@ -107,15 +107,15 @@ function generateTicketReference(eventId: string): string {
 function cadenceToStripe(
   cadence: string | null | undefined,
   durationMonths: number,
-): { interval: 'month' | 'year'; intervalCount: number } {
+): { interval: 'month' | 'year'; interval_count: number } {
   switch (cadence) {
-    case 'annual':       return { interval: 'year',  intervalCount: 1 }
-    case 'semi_annual':  return { interval: 'month', intervalCount: 6 }
-    case 'monthly':      return { interval: 'month', intervalCount: 1 }
+    case 'annual':       return { interval: 'year',  interval_count: 1 }
+    case 'semi_annual':  return { interval: 'month', interval_count: 6 }
+    case 'monthly':      return { interval: 'month', interval_count: 1 }
     default: {
       // Fallback: derive from duration_months column.
-      if (durationMonths >= 12) return { interval: 'year',  intervalCount: Math.max(1, Math.round(durationMonths / 12)) }
-      return { interval: 'month', intervalCount: Math.max(1, durationMonths) }
+      if (durationMonths >= 12) return { interval: 'year',  interval_count: Math.max(1, Math.round(durationMonths / 12)) }
+      return { interval: 'month', interval_count: Math.max(1, durationMonths) }
     }
   }
 }
@@ -612,11 +612,11 @@ export const handler: Handler = async (event) => {
     }
 
     // Determine Stripe cadence from database plan
-    const cadence = plan.cadence === 'monthly' 
-      ? { interval: 'month' as const, intervalCount: 1 }
+    const cadence = plan.cadence === 'monthly'
+      ? { interval: 'month' as const, interval_count: 1 }
       : plan.cadence === 'one_time'
       ? null // one_time has no recurring
-      : { interval: 'year' as const, intervalCount: 1 } // default annual
+      : { interval: 'year' as const, interval_count: 1 } // default annual
 
     // Use Stripe price ID from database when available. Falls back to
     // inline price_data if the plan has not been synced yet.
