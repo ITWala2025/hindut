@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { HandsPrayingIcon, CalendarBlankIcon, GraduationCapIcon, UsersIcon } from '@phosphor-icons/react'
@@ -27,6 +28,7 @@ function ServiceCardSkeleton() {
 
 export function ServicesPage() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = useState('')
   const { services, loading: servicesLoading } = useServices()
   const { categories, loading: categoriesLoading } = useServiceCategories()
@@ -91,7 +93,7 @@ export function ServicesPage() {
             <Tabs value={effectiveTab} onValueChange={setActiveTab} className="max-w-6xl mx-auto">
               <TabsList
                 className="grid w-full mb-12 h-auto p-2 bg-linear-to-r from-orange-50 to-amber-50 border border-orange-200"
-                style={{ gridTemplateColumns: `repeat(${Math.min(categories.length, 4)}, minmax(0, 1fr))` }}
+                style={{ gridTemplateColumns: `repeat(${Math.min(categories.length, isMobile ? 2 : 4)}, minmax(0, 1fr))` }}
               >
                 {categories.map((cat, i) => {
                   const Icon = getCategoryIcon(i)

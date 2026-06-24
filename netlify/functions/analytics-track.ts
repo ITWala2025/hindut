@@ -23,6 +23,7 @@
 import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'node:crypto'
+import ws from 'ws'
 
 // ---------------------------------------------------------------------------
 // Allowed origins. Requests from any other host (local dev, preview deploys,
@@ -251,6 +252,7 @@ export const handler: Handler = async (event) => {
 
   const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { transport: ws },
   })
 
   // -------------------------------------------------------------------------
