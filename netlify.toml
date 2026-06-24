@@ -19,10 +19,13 @@
 [context.production.environment]
   NODE_VERSION = "18"
   # Production site is now live with real Stripe charges.
-  # PRODUCTION_HOSTS and all live Stripe keys (STRIPE_SECRET_KEY_LIVE, etc.) 
-  # must be set in Netlify environment variables.
-  # STRIPE_MODE is removed here to enable host-based detection:
-  # www.hindutemple.ie → live mode, other hosts → test mode
+  # All live Stripe keys (STRIPE_SECRET_KEY_LIVE, etc.) must be set in Netlify env vars.
+  # Force STRIPE_MODE=live for production to ensure functions use live keys
+  STRIPE_MODE = "live"
+
+# Deploy preview context (preview builds use test mode)
+[context.deploy-preview.environment]
+  STRIPE_MODE = "test"
 
 # SPA fallback so client-side routes (react-router) work on refresh / deep links.
 # Netlify evaluates function routes BEFORE redirect rules, so /.netlify/functions/*
