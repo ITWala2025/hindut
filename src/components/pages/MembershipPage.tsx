@@ -215,6 +215,7 @@ export function MembershipPage() {
   const [monthlyAmount, setMonthlyAmount] = useState<number>(0)
   const [monthlyCustom, setMonthlyCustom] = useState('')
   const [processing, setProcessing] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
 
   // ── Monthly giving dialog state ───────────────────────────────────────────
   const [givingOpen, setGivingOpen] = useState(false)
@@ -290,6 +291,7 @@ export function MembershipPage() {
   const pay = async () => {
     if (!selected) return
     setProcessing(true)
+    setPayError(null)
     const effectiveMonthly = addMonthly
       ? (monthlyAmount > 0 ? monthlyAmount : parseFloat(monthlyCustom) || 0)
       : 0
@@ -310,15 +312,22 @@ export function MembershipPage() {
           cancelUrl: `${window.location.origin}/membership?cancelled=1`,
         }),
       })
-      const json = await res.json()
+      let json: { url?: string; error?: string } = {}
+      try { json = await res.json() } catch { /* non-JSON response */ }
       if (!res.ok || !json.url) {
-        toast.error(json.error ?? 'Could not start Stripe checkout. Please try again.')
+        const msg = json.error ?? `Server error (${res.status}). Please try again.`
+        console.error('[membership pay]', res.status, msg)
+        setPayError(msg)
+        toast.error(msg)
         setProcessing(false)
         return
       }
       window.location.href = json.url
-    } catch {
-      toast.error('Network error. Please check your connection and try again.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Network error. Please check your connection.'
+      console.error('[membership pay] fetch error:', err)
+      setPayError(msg)
+      toast.error(msg)
       setProcessing(false)
     }
   }
@@ -1088,11 +1097,18 @@ export function MembershipPage() {
                   </p>
                 </div>
 
+                {/* Inline error (persists until next attempt) */}
+                {payError && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 p-3 mb-3 text-xs text-red-700">
+                    {payError}
+                  </div>
+                )}
+
                 <div className="flex gap-3">
                   <Button
                     variant="outline"
                     size="lg"
-                    onClick={() => setStep('details')}
+                    onClick={() => { setStep('details'); setPayError(null) }}
                     className="h-12 rounded-xl border-slate-300"
                   >
                     Back
