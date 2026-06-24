@@ -109,7 +109,11 @@ export async function resolveStripe(opts: {
   let source: ResolvedStripeContext['source']
 
   const envOverride = process.env.STRIPE_MODE
-  const dbOverride  = opts.skipDb ? null : await modeFromDb()
+  // Skip the DB round-trip when STRIPE_MODE is already set via env var
+  // (always the case on production/preview where netlify.toml sets it).
+  const dbOverride  = (opts.skipDb || envOverride === 'test' || envOverride === 'live')
+    ? null
+    : await modeFromDb()
 
   if (envOverride === 'test' || envOverride === 'live') {
     mode = envOverride

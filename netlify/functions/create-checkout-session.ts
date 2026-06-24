@@ -509,20 +509,21 @@ export const handler: Handler = async (event) => {
     // ─────────────────────────────────────────────────────────────────────
     const m = parsed.data
 
-    // Fetch plan from database
-    const { data: plan, error: planErr } = await supabase
-      .from('membership_plans')
-      .select('*')
-      .eq('id', m.planId)
-      .eq('active', true)
-      .maybeSingle()
+    // Fetch plan + existing member in parallel (independent queries)
+    const [
+      { data: plan, error: planErr },
+      { data: existingMember },
+    ] = await Promise.all([
+      supabase.from('membership_plans').select('*').eq('id', m.planId).eq('active', true).maybeSingle(),
+      supabase.from('members').select('id').eq('email', m.email).maybeSingle(),
+    ])
 
     if (planErr || !plan) {
       console.error('[create-checkout-session] plan query error:', planErr)
-      return { 
-        statusCode: 404, 
-        headers: jsonHeaders, 
-        body: JSON.stringify({ error: 'Membership plan not found or inactive' }) 
+      return {
+        statusCode: 404,
+        headers: jsonHeaders,
+        body: JSON.stringify({ error: 'Membership plan not found or inactive' }),
       }
     }
 
@@ -530,14 +531,8 @@ export const handler: Handler = async (event) => {
     const useStripePriceId = plan.stripe_price_id && plan.stripe_mode === ctx.mode
     const stripePriceId = useStripePriceId ? plan.stripe_price_id : null
 
-    // Upsert member by email (members table has unique constraint on email? let's just insert).
+    // Upsert member
     let memberId: string | null = null
-    const { data: existingMember } = await supabase
-      .from('members')
-      .select('id')
-      .eq('email', m.email)
-      .maybeSingle()
-
     if (existingMember) {
       memberId = (existingMember as { id: string }).id
       await supabase
