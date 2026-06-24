@@ -136,7 +136,7 @@ function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
 export function AnalyticsSection() {
   const [rangeId, setRangeId] = useState('7d')
   const range = useMemo(() => buildRange(rangeId), [rangeId])
-  const { summary, loading, error } = useAnalytics(range)
+  const { summary, loading, error, refresh } = useAnalytics(range)
 
   const exportSessions = () => {
     downloadCsv(
@@ -196,9 +196,9 @@ export function AnalyticsSection() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="secondary" onClick={() => setRangeId((r) => r)} className="bg-white text-orange-800 hover:bg-orange-50">
-              <ArrowsClockwise size={18} weight="bold" className="mr-2" />
-              Refresh
+            <Button variant="secondary" onClick={refresh} disabled={loading} className="bg-white text-orange-800 hover:bg-orange-50">
+              <ArrowsClockwise size={18} weight="bold" className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Loading…' : 'Refresh'}
             </Button>
             <Button variant="secondary" onClick={exportSessions} className="bg-white text-orange-800 hover:bg-orange-50">
               <DownloadSimple size={18} weight="bold" className="mr-2" />

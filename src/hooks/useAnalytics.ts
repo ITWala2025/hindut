@@ -9,7 +9,7 @@
  * The component decides the date range; everything is computed client-side
  * from the queried rows so we stay schema-flexible without server functions.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export interface AnalyticsRange {
@@ -119,6 +119,9 @@ export function useAnalytics(range: AnalyticsRange) {
   const [sessions, setSessions] = useState<AnalyticsSessionRow[]>([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
 
   useEffect(() => {
     let cancelled = false
@@ -155,7 +158,8 @@ export function useAnalytics(range: AnalyticsRange) {
     }
     void load()
     return () => { cancelled = true }
-  }, [range.from, range.to])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range.from, range.to, refreshKey])
 
   const summary: AnalyticsSummary = useMemo(() => {
     // ---------- KPIs --------------------------------------------------------
@@ -292,5 +296,5 @@ export function useAnalytics(range: AnalyticsRange) {
     }
   }, [events, sessions, range.from, range.to, range.bucket])
 
-  return { summary, loading, error, refresh: () => setEvents((e) => [...e]) }
+  return { summary, loading, error, refresh }
 }
