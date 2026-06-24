@@ -687,39 +687,62 @@ export const handler: Handler = async (event) => {
         const subscription = invoice.subscription
         if (!subscription || !stripe) break
 
-        // Fetch subscription to get metadata with donor info
+        // Fetch subscription to get metadata with customer info
         try {
           const sub = await stripe.subscriptions.retrieve(typeof subscription === 'string' ? subscription : subscription.id)
-          const donorName = (sub.metadata?.donorName as string | undefined) || 'Valued Donor'
-          const donorEmail = (sub.metadata?.donorEmail as string | undefined) || ''
-          const amountEur = (sub.metadata?.amountEur as string | undefined) ? parseFloat(sub.metadata.amountEur as string) : 0
+          const subKind = sub.metadata?.kind
 
-          if (donorEmail && process.env.SMTP_HOST) {
+          let customerName  = 'Valued Supporter'
+          let customerEmail = ''
+          let itemName      = 'Subscription'
+          let amountEur     = (sub.metadata?.amountEur as string | undefined)
+            ? parseFloat(sub.metadata.amountEur as string)
+            : 0
+
+          if (subKind === 'donation') {
+            customerName  = (sub.metadata?.donorName  as string | undefined) || 'Valued Donor'
+            customerEmail = (sub.metadata?.donorEmail as string | undefined) || ''
+            itemName      = 'Monthly recurring donation'
+          } else if (subKind === 'membership') {
+            customerName  = (sub.metadata?.memberName  as string | undefined) || 'Member'
+            customerEmail = (sub.metadata?.memberEmail as string | undefined) || ''
+            itemName      = (sub.metadata?.planName    as string | undefined) || 'Membership renewal'
+            amountEur     = (invoice.amount_due ?? 0) / 100
+          } else if (subKind === 'monthly_contribution') {
+            customerName  = (sub.metadata?.memberName  as string | undefined) || 'Member'
+            customerEmail = (sub.metadata?.memberEmail as string | undefined) || ''
+            itemName      = 'Monthly contribution'
+            amountEur     = (invoice.amount_due ?? 0) / 100
+          }
+
+          if (customerEmail && process.env.SMTP_HOST) {
             try {
               const transporter = createMailTransporter()
               const failureReason = invoice.last_payment_error?.message || 'Your payment method was declined. Please try again.'
 
               const emailParams: PaymentFailedEmailParams = {
-                customerName: donorName,
-                customerEmail: donorEmail,
-                itemType: 'donation',
-                itemName: 'Monthly recurring donation',
+                customerName,
+                customerEmail,
+                itemType: subKind === 'donation' ? 'donation' : 'membership',
+                itemName,
                 amount: amountEur,
                 failureReason,
               }
 
               await transporter.sendMail({
-                from: process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
-                to: emailParams.customerEmail,
-                subject: 'Payment Failed – Monthly Donation to Hindu Association of Ireland',
+                from: process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+                to:   emailParams.customerEmail,
+                subject: subKind === 'donation'
+                  ? 'Payment Failed – Monthly Donation to Hindu Association of Ireland'
+                  : 'Payment Failed – Hindu Association of Ireland',
                 html: buildPaymentFailedEmailHtml(emailParams),
                 text: buildPaymentFailedEmailText(emailParams),
                 replyTo: 'info@hindutemple.ie',
               })
-              console.log('[stripe-webhook] ✅ Recurring donation payment failed email sent to', donorEmail)
+              console.log('[stripe-webhook] ✅ invoice.payment_failed email sent to', customerEmail, `[${subKind}]`)
             } catch (emailErr) {
               const msg = emailErr instanceof Error ? emailErr.message : String(emailErr)
-              console.error('[stripe-webhook] ⚠️ Failed to send recurring payment failed email:', msg)
+              console.error('[stripe-webhook] ⚠️ Failed to send invoice.payment_failed email:', msg)
             }
           }
         } catch (err) {

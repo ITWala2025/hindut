@@ -644,7 +644,15 @@ export const handler: Handler = async (event) => {
         ...(m.monthlyContributionEur ? { monthlyContributionEur: String(m.monthlyContributionEur) } : {}),
       },
       subscription_data: {
-        metadata: { kind: 'membership', membershipId, memberId, planId: m.planId },
+        metadata: {
+          kind:        'membership',
+          membershipId,
+          memberId,
+          planId:      m.planId,
+          memberEmail: m.email,
+          memberName:  m.fullName,
+          planName:    plan.name,
+        },
       },
     })
 
