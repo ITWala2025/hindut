@@ -15,7 +15,7 @@
  *   SMTP_SECURE               — "true" for port 465, "false" for 587
  *   SMTP_USER                 — your SMTP login username / email
  *   SMTP_PASS                 — your SMTP password / app password
- *   EMAIL_FROM_EVENTS         — display FROM address, e.g. "HAI Events <events@hindutemple.ie>"
+ *   EMAIL_FROM_PUJA           — display FROM address, e.g. "HAI Puja Seva <puja@hindutemple.ie>"
  */
 
 import type { Handler } from '@netlify/functions'
@@ -260,7 +260,7 @@ export const handler: Handler = async (event) => {
       try {
         const transporter = createTransporter()
         await transporter.sendMail({
-          from:    process.env.EMAIL_FROM_EVENTS ?? process.env.EMAIL_FROM ?? `"HAI Events" <${process.env.SMTP_USER}>`,
+          from:    process.env.EMAIL_FROM_PUJA ?? process.env.EMAIL_FROM ?? `"HAI Puja Seva" <${process.env.SMTP_USER}>`,
           to:      data.email,
           subject: `Your RSVP Confirmation – ${evtRow.title} – Ref #${reference}`,
           html:    buildEmailHtml(emailParams),

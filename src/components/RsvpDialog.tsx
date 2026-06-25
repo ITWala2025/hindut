@@ -264,7 +264,7 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto p-0 gap-0">
+      <DialogContent className="w-full max-h-[90vh] overflow-y-auto p-0 gap-0">
         {step === 'form' ? (
           <>
             {/* Header */}
@@ -274,7 +274,7 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                   <CalendarBlank size={20} weight="duotone" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <DialogTitle className="text-lg font-bold text-orange-800 leading-snug truncate">
+                  <DialogTitle className="text-lg font-bold text-orange-800 leading-snug break-words">
                     RSVP — {event.title}
                   </DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground mt-0.5">
