@@ -203,7 +203,7 @@ export const handler: Handler = async (event) => {
               try {
                 const transporter = createMailTransporter()
                 await transporter.sendMail({
-                  from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+                  from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
                   to:      onetimeDonorEmail,
                   subject: `Thank you for your donation — Hindu Association of Ireland`,
                   html:    buildDonationEmailHtml({ donorName: onetimeDonorName, donorEmail: onetimeDonorEmail, amountEur: onetimeAmountEur, recurring: false }),
@@ -255,7 +255,7 @@ export const handler: Handler = async (event) => {
                 try {
                   const transporter = createMailTransporter()
                   await transporter.sendMail({
-                    from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+                    from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
                     to:      donorEmail,
                     subject: `Thank you for your monthly donation — Hindu Association of Ireland`,
                     html:    buildDonationEmailHtml({ donorName, donorEmail, amountEur, recurring: true }),
@@ -386,7 +386,7 @@ export const handler: Handler = async (event) => {
               }
               const transporter = createMailTransporter()
               await transporter.sendMail({
-                from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+                from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
                 to:      memberEmail,
                 subject: 'Welcome to the Hindu Association of Ireland Community!',
                 html:    buildMembershipWelcomeEmailHtml(emailParams),
@@ -665,7 +665,7 @@ export const handler: Handler = async (event) => {
 
               if (emailParams.customerEmail) {
                 await transporter.sendMail({
-                  from: process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
+                  from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
                   to: emailParams.customerEmail,
                   subject: 'Payment Failed – Donation to Hindu Association of Ireland',
                   html: buildPaymentFailedEmailHtml(emailParams),
@@ -732,7 +732,7 @@ export const handler: Handler = async (event) => {
               }
 
               await transporter.sendMail({
-                from: process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+                from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
                 to:   emailParams.customerEmail,
                 subject: subKind === 'donation'
                   ? 'Payment Failed – Monthly Donation to Hindu Association of Ireland'
@@ -795,7 +795,7 @@ export const handler: Handler = async (event) => {
 
                 if (emailParams.customerEmail) {
                   await transporter.sendMail({
-                    from: process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
+                    from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
                     to: emailParams.customerEmail,
                     subject: 'Refund Processed – Hindu Association of Ireland',
                     html: buildRefundEmailHtml(emailParams),
@@ -969,7 +969,7 @@ export const handler: Handler = async (event) => {
             if (emailParams.customerEmail) {
               const transporter = createMailTransporter()
               await transporter.sendMail({
-                from: process.env.EMAIL_FROM ?? `"HAI Membership" <${process.env.SMTP_USER}>`,
+                from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Membership" <${process.env.SMTP_USER}>`,
                 to: emailParams.customerEmail,
                 subject: 'Membership Canceled – Hindu Association of Ireland',
                 html: buildSubscriptionCanceledEmailHtml(emailParams),
@@ -1041,7 +1041,7 @@ export const handler: Handler = async (event) => {
           }
           const transporter = createMailTransporter()
           await transporter.sendMail({
-            from:    process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+            from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
             to:      memberEmail,
             subject: `Upcoming monthly contribution of €${amountEur.toFixed(2)} – Hindu Association of Ireland`,
             html:    buildMonthlyReminderEmailHtml(reminderParams),

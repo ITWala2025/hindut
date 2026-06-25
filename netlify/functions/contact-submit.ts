@@ -13,7 +13,7 @@
  *   SMTP_SECURE     — "true" for port 465, "false" for 587
  *   SMTP_USER       — Email account username (e.g., donation@hindutemple.ie)
  *   SMTP_PASS       — Email account password / app password
- *   EMAIL_FROM      — Display email, e.g. "HAI Donations <donation@hindutemple.ie>"
+ *   EMAIL_FROM_DONATION — Display FROM address, e.g. "HAI Donations <donation@hindutemple.ie>"
  *   CONTACT_ADMIN_EMAIL — Admin email to receive form submissions (e.g., info@hindutemple.ie)
  *   URL             — Site URL for email links (auto-populated by Netlify)
  */
@@ -210,7 +210,7 @@ export const handler: Handler = async (event) => {
         // Send confirmation email to visitor
         try {
           await transporter.sendMail({
-            from: process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+            from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
             to: sanitisedData.email,
             subject: 'We received your message – Hindu Association of Ireland',
             html: buildVisitorConfirmationHtml(emailParams),
@@ -227,7 +227,7 @@ export const handler: Handler = async (event) => {
         // Send admin notification
         try {
           await transporter.sendMail({
-            from: process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+            from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
             to: adminEmail,
             subject: `New Contact Form Submission from ${sanitisedData.name}`,
             html: buildAdminNotificationHtml(emailParams),

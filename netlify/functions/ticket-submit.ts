@@ -273,7 +273,7 @@ export const handler: Handler = async (event) => {
         }
 
         await transporter.sendMail({
-          from: process.env.EMAIL_FROM ?? `"HAI Events" <${process.env.SMTP_USER}>`,
+          from: process.env.EMAIL_FROM_EVENTS ?? process.env.EMAIL_FROM ?? `"HAI Events" <${process.env.SMTP_USER}>`,
           to: data.email,
           subject: `Ticket Confirmed – ${eventDetails.title}`,
           html: buildTicketEmailHtml(emailParams),
