@@ -26,6 +26,24 @@ export interface RsvpEmailParams {
 // ---------------------------------------------------------------------------
 // Calendar helpers
 // ---------------------------------------------------------------------------
+// Convert Date to Ireland timezone local time in ICS format (YYYYMMDDTHHMMSS)
+function toICSDateLocal(d: Date): string {
+  const dateStr = d.toLocaleDateString('en-IE', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).split('/').reverse().join('')
+  
+  const timeStr = d.toLocaleTimeString('en-IE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).replace(/:/g, '')
+  
+  return dateStr + 'T' + timeStr
+}
+
 function toICSDate(d: Date): string {
   return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 }
@@ -59,16 +77,39 @@ export function buildICS(params: {
   uid: string; title: string; start: Date; end: Date
   location: string; description: string
 }): string {
+  const startLocal = toICSDateLocal(params.start)
+  const endLocal = toICSDateLocal(params.end)
+  
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Hindu Association of Ireland//RSVP//EN',
+    'CALSCALE:GREGORIAN',
     'METHOD:REQUEST',
+    'X-LIC-LOCATION:Europe/Dublin',
+    // VTIMEZONE component for Europe/Dublin
+    'BEGIN:VTIMEZONE',
+    'TZID:Europe/Dublin',
+    'BEGIN:STANDARD',
+    'DTSTART:19701025T020000',
+    'TZOFFSETFROM:+0100',
+    'TZOFFSETTO:+0000',
+    'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU',
+    'TZNAME:IST',
+    'END:STANDARD',
+    'BEGIN:DAYLIGHT',
+    'DTSTART:19700329T010000',
+    'TZOFFSETFROM:+0000',
+    'TZOFFSETTO:+0100',
+    'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU',
+    'TZNAME:GMT',
+    'END:DAYLIGHT',
+    'END:VTIMEZONE',
     'BEGIN:VEVENT',
     `UID:${params.uid}@hai.ie`,
     `DTSTAMP:${toICSDate(new Date())}`,
-    `DTSTART:${toICSDate(params.start)}`,
-    `DTEND:${toICSDate(params.end)}`,
+    `DTSTART;TZID=Europe/Dublin:${startLocal}`,
+    `DTEND;TZID=Europe/Dublin:${endLocal}`,
     `SUMMARY:${params.title.replace(/\n/g, '\\n')}`,
     `LOCATION:${params.location.replace(/\n/g, '\\n')}`,
     `DESCRIPTION:${params.description.replace(/\n/g, '\\n')}`,
