@@ -29,18 +29,20 @@ export interface RsvpEmailParams {
 // Convert Date to Ireland timezone local time in ICS format (YYYYMMDDTHHMMSS)
 function toICSDateLocal(d: Date): string {
   const dateStr = d.toLocaleDateString('en-IE', {
+    timeZone: 'Europe/Dublin',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).split('/').reverse().join('')
-  
+
   const timeStr = d.toLocaleTimeString('en-IE', {
+    timeZone: 'Europe/Dublin',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
   }).replace(/:/g, '')
-  
+
   return dateStr + 'T' + timeStr
 }
 
