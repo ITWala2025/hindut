@@ -25,18 +25,28 @@ interface EventRow {
   event_services: EventService[] | null
   category: string | null
   time_display: string | null
+  start_time: string | null
+  end_time: string | null
   published: boolean
   slug: string | null
 }
 
 function toTempleEvent(row: EventRow): TempleEvent {
+  const startTime = row.start_time ?? undefined
+  const endTime   = row.end_time   ?? undefined
+  const time = startTime && endTime
+    ? `${startTime} – ${endTime}`
+    : startTime ?? undefined
+
   return {
     id: row.id,
     slug: row.slug ?? toSlug(row.title),
     title: row.title,
     description: row.description ?? '',
     date: row.start_date.slice(0, 10),
-    time: row.time_display ?? undefined,
+    startTime,
+    endTime,
+    time,
     location: row.location ?? '',
     category: (row.category as EventCategory) ?? 'community',
     isPaid: row.is_paid,
@@ -85,7 +95,11 @@ export function useEvents() {
         start_date: event.date,
         location: event.location,
         category: event.category,
-        time_display: event.time,
+        start_time: event.startTime ?? null,
+        end_time:   event.endTime   ?? null,
+        time_display: event.startTime && event.endTime
+          ? `${event.startTime} – ${event.endTime}`
+          : event.startTime ?? null,
         is_paid: event.isPaid,
         ticket_price_eur: event.price ?? null,
         stripe_product_id: event.stripeProductId ?? null,
@@ -110,7 +124,13 @@ export function useEvents() {
       if (patch.date !== undefined)          update.start_date       = patch.date
       if (patch.location !== undefined)      update.location         = patch.location
       if (patch.category !== undefined)      update.category         = patch.category
-      if (patch.time !== undefined)          update.time_display     = patch.time
+      if (patch.startTime !== undefined)     update.start_time       = patch.startTime ?? null
+      if (patch.endTime   !== undefined)     update.end_time         = patch.endTime   ?? null
+      if (patch.startTime !== undefined || patch.endTime !== undefined) {
+        const st = patch.startTime ?? undefined
+        const et = patch.endTime   ?? undefined
+        update.time_display = st && et ? `${st} – ${et}` : st ?? null
+      }
       if (patch.isPaid !== undefined)        update.is_paid          = patch.isPaid
       if (patch.price !== undefined)         update.ticket_price_eur = patch.price
       if (patch.stripeProductId !== undefined) update.stripe_product_id = patch.stripeProductId

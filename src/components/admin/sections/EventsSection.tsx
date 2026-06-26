@@ -63,12 +63,76 @@ import { SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/a
 import { cn } from '@/lib/utils'
 import { useTicketBookings, type TicketBookingRow } from '@/hooks/useTicketBookings'
 
+function parseTimeStr(val: string): { h: string; m: string; period: string } | null {
+  const match = val.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (!match) return null
+  return { h: match[1], m: match[2], period: match[3].toUpperCase() }
+}
+
+interface TimePickerProps {
+  value: string
+  onChange: (v: string) => void
+  label: string
+}
+
+function TimePicker({ value, onChange, label }: TimePickerProps) {
+  const parsed = value ? parseTimeStr(value) : null
+  const h      = parsed?.h      ?? ''
+  const m      = parsed?.m      ?? ''
+  const period = parsed?.period ?? 'AM'
+
+  const emit = (newH: string, newM: string, newP: string) => {
+    if (newH && newM) onChange(`${newH}:${newM} ${newP}`)
+    else onChange('')
+  }
+
+  return (
+    <div>
+      <Label className="text-xs font-medium text-slate-600 mb-1.5 block">{label}</Label>
+      <div className="flex gap-1.5 items-center">
+        <Clock size={15} className="shrink-0 text-muted-foreground" />
+        <Select value={h} onValueChange={(v) => emit(v, m, period)}>
+          <SelectTrigger className="w-16 px-2">
+            <SelectValue placeholder="H" />
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((hr) => (
+              <SelectItem key={hr} value={hr}>{hr}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground text-sm font-medium">:</span>
+        <Select value={m} onValueChange={(v) => emit(h, v, period)}>
+          <SelectTrigger className="w-16 px-2">
+            <SelectValue placeholder="MM" />
+          </SelectTrigger>
+          <SelectContent>
+            {['00', '15', '30', '45'].map((min) => (
+              <SelectItem key={min} value={min}>{min}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={period} onValueChange={(v) => emit(h, m, v)}>
+          <SelectTrigger className="w-20 px-2">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="AM">AM</SelectItem>
+            <SelectItem value="PM">PM</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+}
+
 const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
   slug: '',
   title: '',
   description: '',
   date: new Date().toISOString().slice(0, 10),
-  time: '',
+  startTime: '',
+  endTime: '',
   location: 'Ahane Hall, Limerick',
   category: 'prayer',
   isPaid: false,
@@ -591,17 +655,18 @@ export function EventsSection() {
                     />
                   </div>
                 </Field>
-                <Field label="Time">
-                  <div className="relative">
-                    <Clock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                    <Input
-                      value={form.time ?? ''}
-                      onChange={(e) => setForm({ ...form, time: e.target.value })}
-                      placeholder="4:00 PM – 7:00 PM"
-                      className="pl-9"
-                    />
-                  </div>
-                </Field>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <TimePicker
+                  label="Start Time"
+                  value={form.startTime ?? ''}
+                  onChange={(v) => setForm({ ...form, startTime: v, endTime: v ? (form.endTime ?? '') : '' })}
+                />
+                <TimePicker
+                  label="End Time"
+                  value={form.endTime ?? ''}
+                  onChange={(v) => setForm({ ...form, endTime: v })}
+                />
               </div>
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <Field label="Location" required>

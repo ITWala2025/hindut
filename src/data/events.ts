@@ -23,7 +23,9 @@ export interface TempleEvent {
   title: string
   description: string
   date: string
-  time?: string
+  startTime?: string   // e.g. "4:00 PM" — Ireland time (Europe/Dublin)
+  endTime?: string     // e.g. "7:00 PM" — Ireland time, optional
+  time?: string        // computed: "${startTime} – ${endTime}" or startTime; kept for display compat
   location: string
   category: EventCategory
   isPaid: boolean

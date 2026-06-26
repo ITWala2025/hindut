@@ -92,6 +92,60 @@ function generateReference(eventSlug?: string | null, eventId?: string): string 
   return `HAI-${code}-${suffix}`
 }
 
+/**
+ * Builds correct UTC start/end Dates from the DB start_date (date-only, midnight UTC)
+ * and explicit start_time / end_time strings (e.g. "4:00 PM", "7:00 PM") in Europe/Dublin time.
+ * Falls back to start_date + 2 h if times are absent or unparseable.
+ */
+function buildEventDates(
+  startDateStr: string,
+  startTimeStr: string | null,
+  endTimeStr:   string | null,
+): { startDate: Date; endDate: Date } {
+  const datePart = startDateStr.slice(0, 10) // "YYYY-MM-DD"
+
+  // Probe Dublin UTC offset for this date (noon avoids DST edge cases)
+  const probe = new Date(`${datePart}T12:00:00Z`)
+  const dublinNoon = parseInt(
+    probe.toLocaleTimeString('en-IE', { timeZone: 'Europe/Dublin', hour: '2-digit', hour12: false }),
+    10,
+  )
+  const offsetHours = dublinNoon - 12 // +1 in IST (summer), 0 in GMT (winter)
+
+  function dublinToUTC(h: number, m: number): Date {
+    const baseMs = new Date(`${datePart}T00:00:00Z`).getTime()
+    return new Date(baseMs + (h - offsetHours) * 3_600_000 + m * 60_000)
+  }
+
+  function parseAMPM(t: string): { h: number; m: number } | null {
+    const match = t.trim().match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i)
+    if (!match) return null
+    let h = parseInt(match[1], 10)
+    const m = parseInt(match[2], 10)
+    if (match[3].toUpperCase() === 'PM' && h !== 12) h += 12
+    if (match[3].toUpperCase() === 'AM' && h === 12) h = 0
+    return { h, m }
+  }
+
+  if (startTimeStr) {
+    const start = parseAMPM(startTimeStr)
+    if (start) {
+      const startDate = dublinToUTC(start.h, start.m)
+      if (endTimeStr) {
+        const end = parseAMPM(endTimeStr)
+        if (end) {
+          return { startDate, endDate: dublinToUTC(end.h, end.m) }
+        }
+      }
+      // start only — default 2-hour duration
+      return { startDate, endDate: new Date(startDate.getTime() + 2 * 60 * 60 * 1000) }
+    }
+  }
+
+  const startDate = new Date(startDateStr)
+  return { startDate, endDate: new Date(startDate.getTime() + 2 * 60 * 60 * 1000) }
+}
+
 // ---------------------------------------------------------------------------
 // SMTP transporter (created once per function warm instance)
 // ---------------------------------------------------------------------------
@@ -164,7 +218,7 @@ export const handler: Handler = async (event) => {
     // -- Verify event exists, is free, and is published
     const { data: evtRow, error: evtErr } = await supabase
       .from('events')
-      .select('id, title, slug, start_date, location, is_paid, published, time_display')
+      .select('id, title, slug, start_date, location, is_paid, published, time_display, start_time, end_time')
       .eq('id', data.eventId)
       .single()
 
@@ -209,11 +263,15 @@ export const handler: Handler = async (event) => {
     }
 
     // -- Build calendar URLs + ICS
-    const startDate = new Date(evtRow.start_date)
-    const endDate   = new Date(startDate.getTime() + 2 * 60 * 60 * 1000) // +2 hrs
-    const locale    = 'en-IE'
+    const { startDate, endDate } = buildEventDates(
+      evtRow.start_date,
+      evtRow.start_time ?? null,
+      evtRow.end_time   ?? null,
+    )
+    const locale = 'en-IE'
 
     const formattedDate = startDate.toLocaleDateString(locale, {
+      timeZone: 'Europe/Dublin',
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     })
     const formattedTime: string = evtRow.time_display ?? ''
