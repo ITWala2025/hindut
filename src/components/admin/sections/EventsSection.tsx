@@ -47,6 +47,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
 import { useEvents, sortByDate, toSlug } from '@/hooks/useEvents'
 import { useServices } from '@/hooks/useServices'
@@ -76,52 +77,128 @@ interface TimePickerProps {
 }
 
 function TimePicker({ value, onChange, label }: TimePickerProps) {
-  const parsed = value ? parseTimeStr(value) : null
-  const h      = parsed?.h      ?? ''
-  const m      = parsed?.m      ?? ''
-  const period = parsed?.period ?? 'AM'
+  const [open, setOpen] = useState(false)
+  const init = value ? parseTimeStr(value) : null
+  const [localH, setLocalH]           = useState(init?.h      ?? '')
+  const [localM, setLocalM]           = useState(init?.m      ?? '')
+  const [localPeriod, setLocalPeriod] = useState(init?.period ?? 'PM')
 
-  const emit = (newH: string, newM: string, newP: string) => {
-    if (newH && newM) onChange(`${newH}:${newM} ${newP}`)
-    else onChange('')
+  // Keep local state in sync when the parent resets the value (e.g. form clear)
+  useEffect(() => {
+    const p = value ? parseTimeStr(value) : null
+    setLocalH(p?.h      ?? '')
+    setLocalM(p?.m      ?? '')
+    setLocalPeriod(p?.period ?? 'PM')
+  }, [value])
+
+  const handleHour = (hr: string) => {
+    setLocalH(hr)
+    if (localM) { onChange(`${hr}:${localM} ${localPeriod}`); setOpen(false) }
   }
+
+  const handleMinute = (min: string) => {
+    setLocalM(min)
+    if (localH) { onChange(`${localH}:${min} ${localPeriod}`); setOpen(false) }
+  }
+
+  const handlePeriod = (p: string) => {
+    setLocalPeriod(p)
+    if (localH && localM) onChange(`${localH}:${localM} ${p}`)
+  }
+
+  const handleClear = () => {
+    setLocalH(''); setLocalM(''); setLocalPeriod('PM')
+    onChange('')
+    setOpen(false)
+  }
+
+  const display = value || ''
 
   return (
     <div>
       <Label className="text-xs font-medium text-slate-600 mb-1.5 block">{label}</Label>
-      <div className="flex gap-1.5 items-center">
-        <Clock size={15} className="shrink-0 text-muted-foreground" />
-        <Select value={h} onValueChange={(v) => emit(v, m, period)}>
-          <SelectTrigger className="w-16 px-2">
-            <SelectValue placeholder="H" />
-          </SelectTrigger>
-          <SelectContent>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('w-full justify-start font-normal', !display && 'text-muted-foreground')}
+          >
+            <Clock size={15} className="mr-2 shrink-0" />
+            {display || 'Set time'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-52 p-3" align="start">
+          {/* AM / PM toggle */}
+          <div className="flex gap-1 mb-3">
+            {(['AM', 'PM'] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => handlePeriod(p)}
+                className={cn(
+                  'flex-1 py-1 text-sm rounded font-medium transition-colors',
+                  localPeriod === p
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted hover:bg-muted/70',
+                )}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
+          {/* Hour grid 1–12 */}
+          <p className="text-xs text-muted-foreground mb-1.5 font-medium">Hour</p>
+          <div className="grid grid-cols-4 gap-1 mb-3">
             {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((hr) => (
-              <SelectItem key={hr} value={hr}>{hr}</SelectItem>
+              <button
+                key={hr}
+                type="button"
+                onClick={() => handleHour(hr)}
+                className={cn(
+                  'py-1.5 text-sm rounded transition-colors',
+                  localH === hr
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                {hr}
+              </button>
             ))}
-          </SelectContent>
-        </Select>
-        <span className="text-muted-foreground text-sm font-medium">:</span>
-        <Select value={m} onValueChange={(v) => emit(h, v, period)}>
-          <SelectTrigger className="w-16 px-2">
-            <SelectValue placeholder="MM" />
-          </SelectTrigger>
-          <SelectContent>
+          </div>
+
+          {/* Minute buttons */}
+          <p className="text-xs text-muted-foreground mb-1.5 font-medium">Minute</p>
+          <div className="grid grid-cols-4 gap-1">
             {['00', '15', '30', '45'].map((min) => (
-              <SelectItem key={min} value={min}>{min}</SelectItem>
+              <button
+                key={min}
+                type="button"
+                onClick={() => handleMinute(min)}
+                className={cn(
+                  'py-1.5 text-sm rounded transition-colors',
+                  localM === min
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                {min}
+              </button>
             ))}
-          </SelectContent>
-        </Select>
-        <Select value={period} onValueChange={(v) => emit(h, m, v)}>
-          <SelectTrigger className="w-20 px-2">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="AM">AM</SelectItem>
-            <SelectItem value="PM">PM</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          </div>
+
+          {(localH || localM) && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="mt-3 w-full text-xs text-muted-foreground hover:text-destructive transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }
