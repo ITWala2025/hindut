@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { EmailInput } from '@/components/EmailInput'
 import {
   CheckCircle,
   Spinner,
@@ -274,7 +275,7 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                   <CalendarBlank size={20} weight="duotone" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <DialogTitle className="text-lg font-bold text-orange-800 leading-snug break-words">
+                  <DialogTitle className="text-lg font-bold text-orange-800 leading-snug">
                     RSVP — {event.title}
                   </DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground mt-0.5">
@@ -350,14 +351,14 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                     <Envelope size={13} className="text-orange-600" />
                     Email Address <span className="text-red-500">*</span>
                   </Label>
-                  <Input
+                  <EmailInput
                     id="rsvp-email"
-                    type="email"
-                    autoComplete="email"
                     placeholder="arjun@example.com"
-                    aria-invalid={!!errors.email}
-                    className={cn(errors.email && 'border-red-400 focus-visible:ring-red-300')}
-                    {...register('email')}
+                    value={watch('email')}
+                    onChange={(e) => {
+                      setValue('email', e.target.value, { shouldValidate: true })
+                    }}
+                    className={cn('h-11 rounded-xl border-orange-300 focus:border-orange-500', errors.email && 'border-red-400 focus-visible:ring-red-300')}
                   />
                   <FieldError message={errors.email?.message} />
                 </div>
