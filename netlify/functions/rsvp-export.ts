@@ -154,8 +154,9 @@ export const handler: Handler = async (event) => {
         new Date(r.created_at as string).toISOString(),
       ]
       
-      // Force phone (index 4) and email (index 5) to be treated as text
-      const textForceFields = new Set([4, 5])
+      // Force phone (index 4) to be treated as text (prevents scientific notation)
+      // Email doesn't need forcing - it's already text
+      const textForceFields = new Set([4])
       
       return values
         .map((v, idx) => escapeCSV(v, textForceFields.has(idx)))
