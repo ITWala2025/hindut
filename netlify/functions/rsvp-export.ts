@@ -13,13 +13,26 @@ import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
 
-function escapeCSV(value: unknown): string {
+function escapeCSV(value: unknown, forceText: boolean = false): string {
   if (value === null || value === undefined) return ''
   const str = String(value)
+  
+  // Force numeric-looking values (like phone numbers) to be treated as text
+  // by prefixing with a single quote
+  const isNumericLooking = /^\d+$/.test(str)
+  const needsQuotePrefix = forceText || isNumericLooking
+  
+  let result = str
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`
+    result = `"${str.replace(/"/g, '""')}"`
   }
-  return str
+  
+  // If numeric-looking and not already quoted, add quote prefix
+  if (needsQuotePrefix && !result.startsWith('"')) {
+    result = `'${result}`
+  }
+  
+  return result
 }
 
 export const handler: Handler = async (event) => {
@@ -126,8 +139,8 @@ export const handler: Handler = async (event) => {
       'Status', 'Confirmation Sent', 'Submitted At',
     ]
 
-    const csvRows = (rows ?? []).map((r: Record<string, unknown>) =>
-      [
+    const csvRows = (rows ?? []).map((r: Record<string, unknown>) => {
+      const values = [
         r.reference_number,
         r.event_title,
         r.first_name,
@@ -140,9 +153,14 @@ export const handler: Handler = async (event) => {
         r.confirmation_sent_at ? new Date(r.confirmation_sent_at as string).toISOString() : '',
         new Date(r.created_at as string).toISOString(),
       ]
-        .map(escapeCSV)
-        .join(','),
-    )
+      
+      // Force phone (index 4) and email (index 5) to be treated as text
+      const textForceFields = new Set([4, 5])
+      
+      return values
+        .map((v, idx) => escapeCSV(v, textForceFields.has(idx)))
+        .join(',')
+    })
 
     const csv      = [csvHeaders.join(','), ...csvRows].join('\r\n')
     const filename = `rsvps-${new Date().toISOString().slice(0, 10)}.csv`
