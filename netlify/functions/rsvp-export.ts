@@ -93,18 +93,26 @@ export const handler: Handler = async (event) => {
       eventId?: string; fromDate?: string; toDate?: string; status?: string
     }
 
+    console.log('Export request:', { eventId: body.eventId, fromDate: body.fromDate, toDate: body.toDate, status: body.status })
+
     // -- Fetch decrypted data via the secure Postgres function
+    // Cast parameters to match function signature (uuid, date, date, text)
     const { data: rows, error: dbErr } = await supabaseAdmin.rpc('export_rsvps_decrypted', {
       p_enc_key:   encKey,
-      p_event_id:  body.eventId  ?? null,
-      p_from_date: body.fromDate ?? null,
-      p_to_date:   body.toDate   ?? null,
-      p_status:    body.status   ?? null,
+      p_event_id:  body.eventId ? body.eventId : null,  // String UUID or null
+      p_from_date: body.fromDate ? body.fromDate : null,  // YYYY-MM-DD string or null
+      p_to_date:   body.toDate ? body.toDate : null,  // YYYY-MM-DD string or null
+      p_status:    body.status ?? null,
     })
 
     if (dbErr) {
-      console.error('export_rsvps_decrypted error:', dbErr)
-      return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Failed to retrieve RSVP data' }) }
+      console.error('export_rsvps_decrypted error:', dbErr.message, dbErr.details, dbErr.hint)
+      return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: `Database error: ${dbErr.message}` }) }
+    }
+
+    if (!rows || !Array.isArray(rows)) {
+      console.warn('export_rsvps_decrypted returned non-array:', typeof rows, rows)
+      return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Invalid response from database' }) }
     }
 
     // -- Build CSV
