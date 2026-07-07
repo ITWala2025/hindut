@@ -153,7 +153,8 @@ export const handler: Handler = async (event) => {
       body: csv,
     }
   } catch (err) {
-    console.error('Unhandled error in rsvp-export:', err)
-    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'An unexpected error occurred' }) }
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error('Unhandled error in rsvp-export:', errorMsg, err)
+    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: `Server error: ${errorMsg}` }) }
   }
 }

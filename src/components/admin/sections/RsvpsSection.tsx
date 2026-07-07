@@ -153,7 +153,9 @@ export function RsvpsSection() {
       })
       toast.success('CSV downloaded successfully.')
     } catch (err) {
-      toast.error((err as Error).message ?? 'Export failed.')
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error('RSVP export failed:', errorMsg, err)
+      toast.error(errorMsg ?? 'Export failed.')
     } finally {
       setExporting(false)
     }

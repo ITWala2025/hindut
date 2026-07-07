@@ -110,8 +110,15 @@ export function useRsvps(filters?: RsvpFilters) {
       })
 
       if (!res.ok) {
-        const { error: msg } = await res.json().catch(() => ({ error: 'Export failed' }))
-        throw new Error(msg ?? 'Export failed')
+        let errorMsg = 'Export failed'
+        try {
+          const errorData = await res.json()
+          errorMsg = errorData?.error ?? errorMsg
+        } catch {
+          errorMsg = `HTTP ${res.status}: ${res.statusText}`
+        }
+        console.error('RSVP export API error:', { status: res.status, message: errorMsg })
+        throw new Error(errorMsg)
       }
 
       const blob = await res.blob()
@@ -119,7 +126,9 @@ export function useRsvps(filters?: RsvpFilters) {
       const a    = document.createElement('a')
       a.href     = url
       a.download = `rsvps-${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       URL.revokeObjectURL(url)
     },
     [],
