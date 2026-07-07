@@ -11,6 +11,7 @@
 
 import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
+import ws from 'ws'
 
 function escapeCSV(value: unknown): string {
   if (value === null || value === undefined) return ''
@@ -51,7 +52,10 @@ export const handler: Handler = async (event) => {
       return { statusCode: 401, headers: jsonHeaders, body: JSON.stringify({ error: 'Unauthorised' }) }
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, serviceKey)
+    const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      realtime: { transport: ws },
+    })
 
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
     if (authErr || !user) {
@@ -154,7 +158,9 @@ export const handler: Handler = async (event) => {
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err)
+    // Extract only the first line of error message (avoid showing code snippets)
+    const cleanMsg = errorMsg.split('\n')[0]
     console.error('Unhandled error in rsvp-export:', errorMsg, err)
-    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: `Server error: ${errorMsg}` }) }
+    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: cleanMsg }) }
   }
 }

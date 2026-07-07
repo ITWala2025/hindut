@@ -117,8 +117,10 @@ export function useRsvps(filters?: RsvpFilters) {
         } catch {
           errorMsg = `HTTP ${res.status}: ${res.statusText}`
         }
+        // Extract only first line (avoid showing code snippets in error messages)
+        const cleanMsg = errorMsg.split('\n')[0].trim()
         console.error('RSVP export API error:', { status: res.status, message: errorMsg })
-        throw new Error(errorMsg)
+        throw new Error(cleanMsg)
       }
 
       const blob = await res.blob()
