@@ -637,20 +637,56 @@ export function MembersSection() {
 
   const exportCsv = () => {
     if (filtered.length === 0) { toast.error('No members to export.'); return }
+    
+    const escapeCSV = (value: unknown, forceText: boolean = false): string => {
+      if (value === null || value === undefined) return ''
+      const str = String(value)
+      
+      // Force numeric-looking values to be treated as text by prefixing with a single quote
+      const isNumericLooking = /^\d+$/.test(str)
+      const needsQuotePrefix = forceText || isNumericLooking
+      
+      let result = str
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        result = `"${str.replace(/"/g, '""')}"`
+      }
+      
+      // If numeric-looking and not already quoted, add quote prefix
+      if (needsQuotePrefix && !result.startsWith('"')) {
+        result = `'${result}`
+      }
+      
+      return result
+    }
+    
     const header = ['Member ID', 'Name', 'Email', 'Phone', 'Plan', 'Start', 'Expires', 'Status', 'Method', 'Reference', 'Stripe Customer']
     const rows = filtered.map((m) => [
       m.memberCode ?? '', m.fullName, m.email, m.phone ?? '', m.planId, m.startDate,
       m.expiresOn, m.status, m.paymentMethod, m.reference, m.stripeCustomerId ?? '',
     ])
-    const csv = [header, ...rows]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
+    
+    // Force phone (index 3) to be treated as text
+    const textForceFields = new Set([3])
+    
+    const csvLines = [header, ...rows].map((row, rowIdx) => {
+      if (rowIdx === 0) {
+        // Headers
+        return row.map((c) => escapeCSV(c)).join(',')
+      } else {
+        // Data rows
+        return row.map((c, colIdx) => escapeCSV(c, textForceFields.has(colIdx))).join(',')
+      }
+    })
+    
+    const csv = csvLines.join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
     toast.success('Exported member list.')
   }

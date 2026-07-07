@@ -392,25 +392,56 @@ export function EventsSection() {
       toast.info('No bookings found for this event.')
       return
     }
+    
+    const escapeCSV = (value: unknown, forceText: boolean = false): string => {
+      if (value === null || value === undefined) return ''
+      const str = String(value)
+      
+      // Force numeric-looking values to be treated as text by prefixing with a single quote
+      const isNumericLooking = /^\d+$/.test(str)
+      const needsQuotePrefix = forceText || isNumericLooking
+      
+      let result = str
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        result = `"${str.replace(/"/g, '""')}"`
+      }
+      
+      // If numeric-looking and not already quoted, add quote prefix
+      if (needsQuotePrefix && !result.startsWith('"')) {
+        result = `'${result}`
+      }
+      
+      return result
+    }
+    
     const header = ['Reference', 'First name', 'Last name', 'Email', 'Phone', 'Adults', 'Children', 'Amount (EUR)', 'Status', 'Booked at']
-    const lines = rows.map((b: TicketBookingRow) => [
-      b.reference_number,
-      b.first_name,
-      b.last_name,
-      b.email_masked,
-      b.phone_masked,
-      b.num_adults,
-      b.num_children,
-      b.amount_eur.toFixed(2),
-      b.status,
-      new Date(b.created_at).toLocaleDateString('en-IE'),
-    ].map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
-    const csv = [header.join(','), ...lines].join('\n')
+    // Force phone (index 4) to be treated as text
+    const textForceFields = new Set([4])
+    
+    const lines = rows.map((b: TicketBookingRow) => {
+      const values = [
+        b.reference_number,
+        b.first_name,
+        b.last_name,
+        b.email_masked,
+        b.phone_masked,
+        b.num_adults,
+        b.num_children,
+        b.amount_eur.toFixed(2),
+        b.status,
+        new Date(b.created_at).toLocaleDateString('en-IE'),
+      ]
+      return values.map((v, idx) => escapeCSV(v, textForceFields.has(idx))).join(',')
+    })
+    
+    const csv = [header.map((h) => escapeCSV(h)).join(','), ...lines].join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
     const a = document.createElement('a')
     a.href = url
     a.download = `attendees-${e.title.replace(/\s+/g, '-').toLowerCase()}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
 

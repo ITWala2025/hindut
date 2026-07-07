@@ -67,9 +67,23 @@ function fmtDate(d: string | null): string {
   }
 }
 
-function csvEscape(v: unknown): string {
+function csvEscape(v: unknown, forceText: boolean = false): string {
   const s = v == null ? '' : String(v)
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  // Force numeric-looking values to be treated as text by prefixing with a single quote
+  const isNumericLooking = /^\d+$/.test(s)
+  const needsQuotePrefix = forceText || isNumericLooking
+  
+  let result = s
+  if (/[",\n]/.test(s)) {
+    result = `"${s.replace(/"/g, '""')}"`
+  }
+  
+  // If numeric-looking and not already quoted, add quote prefix
+  if (needsQuotePrefix && !result.startsWith('"')) {
+    result = `'${result}`
+  }
+  
+  return result
 }
 
 export function MembersDirectorySection() {
@@ -168,8 +182,11 @@ export function MembersDirectorySection() {
   const exportCsv = () => {
     const headers = ['member_code', 'full_name', 'email', 'phone', 'address', 'joined_at', 'memberships', 'has_active', 'latest_plan']
     const lines = [headers.join(',')]
+    // Force phone (index 3) to be treated as text
+    const textForceFields = new Set([3])
+    
     for (const p of filtered) {
-      lines.push([
+      const values = [
         p.member_code ?? '',
         p.full_name,
         p.email ?? '',
@@ -179,14 +196,17 @@ export function MembersDirectorySection() {
         p.membershipsCount,
         p.hasActive ? 'yes' : 'no',
         p.latestPlan ?? '',
-      ].map(csvEscape).join(','))
+      ]
+      lines.push(values.map((v, idx) => csvEscape(v, textForceFields.has(idx))).join(','))
     }
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
     a.href = url
     a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
     toast.success(`Exported ${filtered.length} member${filtered.length === 1 ? '' : 's'}`)
   }
