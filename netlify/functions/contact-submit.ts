@@ -4,22 +4,22 @@
  * Handles contact form submissions:
  *   1. Server-side validation.
  *   2. Sanitisation to prevent XSS / injection attacks.
- *   3. Sends confirmation email to visitor via Zoho SMTP.
+ *   3. Sends confirmation email to visitor via Microsoft Graph API.
  *   4. Sends admin notification to organization email.
  *
  * Required Netlify environment variables:
- *   SMTP_HOST       — Zoho SMTP host (e.g., smtp.zoho.com / smtp.zoho.eu)
- *   SMTP_PORT       — SMTP port (587 for STARTTLS, 465 for SSL)
- *   SMTP_SECURE     — "true" for port 465, "false" for 587
- *   SMTP_USER       — Email account username (e.g., donation@hindutemple.ie)
- *   SMTP_PASS       — Email account password / app password
- *   EMAIL_FROM_DONATION — Display FROM address, e.g. "HAI Donations <donation@hindutemple.ie>"
- *   CONTACT_ADMIN_EMAIL — Admin email to receive form submissions (e.g., info@hindutemple.ie)
- *   URL             — Site URL for email links (auto-populated by Netlify)
+ *   AZURE_TENANT_ID      — Azure AD tenant ID
+ *   AZURE_CLIENT_ID      — App registration client ID (Mail.Send permission)
+ *   AZURE_CLIENT_SECRET  — App registration client secret
+ *   MAIL_FROM_ADDRESS    — Sending mailbox (e.g. info@hindutemple.ie)
+ *   EMAIL_FROM_DONATION  — Display FROM name, e.g. '"HAI" <info@hindutemple.ie>'
+ *   CONTACT_ADMIN_EMAIL  — Admin email to receive form submissions
+ *   URL                  — Site URL (auto-populated by Netlify)
  */
 
 import type { Handler } from '@netlify/functions'
-import nodemailer from 'nodemailer'
+import { sendMail, isMailConfigured } from './lib/mailer.js'
+import { z } from 'zod'
 import { z } from 'zod'
 import {
   buildVisitorConfirmationHtml,
@@ -58,45 +58,7 @@ function sanitiseText(s: string): string {
 /**
  * SMTP transporter configured for Zoho email
  */
-function createTransporter() {
-  const host = process.env.SMTP_HOST
-  const port = Number(process.env.SMTP_PORT ?? 587)
-  const secure = process.env.SMTP_SECURE === 'true'
-  const user = process.env.SMTP_USER
-  const pass = process.env.SMTP_PASS
-
-  if (!host || !user || !pass) {
-    const missing = []
-    if (!host) missing.push('SMTP_HOST')
-    if (!user) missing.push('SMTP_USER')
-    if (!pass) missing.push('SMTP_PASS')
-    throw new Error(
-      `Missing required SMTP configuration: ${missing.join(', ')}`
-    )
-  }
-
-  console.log('[contact-submit] Creating SMTP transporter with:', {
-    host,
-    port,
-    secure,
-    user: user ? `${user.substring(0, 3)}...` : 'undefined',
-  })
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: {
-      user,
-      pass,
-    },
-    pool: {
-      maxConnections: 1,
-    },
-    connectionTimeout: 10000,
-    socketTimeout: 10000,
-  })
-}
+// Graph API mailer used via sendMail() — no transporter needed
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -186,31 +148,15 @@ export const handler: Handler = async (event) => {
       submittedAt: new Date().toISOString(),
     }
 
-    // Create transporter and send emails
-    if (process.env.SMTP_HOST) {
+    // Send emails via Microsoft Graph API
+    if (isMailConfigured()) {
       try {
-        const transporter = createTransporter()
-        
-        console.log('[contact-submit] Testing SMTP connection...', {
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT,
-          user: process.env.SMTP_USER,
-        })
-
-        // Test connection
-        try {
-          await transporter.verify()
-          console.log('[contact-submit] ✅ SMTP connection verified successfully')
-        } catch (verifyErr) {
-          const verifyMessage = verifyErr instanceof Error ? verifyErr.message : String(verifyErr)
-          console.error('[contact-submit] ❌ SMTP verification failed:', verifyMessage)
-          throw new Error(`SMTP connection failed: ${verifyMessage}. Check credentials and network connectivity.`)
-        }
+        const fromAddr = process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"Hindu Association of Ireland" <info@hindutemple.ie>'
 
         // Send confirmation email to visitor
         try {
-          await transporter.sendMail({
-            from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+          await sendMail({
+            from: fromAddr,
             to: sanitisedData.email,
             subject: 'We received your message – Hindu Association of Ireland',
             html: buildVisitorConfirmationHtml(emailParams),
@@ -226,8 +172,8 @@ export const handler: Handler = async (event) => {
 
         // Send admin notification
         try {
-          await transporter.sendMail({
-            from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"Hindu Association of Ireland" <${process.env.SMTP_USER}>`,
+          await sendMail({
+            from: fromAddr,
             to: adminEmail,
             subject: `New Contact Form Submission from ${sanitisedData.name}`,
             html: buildAdminNotificationHtml(emailParams),
@@ -242,11 +188,9 @@ export const handler: Handler = async (event) => {
         }
       } catch (emailErr) {
         const errorMessage = emailErr instanceof Error ? emailErr.message : String(emailErr)
-        const errorCode = emailErr instanceof Error && 'code' in emailErr ? (emailErr as any).code : 'UNKNOWN'
         
         console.error('[contact-submit] Email error:', {
           message: errorMessage,
-          code: errorCode,
           stack: emailErr instanceof Error ? emailErr.stack : undefined,
         })
         
@@ -256,13 +200,12 @@ export const handler: Handler = async (event) => {
           body: JSON.stringify({
             error: 'Failed to send email',
             details: errorMessage,
-            errorCode: errorCode,
             timestamp: new Date().toISOString(),
           }),
         }
       }
     } else {
-      console.warn('[contact-submit] SMTP_HOST not set — skipping email')
+      console.warn('[contact-submit] Mail not configured — skipping email')
     }
 
     // Success response

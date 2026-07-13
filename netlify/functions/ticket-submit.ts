@@ -15,7 +15,7 @@
 import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
-import nodemailer from 'nodemailer'
+import { sendMail, isMailConfigured } from './lib/mailer.js'
 import { z } from 'zod'
 import ws from 'ws'
 import { resolveStripe } from './lib/stripe.js'
@@ -82,17 +82,7 @@ function generateReference(eventSlug?: string | null, eventId?: string): string 
 /**
  * Create SMTP transporter for sending ticket emails
  */
-function createMailTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST,
-    port:   Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  })
-}
+// Graph API mailer used via sendMail() — no transporter needed
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -247,7 +237,7 @@ export const handler: Handler = async (event) => {
         .eq('id', data.eventId)
         .single()
 
-      if (eventDetails && process.env.SMTP_HOST) {
+      if (eventDetails && isMailConfigured()) {
         const transporter = createMailTransporter()
         
         // Format event date
@@ -272,8 +262,8 @@ export const handler: Handler = async (event) => {
           referenceNumber: reference,
         }
 
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM_EVENTS ?? process.env.EMAIL_FROM ?? `"HAI Events" <${process.env.SMTP_USER}>`,
+        await sendMail({
+          from: process.env.EMAIL_FROM_EVENTS ?? process.env.EMAIL_FROM ?? '"HAI Events" <noreply@hindutemple.ie>',
           to: data.email,
           subject: `Ticket Confirmed – ${eventDetails.title}`,
           html: buildTicketEmailHtml(emailParams),

@@ -27,7 +27,7 @@
 
 import type { Handler } from '@netlify/functions'
 import Stripe from 'stripe'
-import nodemailer from 'nodemailer'
+import { sendMail, isMailConfigured } from './lib/mailer.js'
 import { supabaseAdmin, jsonHeaders } from './lib/stripe.js'
 import {
   buildMembershipWelcomeEmailHtml,
@@ -58,19 +58,8 @@ import {
 } from './lib/refundEmailTemplate.js'
 
 // ---------------------------------------------------------------------------
-// SMTP helpers (same credentials as rsvp-submit)
+// Mail helpers (Graph API via lib/mailer.ts)
 // ---------------------------------------------------------------------------
-function createMailTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST,
-    port:   Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  })
-}
 
 /**
  * Generate next HAI-MMYYYY-XXXX code for the given Supabase client.
@@ -201,10 +190,8 @@ export const handler: Handler = async (event) => {
             const onetimeAmountEur  = (session.amount_total ?? 0) / 100
             if (onetimeDonorEmail) {
               try {
-                const transporter = createMailTransporter()
-                await transporter.sendMail({
-                  from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
-                  to:      onetimeDonorEmail,
+                await sendMail({
+                  from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',                  to:      onetimeDonorEmail,
                   subject: `Thank you for your donation — Hindu Association of Ireland`,
                   html:    buildDonationEmailHtml({ donorName: onetimeDonorName, donorEmail: onetimeDonorEmail, amountEur: onetimeAmountEur, recurring: false }),
                   text:    buildDonationEmailText({ donorName: onetimeDonorName, donorEmail: onetimeDonorEmail, amountEur: onetimeAmountEur, recurring: false }),
@@ -253,10 +240,8 @@ export const handler: Handler = async (event) => {
               // ── Send donation confirmation email ───────────────────────
               if (donorEmail) {
                 try {
-                  const transporter = createMailTransporter()
-                  await transporter.sendMail({
-                    from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
-                    to:      donorEmail,
+                  await sendMail({
+                    from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',                    to:      donorEmail,
                     subject: `Thank you for your monthly donation — Hindu Association of Ireland`,
                     html:    buildDonationEmailHtml({ donorName, donorEmail, amountEur, recurring: true }),
                     text:    buildDonationEmailText({ donorName, donorEmail, amountEur, recurring: true }),
@@ -375,7 +360,7 @@ export const handler: Handler = async (event) => {
           }
 
           // ── Send welcome email ────────────────────────────────────────────
-          if (memberEmail && memberCode && process.env.SMTP_HOST) {
+          if (memberEmail && memberCode && isMailConfigured()) {
             try {
               const emailParams: MembershipWelcomeEmailParams = {
                 memberName,
@@ -384,9 +369,8 @@ export const handler: Handler = async (event) => {
                 planName,
                 addedMonthly: monthlyContributionEurEarly >= 1,
               }
-              const transporter = createMailTransporter()
-              await transporter.sendMail({
-                from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
+              await sendMail({
+                from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',
                 to:      memberEmail,
                 subject: 'Welcome to the Hindu Association of Ireland Community!',
                 html:    buildMembershipWelcomeEmailHtml(emailParams),
@@ -397,8 +381,8 @@ export const handler: Handler = async (event) => {
               // Non-fatal: membership is already active. Log and continue.
               console.error('[stripe-webhook] welcome email error:', (emailErr as Error).message)
             }
-          } else if (!process.env.SMTP_HOST) {
-            console.log('[dev] SMTP_HOST not set — skipping welcome email for', memberEmail)
+          } else if (!isMailConfigured()) {
+            console.log('[dev] Mail not configured — skipping welcome email for', memberEmail)
           }
 
           // ── Set up optional monthly contribution subscription ─────────────
@@ -649,9 +633,8 @@ export const handler: Handler = async (event) => {
             .single()
 
           // Send payment failed email
-          if (donation && process.env.SMTP_HOST) {
+          if (donation && isMailConfigured()) {
             try {
-              const transporter = createMailTransporter()
               const failureReason = pi.last_payment_error?.message || 'Your payment method was declined. Please try again.'
               
               const emailParams: PaymentFailedEmailParams = {
@@ -664,9 +647,8 @@ export const handler: Handler = async (event) => {
               }
 
               if (emailParams.customerEmail) {
-                await transporter.sendMail({
-                  from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
-                  to: emailParams.customerEmail,
+                await sendMail({
+                  from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',                  to: emailParams.customerEmail,
                   subject: 'Payment Failed – Donation to Hindu Association of Ireland',
                   html: buildPaymentFailedEmailHtml(emailParams),
                   text: buildPaymentFailedEmailText(emailParams),
@@ -717,9 +699,8 @@ export const handler: Handler = async (event) => {
             amountEur     = (invoice.amount_due ?? 0) / 100
           }
 
-          if (customerEmail && process.env.SMTP_HOST) {
+          if (customerEmail && isMailConfigured()) {
             try {
-              const transporter = createMailTransporter()
               const failureReason = invoice.last_payment_error?.message || 'Your payment method was declined. Please try again.'
 
               const emailParams: PaymentFailedEmailParams = {
@@ -731,9 +712,8 @@ export const handler: Handler = async (event) => {
                 failureReason,
               }
 
-              await transporter.sendMail({
-                from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
-                to:   emailParams.customerEmail,
+              await sendMail({
+                from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',                to:   emailParams.customerEmail,
                 subject: subKind === 'donation'
                   ? 'Payment Failed – Monthly Donation to Hindu Association of Ireland'
                   : 'Payment Failed – Hindu Association of Ireland',
@@ -775,11 +755,8 @@ export const handler: Handler = async (event) => {
           .eq('payment_reference', piId)
 
         // Send refund emails
-        if (process.env.SMTP_HOST) {
+        if (isMailConfigured()) {
           try {
-            const transporter = createMailTransporter()
-            
-            // Send refund email for donations if any
             if (donations && donations.length > 0) {
               for (const donation of donations) {
                 const emailParams: RefundEmailParams = {
@@ -794,8 +771,8 @@ export const handler: Handler = async (event) => {
                 }
 
                 if (emailParams.customerEmail) {
-                  await transporter.sendMail({
-                    from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
+                  await sendMail({
+                    from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',
                     to: emailParams.customerEmail,
                     subject: 'Refund Processed – Hindu Association of Ireland',
                     html: buildRefundEmailHtml(emailParams),
@@ -952,7 +929,7 @@ export const handler: Handler = async (event) => {
           .eq('id', membershipId)
 
         // Send subscription canceled email
-        if (process.env.SMTP_HOST) {
+        if (isMailConfigured()) {
           try {
             const memberEmail = sub.metadata?.memberEmail ?? ''
             const memberName = sub.metadata?.memberName ?? ''
@@ -967,9 +944,8 @@ export const handler: Handler = async (event) => {
             }
 
             if (emailParams.customerEmail) {
-              const transporter = createMailTransporter()
-              await transporter.sendMail({
-                from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Membership" <${process.env.SMTP_USER}>`,
+              await sendMail({
+                from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Membership" <noreply@hindutemple.ie>',
                 to: emailParams.customerEmail,
                 subject: 'Membership Canceled – Hindu Association of Ireland',
                 html: buildSubscriptionCanceledEmailHtml(emailParams),
@@ -1023,10 +999,10 @@ export const handler: Handler = async (event) => {
         // NOTE: No deduplication — Stripe retries can deliver this event more than once,
         // potentially sending the member duplicate reminder emails. A future hardening
         // pass should record stripeEvent.id before sending to prevent this.
-        if (!memberEmail || !process.env.SMTP_HOST) {
+        if (!memberEmail || !isMailConfigured()) {
           console.log(
             '[stripe-webhook] invoice.upcoming: skipping reminder for', memberEmail || '(no email)',
-            process.env.SMTP_HOST ? '' : '(SMTP not configured)',
+            isMailConfigured() ? '' : '(mail not configured)',
           )
           break
         }
@@ -1039,9 +1015,8 @@ export const handler: Handler = async (event) => {
             chargeDate,
             planName,
           }
-          const transporter = createMailTransporter()
-          await transporter.sendMail({
-            from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? `"HAI Donations" <${process.env.SMTP_USER}>`,
+          await sendMail({
+            from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',
             to:      memberEmail,
             subject: `Upcoming monthly contribution of €${amountEur.toFixed(2)} – Hindu Association of Ireland`,
             html:    buildMonthlyReminderEmailHtml(reminderParams),

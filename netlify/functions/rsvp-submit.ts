@@ -4,24 +4,23 @@
  *   1. Server-side validation (mirrors client Zod schema).
  *   2. Sanitisation to prevent XSS / SQL-injection.
  *   3. Calls Supabase RPC to insert with pgcrypto encryption.
- *   4. Sends HTML + plain-text confirmation email via SMTP (nodemailer).
+ *   4. Sends HTML + plain-text confirmation email via Microsoft Graph API.
  *
  * Required Netlify environment variables:
  *   SUPABASE_URL              — from Supabase dashboard → Settings → API
  *   SUPABASE_SERVICE_ROLE_KEY — from Supabase dashboard → Settings → API
  *   RSVP_ENCRYPTION_KEY       — 32-char+ random string (generated once, kept secret)
- *   SMTP_HOST                 — e.g. smtp.gmail.com / mail.privateemail.com
- *   SMTP_PORT                 — 587 (STARTTLS) or 465 (SSL)
- *   SMTP_SECURE               — "true" for port 465, "false" for 587
- *   SMTP_USER                 — your SMTP login username / email
- *   SMTP_PASS                 — your SMTP password / app password
- *   EMAIL_FROM_PUJA           — display FROM address, e.g. "HAI Puja Seva <puja@hindutemple.ie>"
+ *   AZURE_TENANT_ID           — Azure AD tenant ID
+ *   AZURE_CLIENT_ID            — App registration client ID (Mail.Send permission)
+ *   AZURE_CLIENT_SECRET        — App registration client secret
+ *   MAIL_FROM_ADDRESS          — Sending mailbox (e.g. info@hindutemple.ie)
+ *   EMAIL_FROM_PUJA            — Display FROM name, e.g. '"HAI Puja Seva" <info@hindutemple.ie>'
  */
 
 import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
-import nodemailer from 'nodemailer'
+import { sendMail, isMailConfigured } from './lib/mailer.js'
 import { z } from 'zod'
 import ws from 'ws'
 import {
@@ -144,21 +143,6 @@ function buildEventDates(
 
   const startDate = new Date(startDateStr)
   return { startDate, endDate: new Date(startDate.getTime() + 2 * 60 * 60 * 1000) }
-}
-
-// ---------------------------------------------------------------------------
-// SMTP transporter (created once per function warm instance)
-// ---------------------------------------------------------------------------
-function createTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST,
-    port:   Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  })
 }
 
 // ---------------------------------------------------------------------------
@@ -314,11 +298,10 @@ export const handler: Handler = async (event) => {
       outlookCalUrl: olUrl,
     }
 
-    if (process.env.SMTP_HOST) {
+    if (isMailConfigured()) {
       try {
-        const transporter = createTransporter()
-        await transporter.sendMail({
-          from:    process.env.EMAIL_FROM_PUJA ?? process.env.EMAIL_FROM ?? `"HAI Puja Seva" <${process.env.SMTP_USER}>`,
+        await sendMail({
+          from:    process.env.EMAIL_FROM_PUJA ?? process.env.EMAIL_FROM ?? '"HAI Puja Seva" <noreply@hindutemple.ie>',
           to:      data.email,
           subject: `Your RSVP Confirmation – ${evtRow.title} – Ref #${reference}`,
           html:    buildEmailHtml(emailParams),
@@ -339,10 +322,10 @@ export const handler: Handler = async (event) => {
           .eq('id', rsvpId as string)
       } catch (emailErr) {
         // Non-fatal: RSVP is already saved. Log and continue.
-        console.error('SMTP send error:', emailErr)
+        console.error('Graph API send error:', emailErr)
       }
     } else {
-      console.log('[dev] SMTP_HOST not set — skipping email for ref', reference)
+      console.log('[dev] Mail not configured — skipping email for ref', reference)
     }
 
     return {

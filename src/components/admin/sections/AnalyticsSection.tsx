@@ -135,6 +135,8 @@ function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
 // ---------------------------------------------------------------------------
 export function AnalyticsSection() {
   const [rangeId, setRangeId] = useState('7d')
+  const [eventsPage, setEventsPage] = useState(0)
+  const [sessionsPage, setSessionsPage] = useState(0)
   const range = useMemo(() => buildRange(rangeId), [rangeId])
   const { summary, loading, error, refresh } = useAnalytics(range)
 
@@ -186,7 +188,7 @@ export function AnalyticsSection() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Select value={rangeId} onValueChange={setRangeId}>
+            <Select value={rangeId} onValueChange={(v) => { setRangeId(v); setEventsPage(0); setSessionsPage(0) }}>
               <SelectTrigger className="w-[200px] bg-white text-orange-900 border-0">
                 <SelectValue />
               </SelectTrigger>
@@ -368,7 +370,7 @@ export function AnalyticsSection() {
       {/* Recent activity */}
       <SectionCard
         title="Recent activity"
-        description="Most recent 100 events captured."
+        description={`${summary.recentEvents.length} events · ${summary.sessions_.length} sessions · 25 per page`}
       >
         <Tabs defaultValue="events">
           <TabsList>
@@ -376,62 +378,82 @@ export function AnalyticsSection() {
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
           </TabsList>
           <TabsContent value="events">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Path</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Device</TableHead>
-                  <TableHead className="text-right">Duration</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {summary.recentEvents.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No events yet.</TableCell></TableRow>
-                  ) : summary.recentEvents.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(e.created_at).toLocaleString('en-IE')}</TableCell>
-                      <TableCell><Badge variant="outline" className="capitalize">{e.event_type}</Badge></TableCell>
-                      <TableCell className="font-medium truncate max-w-[260px]" title={e.path}>{e.path}</TableCell>
-                      <TableCell><span className="mr-1">{countryFlag(e.country_code)}</span>{e.country ?? e.country_code ?? '—'}</TableCell>
-                      <TableCell className="capitalize text-sm">{e.device_type ?? '—'} · {e.browser ?? '—'}</TableCell>
-                      <TableCell className="text-right tabular-nums">{e.duration_ms ? formatMs(e.duration_ms) : '—'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            {(() => {
+              const PAGE_SIZE = 25
+              const totalPages = Math.ceil(summary.recentEvents.length / PAGE_SIZE)
+              const pageData = summary.recentEvents.slice(eventsPage * PAGE_SIZE, (eventsPage + 1) * PAGE_SIZE)
+              return (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader><TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Path</TableHead>
+                        <TableHead>Country</TableHead>
+                        <TableHead>Device</TableHead>
+                        <TableHead className="text-right">Duration</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {pageData.length === 0 ? (
+                          <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No events yet.</TableCell></TableRow>
+                        ) : pageData.map((e) => (
+                          <TableRow key={e.id}>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(e.created_at).toLocaleString('en-IE')}</TableCell>
+                            <TableCell><Badge variant="outline" className="capitalize">{e.event_type}</Badge></TableCell>
+                            <TableCell className="font-medium truncate max-w-[260px]" title={e.path}>{e.path}</TableCell>
+                            <TableCell><span className="mr-1">{countryFlag(e.country_code)}</span>{e.country ?? e.country_code ?? '—'}</TableCell>
+                            <TableCell className="capitalize text-sm">{e.device_type ?? '—'} · {e.browser ?? '—'}</TableCell>
+                            <TableCell className="text-right tabular-nums">{e.duration_ms ? formatMs(e.duration_ms) : '—'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <TablePagination page={eventsPage} totalPages={totalPages} total={summary.recentEvents.length} onPage={setEventsPage} />
+                </>
+              )
+            })()}
           </TabsContent>
           <TabsContent value="sessions">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Started</TableHead>
-                  <TableHead>Visitor</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Device</TableHead>
-                  <TableHead>Referrer</TableHead>
-                  <TableHead className="text-right">Pageviews</TableHead>
-                  <TableHead className="text-right">Duration</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {summary.sessions_.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No sessions yet.</TableCell></TableRow>
-                  ) : summary.sessions_.slice(0, 100).map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(s.started_at).toLocaleString('en-IE')}</TableCell>
-                      <TableCell className="font-mono text-xs">{s.visitor_id.slice(0, 8)}…</TableCell>
-                      <TableCell><span className="mr-1">{countryFlag(s.country_code)}</span>{s.country ?? '—'}{s.city ? ` · ${s.city}` : ''}</TableCell>
-                      <TableCell className="capitalize text-sm">{s.device_type ?? '—'} · {s.browser ?? '—'} · {s.os ?? '—'}</TableCell>
-                      <TableCell className="text-sm">{s.referrer_host ?? '(direct)'}</TableCell>
-                      <TableCell className="text-right tabular-nums">{s.pageviews}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatMs(s.total_duration_ms)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            {(() => {
+              const PAGE_SIZE = 25
+              const totalPages = Math.ceil(summary.sessions_.length / PAGE_SIZE)
+              const pageData = summary.sessions_.slice(sessionsPage * PAGE_SIZE, (sessionsPage + 1) * PAGE_SIZE)
+              return (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader><TableRow>
+                        <TableHead>Started</TableHead>
+                        <TableHead>Visitor</TableHead>
+                        <TableHead>Country</TableHead>
+                        <TableHead>Device</TableHead>
+                        <TableHead>Referrer</TableHead>
+                        <TableHead className="text-right">Pageviews</TableHead>
+                        <TableHead className="text-right">Duration</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {pageData.length === 0 ? (
+                          <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No sessions yet.</TableCell></TableRow>
+                        ) : pageData.map((s) => (
+                          <TableRow key={s.id}>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(s.started_at).toLocaleString('en-IE')}</TableCell>
+                            <TableCell className="font-mono text-xs">{s.visitor_id.slice(0, 8)}…</TableCell>
+                            <TableCell><span className="mr-1">{countryFlag(s.country_code)}</span>{s.country ?? '—'}{s.city ? ` · ${s.city}` : ''}</TableCell>
+                            <TableCell className="capitalize text-sm">{s.device_type ?? '—'} · {s.browser ?? '—'} · {s.os ?? '—'}</TableCell>
+                            <TableCell className="text-sm">{s.referrer_host ?? '(direct)'}</TableCell>
+                            <TableCell className="text-right tabular-nums">{s.pageviews}</TableCell>
+                            <TableCell className="text-right tabular-nums">{formatMs(s.total_duration_ms)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <TablePagination page={sessionsPage} totalPages={totalPages} total={summary.sessions_.length} onPage={setSessionsPage} />
+                </>
+              )
+            })()}
           </TabsContent>
         </Tabs>
       </SectionCard>
@@ -442,6 +464,36 @@ export function AnalyticsSection() {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
+function TablePagination({
+  page, totalPages, total, onPage,
+}: { page: number; totalPages: number; total: number; onPage: (p: number) => void }) {
+  if (totalPages <= 1) return null
+  return (
+    <div className="flex items-center justify-between px-1 py-3 border-t mt-1">
+      <p className="text-sm text-muted-foreground">
+        Page <span className="font-medium text-foreground">{page + 1}</span> of {totalPages}
+        <span className="ml-2 text-xs">({total} records)</span>
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline" size="sm"
+          onClick={() => onPage(page - 1)}
+          disabled={page === 0}
+        >
+          ← Previous
+        </Button>
+        <Button
+          variant="outline" size="sm"
+          onClick={() => onPage(page + 1)}
+          disabled={page >= totalPages - 1}
+        >
+          Next →
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 function BreakdownPie({
   title, icon, data,
 }: { title: string; icon?: React.ReactNode; data: { key: string; count: number }[] }) {

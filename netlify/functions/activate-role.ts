@@ -17,26 +17,14 @@
  */
 
 import type { Handler } from '@netlify/functions'
-import nodemailer from 'nodemailer'
+import { sendMail } from './lib/mailer.js'
 import { supabaseAdmin, jsonHeaders } from './lib/stripe.js'
 import { logoRow, footerInner } from './lib/emailBase.js'
 
 // ---------------------------------------------------------------------------
-// SMTP helpers
+// Mail helpers
 // ---------------------------------------------------------------------------
-function createMailTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST,
-    port:   Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  })
-}
-
-const FROM_ADDRESS = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@hindutemple.ie'
+const FROM_ADDRESS = process.env.MAIL_FROM_ADDRESS ?? 'noreply@hindutemple.ie'
 const ORG_NAME     = 'Hindu Association of Ireland'
 
 /** Confirmation email sent after the role is successfully activated. */
@@ -94,8 +82,7 @@ async function sendActivationConfirmationEmail(opts: {
 
   const text = `Account Activated — ${ORG_NAME}\n\nYour ${roleLabel} access has been activated.\n\nSign in here: ${loginUrl}`
 
-  const transporter = createMailTransporter()
-  await transporter.sendMail({
+  await sendMail({
     from:    `"${ORG_NAME}" <${FROM_ADDRESS}>`,
     to:      opts.toEmail,
     subject: `Your ${roleLabel} account is now active — ${ORG_NAME} Admin Portal`,

@@ -16,7 +16,7 @@
 
 import type { Handler } from '@netlify/functions'
 import { randomBytes } from 'crypto'
-import nodemailer from 'nodemailer'
+import { sendMail } from './lib/mailer.js'
 import { supabaseAdmin, jsonHeaders } from './lib/stripe.js'
 import { logoRow, footerInner } from './lib/emailBase.js'
 
@@ -75,21 +75,9 @@ async function requirePermission(
 }
 
 // ---------------------------------------------------------------------------
-// SMTP helpers
+// Mail helpers
 // ---------------------------------------------------------------------------
-function createMailTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST,
-    port:   Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  })
-}
-
-const FROM_ADDRESS = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@hindutemple.ie'
+const FROM_ADDRESS = process.env.MAIL_FROM_ADDRESS ?? 'noreply@hindutemple.ie'
 const ORG_NAME     = 'Hindu Association of Ireland'
 
 /** Email sent to the user when a super_admin assigns them a role (existing user). */
@@ -146,8 +134,7 @@ async function sendRoleAssignmentEmail(opts: {
 
   const text = `Admin Portal Access — ${ORG_NAME}\n\nYou have been assigned the ${roleLabel} role by ${opts.invitedBy}.\n\nActivate your access here:\n${opts.activationUrl}\n\nThis link expires in 7 days.`
 
-  const transporter = createMailTransporter()
-  await transporter.sendMail({
+  await sendMail({
     from:    `"${ORG_NAME}" <${FROM_ADDRESS}>`,
     to:      opts.toEmail,
     subject: `You've been given ${roleLabel} access — ${ORG_NAME} Admin Portal`,
