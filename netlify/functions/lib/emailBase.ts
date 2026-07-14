@@ -13,7 +13,7 @@ export function getSiteUrl(): string {
 
 /** Public URL of the HAI green logo served from /public. */
 export function getLogoUrl(): string {
-  return `${getSiteUrl()}/${encodeURIComponent('HAI (Green)  Hindu Association Ireland logo-01.jpg')}`
+  return `${getSiteUrl()}/logo.jpeg`
 }
 
 /** Public URL of the favicon — used as a visual trust seal in email footers. */
@@ -29,13 +29,12 @@ export function logoRow(): string {
   return `
         <!-- ═══════════════════════ LOGO BANNER ═══════════════════════════ -->
         <tr>
-          <td style="background:#ffffff;padding:18px 40px 14px;text-align:center;
-                     border-bottom:2px solid #fff7ed;">
+          <td bgcolor="ffffff" style="background:#ffffff;padding:18px 40px 14px;text-align:center;border-bottom:2px solid #fff7ed;">
             <img src="${getLogoUrl()}"
                  alt="Hindu Association of Ireland"
-                 width="160"
-                 style="height:auto;max-height:72px;width:auto;max-width:200px;
-                        display:block;margin:0 auto;"
+                 width="160" height="72"
+                 border="0"
+                 style="height:auto;max-height:72px;width:auto;max-width:200px;display:block;margin:0 auto;"
             />
           </td>
         </tr>`

@@ -194,6 +194,9 @@ export function buildAdminNotificationHtml(p: ContactEmailParams): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light">
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
   <title>New Contact Form Submission</title>
 </head>
 <body style="margin:0;padding:0;background:#fafaf9;font-family:Arial,sans-serif;">
@@ -204,15 +207,15 @@ export function buildAdminNotificationHtml(p: ContactEmailParams): string {
       <td align="center">
 
         <!-- Card -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.08);overflow:hidden;">
+        <table width="600" border="0" cellpadding="0" cellspacing="0" style="background:#ffffff;width:600px;">
 
           ${logoRow()}
 
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg, #ea580c 0%, #f97316 100%);padding:32px 40px;">
+            <td bgcolor="ea580c" style="background:#ea580c;padding:32px 40px;">
               <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;">
-                📬 New Contact Form Submission
+                &#128236; New Contact Form Submission
               </h1>
             </td>
           </tr>
@@ -261,7 +264,7 @@ export function buildAdminNotificationHtml(p: ContactEmailParams): string {
                         <td style="padding:12px;">
                           <p style="margin:0;font-size:12px;color:#a8a29e;font-family:Arial,sans-serif;">Submitted</p>
                           <p style="margin:4px 0 0;font-size:14px;color:#1c1917;font-family:Arial,sans-serif;">
-                            ${new Date(p.submittedAt).toLocaleString('en-IE', { timeZone: 'Europe/Dublin' })}
+                            ${formatDate(p.submittedAt)}
                           </p>
                         </td>
                       </tr>
@@ -335,7 +338,7 @@ VISITOR INFORMATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Name:      ${p.visitorName}
 Email:     ${p.visitorEmail}
-${p.visitorPhone ? `Phone:     ${p.visitorPhone}\n` : ''}Submitted:  ${new Date(p.submittedAt).toLocaleString('en-IE', { timeZone: 'Europe/Dublin' })}
+${p.visitorPhone ? `Phone:     ${p.visitorPhone}\n` : ''}Submitted:  ${formatDate(p.submittedAt)}
 
 MESSAGE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -352,6 +355,20 @@ To reply, send an email to: ${p.visitorEmail}
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+function formatDate(isoString: string): string {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const d = new Date(isoString)
+  const parts = new Intl.DateTimeFormat('en-IE', {
+    timeZone: 'Europe/Dublin',
+    year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d).reduce<Record<string, string>>((acc, part) => {
+    acc[part.type] = part.value
+    return acc
+  }, {})
+  return `${String(parts.day).padStart(2, '0')} ${MONTHS[+parts.month - 1]} ${parts.year}, ${parts.hour}:${parts.minute}`
+}
+
 function escapeHtml(text: string): string {
   if (!text) return ''
   return text

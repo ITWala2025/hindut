@@ -99,11 +99,11 @@ async function sendRoleAssignmentEmail(opts: {
 <body style="margin:0;padding:0;background:#fafaf9;font-family:Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafaf9;padding:32px 16px;">
   <tr><td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+    <table width="560" border="0" cellpadding="0" cellspacing="0" style="background:#ffffff;width:560px;">
       ${logoRow()}
       <!-- Header -->
-      <tr><td style="background:linear-gradient(135deg,#ea580c,#d97706);padding:24px 32px;text-align:center;">
-        <p style="margin:0 0 6px;font-size:12px;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif;">Hindu Association of Ireland</p>
+      <tr><td bgcolor="ea580c" style="background:#ea580c;padding:24px 32px;text-align:center;">
+        <p style="margin:0 0 6px;font-size:12px;color:#fff7ed;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif;">Hindu Association of Ireland</p>
         <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;">Admin Portal Access</h1>
       </td></tr>
       <!-- Body -->
@@ -115,7 +115,7 @@ async function sendRoleAssignmentEmail(opts: {
           To activate your access, please click the button below. This link expires in 7 days.
         </p>
         <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
-          <tr><td style="background:linear-gradient(135deg,#ea580c,#d97706);border-radius:8px;">
+          <tr><td bgcolor="ea580c" style="background:#ea580c;">
             <a href="${opts.activationUrl}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;">Activate My Access</a>
           </td></tr>
         </table>
