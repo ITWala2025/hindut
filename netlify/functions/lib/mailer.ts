@@ -183,12 +183,25 @@ export async function sendMail(msg: MailMessage): Promise<void> {
     },
   }
 
-  // replyTo: explicit caller value wins; otherwise fall back to the alias address
-  // (so replies land in the right inbox even though the From is MAIL_FROM_ADDRESS).
-  const replyToAddr = msg.replyTo ?? (aliasAddress ? aliasAddress : undefined)
-  if (replyToAddr) {
-    const rp = parseAddress(replyToAddr)
-    message.replyTo = [{ emailAddress: { address: rp.address, name: rp.name || rp.address } }]
+  // replyTo: explicit caller value wins; otherwise use the alias derived from msg.from.
+  // Exchange Online sometimes ignores the message.replyTo property for addresses not
+  // registered in the tenant directory, so we also set it as a raw SMTP header via
+  // internetMessageHeaders — Exchange DOES forward custom headers to the final message.
+  const replyToParsed: { name: string; address: string } | null = (() => {
+    if (msg.replyTo) return parseAddress(msg.replyTo)
+    if (aliasAddress) return { name: displayName, address: aliasAddress }
+    return null
+  })()
+
+  if (replyToParsed) {
+    const replyName = replyToParsed.name || replyToParsed.address
+    // Graph API replyTo property (honoured by newer Exchange builds)
+    message.replyTo = [{ emailAddress: { address: replyToParsed.address, name: replyName } }]
+    // Raw SMTP Reply-To header — bypasses Exchange's tenant-directory validation
+    const rfcValue = replyToParsed.name
+      ? `"${replyToParsed.name}" <${replyToParsed.address}>`
+      : replyToParsed.address
+    message.internetMessageHeaders = [{ name: 'Reply-To', value: rfcValue }]
   }
 
   if (attachments.length > 0) {
