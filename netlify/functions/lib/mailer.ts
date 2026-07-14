@@ -12,6 +12,8 @@
  *                          The app registration must have the
  *                          Mail.Send *application* permission granted.
  */
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,7 +22,14 @@ export interface MailAttachment {
   filename:    string
   content:     string | Buffer
   contentType?: string
+  /** Set true to embed as a CID inline image (bypasses Outlook image blocking). */
+  isInline?:   boolean
+  /** Content-ID referenced in HTML as src="cid:<contentId>". */
+  contentId?:  string
 }
+
+/** CID used for the HAI logo in all transactional emails. */
+export const LOGO_CID = 'email-logo@hai'
 
 export interface MailMessage {
   /** Display FROM address — e.g. '"HAI Donations" <info@hindutemple.ie>' */
@@ -121,17 +130,38 @@ export async function sendMail(msg: MailMessage): Promise<void> {
   })
 
   // Attachments (e.g. ICS calendar files)
-  const attachments = (msg.attachments ?? []).map((att) => {
+  const attachments: Array<Record<string, unknown>> = (msg.attachments ?? []).map((att) => {
     const bytes = Buffer.isBuffer(att.content)
       ? att.content
       : Buffer.from(att.content as string)
-    return {
+    const obj: Record<string, unknown> = {
       '@odata.type':  '#microsoft.graph.fileAttachment',
       name:           att.filename,
       contentType:    att.contentType ?? 'application/octet-stream',
       contentBytes:   bytes.toString('base64'),
     }
+    if (att.isInline)   obj.isInline   = true
+    if (att.contentId)  obj.contentId  = att.contentId
+    return obj
   })
+
+  // Auto-inject HAI logo as a CID inline attachment whenever the HTML
+  // references cid:email-logo@hai — works without changes in any caller.
+  if (msg.html?.includes(`cid:${LOGO_CID}`)) {
+    try {
+      const logoBytes = readFileSync(join(__dirname, 'email-logo.jpg'))
+      attachments.unshift({
+        '@odata.type':  '#microsoft.graph.fileAttachment',
+        name:           'email-logo.jpg',
+        contentType:    'image/jpeg',
+        contentBytes:   logoBytes.toString('base64'),
+        isInline:       true,
+        contentId:      LOGO_CID,
+      })
+    } catch {
+      // Logo file not found — gracefully degrade (alt text shown instead)
+    }
+  }
 
   // Graph API message payload
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

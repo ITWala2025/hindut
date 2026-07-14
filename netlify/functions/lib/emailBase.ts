@@ -30,7 +30,7 @@ export function logoRow(): string {
         <!-- ═══════════════════════ LOGO BANNER ═══════════════════════════ -->
         <tr>
           <td bgcolor="ffffff" style="background:#ffffff;padding:18px 40px 14px;text-align:center;border-bottom:2px solid #fff7ed;">
-            <img src="${getLogoUrl()}"
+            <img src="cid:email-logo@hai"
                  alt="Hindu Association of Ireland"
                  width="160" height="72"
                  border="0"
