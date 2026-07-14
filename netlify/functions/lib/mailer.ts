@@ -118,9 +118,11 @@ export async function sendMail(msg: MailMessage): Promise<void> {
 
   const token = await getAccessToken()
 
-  // Display name: prefer what the caller passed in `from`, fall back to address.
-  const fromParsed  = msg.from ? parseAddress(msg.from) : { name: '', address: fromAddress }
-  const displayName = fromParsed.name || fromParsed.address || fromAddress
+  // From: use the alias supplied by the caller (requires Send As permission in Exchange);
+  // fall back to MAIL_FROM_ADDRESS for both the address and display name.
+  const fromParsed    = msg.from ? parseAddress(msg.from) : { name: '', address: fromAddress }
+  const fromEmailAddr = fromParsed.address || fromAddress
+  const displayName   = fromParsed.name || fromEmailAddr
 
   // Recipients
   const toList = Array.isArray(msg.to) ? msg.to : [msg.to]
@@ -168,7 +170,7 @@ export async function sendMail(msg: MailMessage): Promise<void> {
   const message: Record<string, any> = {
     subject: msg.subject,
     from: {
-      emailAddress: { address: fromAddress, name: displayName },
+      emailAddress: { address: fromEmailAddr, name: displayName },
     },
     toRecipients,
     body: {

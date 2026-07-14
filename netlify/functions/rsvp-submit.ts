@@ -301,7 +301,7 @@ export const handler: Handler = async (event) => {
     if (isMailConfigured()) {
       try {
         await sendMail({
-          from:    process.env.EMAIL_FROM_PUJA ?? process.env.EMAIL_FROM ?? '"HAI Puja Seva" <noreply@hindutemple.ie>',
+          from:    '"HAI Puja Seva" <puja@hindutemple.ie>',
           to:      data.email,
           subject: `Your RSVP Confirmation – ${evtRow.title} – Ref #${reference}`,
           html:    buildEmailHtml(emailParams),

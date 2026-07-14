@@ -191,7 +191,8 @@ export const handler: Handler = async (event) => {
             if (onetimeDonorEmail) {
               try {
                 await sendMail({
-                  from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',                  to:      onetimeDonorEmail,
+                  from:    '"HAI Donations" <donation@hindutemple.ie>',
+                  to:      onetimeDonorEmail,
                   subject: `Thank you for your donation — Hindu Association of Ireland`,
                   html:    buildDonationEmailHtml({ donorName: onetimeDonorName, donorEmail: onetimeDonorEmail, amountEur: onetimeAmountEur, recurring: false }),
                   text:    buildDonationEmailText({ donorName: onetimeDonorName, donorEmail: onetimeDonorEmail, amountEur: onetimeAmountEur, recurring: false }),
@@ -241,7 +242,8 @@ export const handler: Handler = async (event) => {
               if (donorEmail) {
                 try {
                   await sendMail({
-                    from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',                    to:      donorEmail,
+                    from:    '"HAI Donations" <donation@hindutemple.ie>',
+                    to:      donorEmail,
                     subject: `Thank you for your monthly donation — Hindu Association of Ireland`,
                     html:    buildDonationEmailHtml({ donorName, donorEmail, amountEur, recurring: true }),
                     text:    buildDonationEmailText({ donorName, donorEmail, amountEur, recurring: true }),
@@ -370,7 +372,7 @@ export const handler: Handler = async (event) => {
                 addedMonthly: monthlyContributionEurEarly >= 1,
               }
               await sendMail({
-                from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',
+                from:    '"Hindu Association of Ireland" <info@hindutemple.ie>',
                 to:      memberEmail,
                 subject: 'Welcome to the Hindu Association of Ireland Community!',
                 html:    buildMembershipWelcomeEmailHtml(emailParams),
@@ -648,7 +650,8 @@ export const handler: Handler = async (event) => {
 
               if (emailParams.customerEmail) {
                 await sendMail({
-                  from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',                  to: emailParams.customerEmail,
+                  from: '"HAI Donations" <donation@hindutemple.ie>',
+                  to: emailParams.customerEmail,
                   subject: 'Payment Failed – Donation to Hindu Association of Ireland',
                   html: buildPaymentFailedEmailHtml(emailParams),
                   text: buildPaymentFailedEmailText(emailParams),
@@ -713,7 +716,8 @@ export const handler: Handler = async (event) => {
               }
 
               await sendMail({
-                from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',                to:   emailParams.customerEmail,
+                from: subKind === 'donation' ? '"HAI Donations" <donation@hindutemple.ie>' : '"Hindu Association of Ireland" <info@hindutemple.ie>',
+                to:   emailParams.customerEmail,
                 subject: subKind === 'donation'
                   ? 'Payment Failed – Monthly Donation to Hindu Association of Ireland'
                   : 'Payment Failed – Hindu Association of Ireland',
@@ -772,7 +776,7 @@ export const handler: Handler = async (event) => {
 
                 if (emailParams.customerEmail) {
                   await sendMail({
-                    from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',
+                    from: '"HAI Donations" <donation@hindutemple.ie>',
                     to: emailParams.customerEmail,
                     subject: 'Refund Processed – Hindu Association of Ireland',
                     html: buildRefundEmailHtml(emailParams),
@@ -945,7 +949,7 @@ export const handler: Handler = async (event) => {
 
             if (emailParams.customerEmail) {
               await sendMail({
-                from: process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Membership" <noreply@hindutemple.ie>',
+                from: '"Hindu Association of Ireland" <info@hindutemple.ie>',
                 to: emailParams.customerEmail,
                 subject: 'Membership Canceled – Hindu Association of Ireland',
                 html: buildSubscriptionCanceledEmailHtml(emailParams),
@@ -1016,7 +1020,7 @@ export const handler: Handler = async (event) => {
             planName,
           }
           await sendMail({
-            from:    process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"HAI Donations" <noreply@hindutemple.ie>',
+            from:    '"Hindu Association of Ireland" <info@hindutemple.ie>',
             to:      memberEmail,
             subject: `Upcoming monthly contribution of €${amountEur.toFixed(2)} – Hindu Association of Ireland`,
             html:    buildMonthlyReminderEmailHtml(reminderParams),

@@ -151,7 +151,7 @@ export const handler: Handler = async (event) => {
     // Send emails via Microsoft Graph API
     if (isMailConfigured()) {
       try {
-        const fromAddr = process.env.EMAIL_FROM_DONATION ?? process.env.EMAIL_FROM ?? '"Hindu Association of Ireland" <info@hindutemple.ie>'
+        const fromAddr = '"Hindu Association of Ireland" <info@hindutemple.ie>'
 
         // Send confirmation email to visitor
         try {
