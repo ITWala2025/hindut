@@ -268,7 +268,6 @@ export const handler: Handler = async (event) => {
           subject: `Ticket Confirmed – ${eventDetails.title}`,
           html: buildTicketEmailHtml(emailParams),
           text: buildTicketEmailText(emailParams),
-          replyTo: 'info@hindutemple.ie',
         })
 
         console.log('[ticket-submit] ✅ Ticket email sent to', data.email)

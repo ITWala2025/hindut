@@ -655,7 +655,6 @@ export const handler: Handler = async (event) => {
                   subject: 'Payment Failed – Donation to Hindu Association of Ireland',
                   html: buildPaymentFailedEmailHtml(emailParams),
                   text: buildPaymentFailedEmailText(emailParams),
-                  replyTo: 'info@hindutemple.ie',
                 })
                 console.log('[stripe-webhook] ✅ Payment failed email sent to', emailParams.customerEmail)
               }
@@ -723,7 +722,6 @@ export const handler: Handler = async (event) => {
                   : 'Payment Failed – Hindu Association of Ireland',
                 html: buildPaymentFailedEmailHtml(emailParams),
                 text: buildPaymentFailedEmailText(emailParams),
-                replyTo: 'info@hindutemple.ie',
               })
               console.log('[stripe-webhook] ✅ invoice.payment_failed email sent to', customerEmail, `[${subKind}]`)
             } catch (emailErr) {
@@ -781,7 +779,6 @@ export const handler: Handler = async (event) => {
                     subject: 'Refund Processed – Hindu Association of Ireland',
                     html: buildRefundEmailHtml(emailParams),
                     text: buildRefundEmailText(emailParams),
-                    replyTo: 'info@hindutemple.ie',
                   })
                   console.log('[stripe-webhook] ✅ Donation refund email sent to', emailParams.customerEmail)
                 }

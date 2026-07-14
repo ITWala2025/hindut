@@ -118,11 +118,15 @@ export async function sendMail(msg: MailMessage): Promise<void> {
 
   const token = await getAccessToken()
 
-  // From: use the alias supplied by the caller (requires Send As permission in Exchange);
-  // fall back to MAIL_FROM_ADDRESS for both the address and display name.
+  // The actual sending address MUST be MAIL_FROM_ADDRESS (Exchange rejects anything
+  // else unless Send As permissions are explicitly configured per alias).
+  // The display name is taken from msg.from; the alias address becomes replyTo so
+  // replies land in the right inbox without requiring Exchange alias config.
   const fromParsed    = msg.from ? parseAddress(msg.from) : { name: '', address: fromAddress }
-  const fromEmailAddr = fromParsed.address || fromAddress
-  const displayName   = fromParsed.name || fromEmailAddr
+  const displayName   = fromParsed.name || fromParsed.address || fromAddress
+  const aliasAddress  = fromParsed.address && fromParsed.address !== fromAddress
+                          ? fromParsed.address
+                          : null
 
   // Recipients
   const toList = Array.isArray(msg.to) ? msg.to : [msg.to]
@@ -170,7 +174,7 @@ export async function sendMail(msg: MailMessage): Promise<void> {
   const message: Record<string, any> = {
     subject: msg.subject,
     from: {
-      emailAddress: { address: fromEmailAddr, name: displayName },
+      emailAddress: { address: fromAddress, name: displayName },
     },
     toRecipients,
     body: {
@@ -179,8 +183,11 @@ export async function sendMail(msg: MailMessage): Promise<void> {
     },
   }
 
-  if (msg.replyTo) {
-    const rp = parseAddress(msg.replyTo)
+  // replyTo: explicit caller value wins; otherwise fall back to the alias address
+  // (so replies land in the right inbox even though the From is MAIL_FROM_ADDRESS).
+  const replyToAddr = msg.replyTo ?? (aliasAddress ? aliasAddress : undefined)
+  if (replyToAddr) {
+    const rp = parseAddress(replyToAddr)
     message.replyTo = [{ emailAddress: { address: rp.address, name: rp.name || rp.address } }]
   }
 
