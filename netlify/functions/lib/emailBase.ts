@@ -11,9 +11,9 @@ export function getSiteUrl(): string {
   return (process.env.URL ?? 'https://limerickhindutemple.netlify.app').replace(/\/$/, '')
 }
 
-/** Public URL of the HAI green logo served from /public. */
+/** Public URL of the email-optimised HAI logo (280px wide, white bg) served from /public. */
 export function getLogoUrl(): string {
-  return `${getSiteUrl()}/logo.jpeg`
+  return `${getSiteUrl()}/email-logo.jpg`
 }
 
 /** Public URL of the favicon — used as a visual trust seal in email footers. */
@@ -26,16 +26,25 @@ export function getFaviconUrl(): string {
  * the gradient header.  Insert this as the FIRST row inside the card <table>.
  */
 export function logoRow(): string {
+  const externalSrc = getLogoUrl()
   return `
         <!-- ═══════════════════════ LOGO BANNER ═══════════════════════════ -->
         <tr>
           <td bgcolor="ffffff" style="background:#ffffff;padding:18px 40px 14px;text-align:center;border-bottom:2px solid #fff7ed;">
+            <!--[if mso]>
             <img src="cid:email-logo@hai"
+                 alt="Hindu Association of Ireland"
+                 width="160" height="72" border="0"
+                 style="display:block;margin:0 auto;" />
+            <![endif]-->
+            <!--[if !mso]><!-->
+            <img src="${externalSrc}"
                  alt="Hindu Association of Ireland"
                  width="160" height="72"
                  border="0"
                  style="height:auto;max-height:72px;width:auto;max-width:200px;display:block;margin:0 auto;"
             />
+            <!--<![endif]-->
           </td>
         </tr>`
 }
