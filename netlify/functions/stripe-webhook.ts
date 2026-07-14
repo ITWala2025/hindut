@@ -993,6 +993,7 @@ export const handler: Handler = async (event) => {
         const chargeDateMs = (invoice.next_payment_attempt ?? 0) * 1000
         const chargeDate   = chargeDateMs
           ? new Date(chargeDateMs).toLocaleDateString('en-IE', {
+              timeZone: 'Europe/Dublin',
               day: 'numeric', month: 'long', year: 'numeric',
             })
           : 'shortly'

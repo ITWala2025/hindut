@@ -51,37 +51,72 @@ function toICSDate(d: Date): string {
 }
 
 export function buildGoogleCalUrl(params: {
-  title: string; start: Date; end: Date; location: string; details: string
+  title: string; start: Date | string; end: Date | string; location: string; details: string
 }): string {
+  // All-day (YYYY-MM-DD string) → YYYYMMDD; timed (Date) → YYYYMMDDTHHMMSSZ
+  const fmt = (v: Date | string) =>
+    typeof v === 'string' ? v.replace(/-/g, '') : toICSDate(v)
   return (
     'https://calendar.google.com/calendar/render?action=TEMPLATE' +
     `&text=${encodeURIComponent(params.title)}` +
-    `&dates=${toICSDate(params.start)}/${toICSDate(params.end)}` +
+    `&dates=${fmt(params.start)}/${fmt(params.end)}` +
     `&details=${encodeURIComponent(params.details)}` +
     `&location=${encodeURIComponent(params.location)}`
   )
 }
 
 export function buildOutlookCalUrl(params: {
-  title: string; start: Date; end: Date; location: string; body: string
+  title: string; start: Date | string; end: Date | string; location: string; body: string
 }): string {
+  const startStr = typeof params.start === 'string' ? params.start : params.start.toISOString()
+  const endStr   = typeof params.end   === 'string' ? params.end   : params.end.toISOString()
   return (
     'https://outlook.live.com/calendar/0/action/compose?rru=addevent' +
     `&subject=${encodeURIComponent(params.title)}` +
-    `&startdt=${params.start.toISOString()}` +
-    `&enddt=${params.end.toISOString()}` +
+    `&startdt=${startStr}` +
+    `&enddt=${endStr}` +
     `&body=${encodeURIComponent(params.body)}` +
     `&location=${encodeURIComponent(params.location)}`
   )
 }
 
 export function buildICS(params: {
-  uid: string; title: string; start: Date; end: Date
+  uid: string; title: string; start: Date | string; end: Date | string
   location: string; description: string
 }): string {
-  const startLocal = toICSDateLocal(params.start)
-  const endLocal = toICSDateLocal(params.end)
-  
+  const allDay = typeof params.start === 'string'
+  const dtstamp = toICSDate(new Date())
+  const summary     = (params.title       || '').replace(/\n/g, '\\n')
+  const location    = (params.location    || '').replace(/\n/g, '\\n')
+  const description = (params.description || '').replace(/\n/g, '\\n')
+
+  if (allDay) {
+    // No time defined — emit a DATE-only (all-day) event; no VTIMEZONE needed
+    const startICS = (params.start as string).replace(/-/g, '')
+    const endICS   = (params.end   as string).replace(/-/g, '')
+    return [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Hindu Association of Ireland//RSVP//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:REQUEST',
+      'BEGIN:VEVENT',
+      `UID:${params.uid}@hai.ie`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART;VALUE=DATE:${startICS}`,
+      `DTEND;VALUE=DATE:${endICS}`,
+      `SUMMARY:${summary}`,
+      `LOCATION:${location}`,
+      `DESCRIPTION:${description}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n')
+  }
+
+  // Timed event — include full VTIMEZONE for Europe/Dublin
+  const startLocal = toICSDateLocal(params.start as Date)
+  const endLocal   = toICSDateLocal(params.end   as Date)
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -89,7 +124,6 @@ export function buildICS(params: {
     'CALSCALE:GREGORIAN',
     'METHOD:REQUEST',
     'X-LIC-LOCATION:Europe/Dublin',
-    // VTIMEZONE component for Europe/Dublin
     'BEGIN:VTIMEZONE',
     'TZID:Europe/Dublin',
     'BEGIN:STANDARD',
@@ -109,12 +143,12 @@ export function buildICS(params: {
     'END:VTIMEZONE',
     'BEGIN:VEVENT',
     `UID:${params.uid}@hai.ie`,
-    `DTSTAMP:${toICSDate(new Date())}`,
+    `DTSTAMP:${dtstamp}`,
     `DTSTART;TZID=Europe/Dublin:${startLocal}`,
     `DTEND;TZID=Europe/Dublin:${endLocal}`,
-    `SUMMARY:${params.title.replace(/\n/g, '\\n')}`,
-    `LOCATION:${params.location.replace(/\n/g, '\\n')}`,
-    `DESCRIPTION:${params.description.replace(/\n/g, '\\n')}`,
+    `SUMMARY:${summary}`,
+    `LOCATION:${location}`,
+    `DESCRIPTION:${description}`,
     'STATUS:CONFIRMED',
     'END:VEVENT',
     'END:VCALENDAR',

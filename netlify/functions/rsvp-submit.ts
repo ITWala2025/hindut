@@ -141,8 +141,7 @@ function buildEventDates(
     }
   }
 
-  const startDate = new Date(startDateStr)
-  return { startDate, endDate: new Date(startDate.getTime() + 2 * 60 * 60 * 1000) }
+  return null // No time defined — caller renders an all-day calendar entry
 }
 
 // ---------------------------------------------------------------------------
@@ -247,38 +246,58 @@ export const handler: Handler = async (event) => {
     }
 
     // -- Build calendar URLs + ICS
-    const { startDate, endDate } = buildEventDates(
-      evtRow.start_date,
-      evtRow.start_time ?? null,
-      evtRow.end_time   ?? null,
-    )
-    const locale = 'en-IE'
+    // Prefer explicit start_time/end_time DB fields; fall back to parsing time_display
+    // (e.g. "4:00 PM - 7:00 PM") so events that only have time_display still get
+    // correct calendar times instead of UTC midnight.
+    let calStartTime: string | null = evtRow.start_time ?? null
+    let calEndTime:   string | null = evtRow.end_time   ?? null
+    if ((!calStartTime || !calEndTime) && evtRow.time_display) {
+      const tm = evtRow.time_display.match(
+        /^(\d{1,2}:\d{2}\s*[AP]M)\s*[-\u2013]\s*(\d{1,2}:\d{2}\s*[AP]M)/i
+      )
+      if (tm) {
+        if (!calStartTime) calStartTime = tm[1].trim()
+        if (!calEndTime)   calEndTime   = tm[2].trim()
+      }
+    }
+    const eventDates = buildEventDates(evtRow.start_date, calStartTime, calEndTime)
+    const datePart   = evtRow.start_date.slice(0, 10)
 
-    const formattedDate = startDate.toLocaleDateString(locale, {
+    // Date for email body — always Dublin timezone, derived from start_date
+    const formattedDate = new Date(`${datePart}T12:00:00Z`).toLocaleDateString('en-IE', {
       timeZone: 'Europe/Dublin',
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     })
+    // Time for email body — blank when not defined
     const formattedTime: string = evtRow.time_display ?? ''
 
+    // Calendar start/end: timed Date objects when available; YYYY-MM-DD strings for all-day
+    const calStartVal: Date | string = eventDates?.startDate ?? datePart
+    const calEndVal:   Date | string = eventDates?.endDate   ?? (() => {
+      const d = new Date(`${datePart}T12:00:00Z`)
+      d.setUTCDate(d.getUTCDate() + 1)
+      return d.toISOString().slice(0, 10)
+    })()
+
     const gcUrl = buildGoogleCalUrl({
-      title:   evtRow.title,
-      start:   startDate,
-      end:     endDate,
+      title:    evtRow.title,
+      start:    calStartVal,
+      end:      calEndVal,
       location: evtRow.location ?? '',
-      details: `RSVP Reference: ${reference}`,
+      details:  `RSVP Reference: ${reference}`,
     })
     const olUrl = buildOutlookCalUrl({
-      title:   evtRow.title,
-      start:   startDate,
-      end:     endDate,
+      title:    evtRow.title,
+      start:    calStartVal,
+      end:      calEndVal,
       location: evtRow.location ?? '',
-      body:    `RSVP Reference: ${reference}`,
+      body:     `RSVP Reference: ${reference}`,
     })
     const icsContent = buildICS({
       uid:         rsvpId as string,
       title:       evtRow.title,
-      start:       startDate,
-      end:         endDate,
+      start:       calStartVal,
+      end:         calEndVal,
       location:    evtRow.location ?? '',
       description: `RSVP Reference: ${reference}`,
     })

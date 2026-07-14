@@ -233,28 +233,29 @@ export const handler: Handler = async (event) => {
     try {
       const { data: eventDetails } = await supabase
         .from('events')
-        .select('title, date, time, location')
+        .select('title, start_date, start_time, end_time, time_display, location')
         .eq('id', data.eventId)
         .single()
 
       if (eventDetails && isMailConfigured()) {
-        const transporter = createMailTransporter()
-        
-        // Format event date
-        const eventDate = new Date(eventDetails.date)
-        const eventDateStr = eventDate.toLocaleDateString('en-IE', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        })
+        // Format event date in Dublin timezone
+        const datePart   = (eventDetails.start_date ?? '').slice(0, 10)
+        const eventDateStr = datePart
+          ? new Date(`${datePart}T12:00:00Z`).toLocaleDateString('en-IE', {
+              timeZone: 'Europe/Dublin',
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })
+          : ''
 
         const emailParams: TicketEmailParams = {
           buyerName: firstName,
           buyerEmail: data.email,
           eventTitle: eventDetails.title,
           eventDate: eventDateStr,
-          eventTime: eventDetails.time || '',
+          eventTime: eventDetails.time_display || '',
           eventLocation: eventDetails.location,
           ticketTier: evtRow.ticket_price_eur ? 'General Admission' : 'Free',
           quantity: data.numAdults + (data.numChildren || 0),
