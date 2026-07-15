@@ -191,8 +191,8 @@ export function buildPaymentFailedEmailHtml(p: PaymentFailedEmailParams): string
                     <p style="margin:0;font-size:14px;color:#44403c;font-family:Arial,sans-serif;
                                line-height:1.6;">
                       Need help? Contact our support team at
-                      <a href="mailto:info@hindutemple.ie"
-                         style="color:#ea580c;text-decoration:none;">info@hindutemple.ie</a>
+                      <a href="mailto:community@hindutemple.ie"
+                         style="color:#ea580c;text-decoration:none;">community@hindutemple.ie</a>
                       or visit our website for assistance.
                     </p>
                   </td>
@@ -247,7 +247,7 @@ WHAT CAN YOU DO?
 • Try a different payment method
 
 ${p.retryUrl ? `\nRetry Payment: ${p.retryUrl}\n` : ''}
-Need help? Contact info@hindutemple.ie
+Need help? Contact community@hindutemple.ie
 
 Hindu Association of Ireland
 `
@@ -348,7 +348,7 @@ export function buildSubscriptionCanceledEmailHtml(p: PaymentCanceledEmailParams
                     <p style="margin:0;font-size:14px;color:#44403c;font-family:Arial,sans-serif;line-height:1.6;">
                       If you canceled by mistake or have questions,
                       contact us at
-                      <a href="mailto:info@hindutemple.ie" style="color:#7c3aed;text-decoration:none;">info@hindutemple.ie</a>
+                      <a href="mailto:community@hindutemple.ie" style="color:#7c3aed;text-decoration:none;">community@hindutemple.ie</a>
                     </p>
                   </td>
                 </tr>
@@ -393,7 +393,7 @@ After that, your subscription will not renew.
 
 We'd love to have you back. You can reactivate your ${p.itemType} at any time.
 
-If you canceled by mistake or have questions, contact us at info@hindutemple.ie
+If you canceled by mistake or have questions, contact us at community@hindutemple.ie
 
 Hindu Association of Ireland
 `

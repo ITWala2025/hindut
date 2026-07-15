@@ -336,8 +336,8 @@ export function buildMonthlyReminderEmailHtml(p: MonthlyReminderEmailParams): st
                     </p>
                     <p style="margin:12px 0 0;font-size:14px;line-height:1.7;color:#57534e;font-family:Arial,sans-serif;">
                       If you wish to cancel or update your contribution, please contact us at
-                      <a href="mailto:info@hindutemple.ie"
-                         style="color:#ea580c;text-decoration:none;">info@hindutemple.ie</a>
+                      <a href="mailto:community@hindutemple.ie"
+                         style="color:#ea580c;text-decoration:none;">community@hindutemple.ie</a>
                       before the charge date.
                     </p>
                   </td>
@@ -364,7 +364,7 @@ export function buildMonthlyReminderEmailHtml(p: MonthlyReminderEmailParams): st
                       Team HAI
                     </p>
                     <p style="margin:4px 0 0;font-size:13px;color:#78716c;font-family:Arial,sans-serif;">
-                      Hindu Association of Ireland · info@hindutemple.ie
+                      Hindu Association of Ireland · community@hindutemple.ie
                     </p>
                   </td>
                 </tr>
@@ -413,13 +413,13 @@ export function buildMonthlyReminderEmailText(p: MonthlyReminderEmailParams): st
     'Your payment will be processed automatically.',
     '',
     'To cancel or update your contribution, please contact us at',
-    'info@hindutemple.ie before the charge date.',
+    'community@hindutemple.ie before the charge date.',
     '',
     'Your generosity sustains our community. Thank you.',
     '',
     'With blessings and gratitude,',
     'Team HAI',
-    'Hindu Association of Ireland · info@hindutemple.ie',
+    'Hindu Association of Ireland · community@hindutemple.ie',
     '',
     'Om Shanti',
   ].join('\n')

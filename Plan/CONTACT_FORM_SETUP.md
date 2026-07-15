@@ -49,7 +49,7 @@ SMTP_SECURE=true
 SMTP_USER=donation@hindutemple.ie
 SMTP_PASS=Haidonation2026$
 EMAIL_FROM=donation@hindutemple.ie
-CONTACT_ADMIN_EMAIL=info@hindutemple.ie
+CONTACT_ADMIN_EMAIL=community@hindutemple.ie
 ```
 
 ### Variable Explanations
@@ -62,7 +62,7 @@ CONTACT_ADMIN_EMAIL=info@hindutemple.ie
 | `SMTP_USER` | `donation@hindutemple.ie` | Your Zoho email account |
 | `SMTP_PASS` | `Haidonation2026$` | Your Zoho email password |
 | `EMAIL_FROM` | `"HAI Donations <donation@hindutemple.ie>"` | Display name and sender email |
-| `CONTACT_ADMIN_EMAIL` | `info@hindutemple.ie` | Where admin notifications are sent |
+| `CONTACT_ADMIN_EMAIL` | `community@hindutemple.ie` | Where admin notifications are sent |
 
 ---
 
@@ -118,7 +118,7 @@ If email sending fails:
 
 ### Admin Notification Email
 - **Subject**: "New Contact Form Submission from [Visitor Name]"
-- **To**: `info@hindutemple.ie` (or `CONTACT_ADMIN_EMAIL`)
+- **To**: `community@hindutemple.ie` (or `CONTACT_ADMIN_EMAIL`)
 - **From**: `donation@hindutemple.ie`
 - **Contents**:
   - Visitor's name, email, phone

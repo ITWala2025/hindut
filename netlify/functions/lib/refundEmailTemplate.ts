@@ -169,7 +169,7 @@ export function buildRefundEmailHtml(p: RefundEmailParams): string {
                     <p style="margin:0;font-size:14px;color:#44403c;font-family:Arial,sans-serif;line-height:1.6;">
                       If you don't see the refund in your account after the expected time,
                       or if you have any questions, please contact us at
-                      <a href="mailto:info@hindutemple.ie" style="color:#059669;text-decoration:none;">info@hindutemple.ie</a>
+                      <a href="mailto:community@hindutemple.ie" style="color:#059669;text-decoration:none;">community@hindutemple.ie</a>
                     </p>
                   </td>
                 </tr>
@@ -225,7 +225,7 @@ ${estimatedText}
 
 Have questions?
 If you don't see the refund in your account after the expected time,
-or if you have any questions, contact info@hindutemple.ie
+or if you have any questions, contact community@hindutemple.ie
 
 Thank you for your business.
 Hindu Association of Ireland

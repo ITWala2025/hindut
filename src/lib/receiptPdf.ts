@@ -6,7 +6,7 @@ const ORG_NAME    = 'Hindu Association of Ireland'
 const ORG_REG     = 'Registered Charity | Ireland'
 const ORG_ADDRESS = '4 Upper Denmark Street, Co. Limerick, Ireland'
 const ORG_PHONE   = '+353 87 495 3334'
-const ORG_EMAIL   = 'info@hindutemple.ie'
+const ORG_EMAIL   = 'community@hindutemple.ie'
 const ORG_EMAIL2  = 'hinduassociationireland@gmail.com'
 const ORG_WEB     = 'www.hindutemple.ie'
 

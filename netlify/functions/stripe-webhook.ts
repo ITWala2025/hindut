@@ -372,7 +372,7 @@ export const handler: Handler = async (event) => {
                 addedMonthly: monthlyContributionEurEarly >= 1,
               }
               await sendMail({
-                from:    '"Hindu Association of Ireland" <info@hindutemple.ie>',
+                from:    '"Hindu Association of Ireland" <community@hindutemple.ie>',
                 to:      memberEmail,
                 subject: 'Welcome to the Hindu Association of Ireland Community!',
                 html:    buildMembershipWelcomeEmailHtml(emailParams),
@@ -715,7 +715,7 @@ export const handler: Handler = async (event) => {
               }
 
               await sendMail({
-                from: subKind === 'donation' ? '"HAI Donations" <donation@hindutemple.ie>' : '"Hindu Association of Ireland" <info@hindutemple.ie>',
+                from: subKind === 'donation' ? '"HAI Donations" <donation@hindutemple.ie>' : '"Hindu Association of Ireland" <community@hindutemple.ie>',
                 to:   emailParams.customerEmail,
                 subject: subKind === 'donation'
                   ? 'Payment Failed – Monthly Donation to Hindu Association of Ireland'
@@ -946,12 +946,12 @@ export const handler: Handler = async (event) => {
 
             if (emailParams.customerEmail) {
               await sendMail({
-                from: '"Hindu Association of Ireland" <info@hindutemple.ie>',
+                from: '"Hindu Association of Ireland" <community@hindutemple.ie>',
                 to: emailParams.customerEmail,
                 subject: 'Membership Canceled – Hindu Association of Ireland',
                 html: buildSubscriptionCanceledEmailHtml(emailParams),
                 text: buildSubscriptionCanceledEmailText(emailParams),
-                replyTo: 'info@hindutemple.ie',
+                replyTo: 'community@hindutemple.ie',
               })
               console.log('[stripe-webhook] ✅ Membership canceled email sent to', emailParams.customerEmail)
             }
@@ -1018,7 +1018,7 @@ export const handler: Handler = async (event) => {
             planName,
           }
           await sendMail({
-            from:    '"Hindu Association of Ireland" <info@hindutemple.ie>',
+            from:    '"Hindu Association of Ireland" <community@hindutemple.ie>',
             to:      memberEmail,
             subject: `Upcoming monthly contribution of €${amountEur.toFixed(2)} – Hindu Association of Ireland`,
             html:    buildMonthlyReminderEmailHtml(reminderParams),

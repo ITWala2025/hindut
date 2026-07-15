@@ -196,7 +196,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
                       Team HAI
                     </p>
                     <p style="margin:4px 0 0;font-size:13px;color:#78716c;font-family:Arial,sans-serif;">
-                      Hindu Association of Ireland · info@hindutemple.ie
+                      Hindu Association of Ireland · community@hindutemple.ie
                     </p>
                   </td>
                 </tr>
@@ -210,7 +210,7 @@ export function buildTicketEmailHtml(p: TicketEmailParams): string {
             <td bgcolor="fafaf9" style="background:#fafaf9;border-top:1px solid #e7e5e4;padding:24px 40px;text-align:center;">
               ${footerInner({
                 mainText: `This ticket was sent to ${p.buyerEmail}. Please keep this email safe for check-in at the event.`,
-                subText: 'For support or questions, contact info@hindutemple.ie',
+                subText: 'For support or questions, contact community@hindutemple.ie',
               })}
             </td>
           </tr>
@@ -253,7 +253,7 @@ IMPORTANT:
 Please arrive 15-20 minutes before the event begins to allow time for check-in.
 
 We look forward to seeing you at the event!
-If you have any questions, please contact us at info@hindutemple.ie
+If you have any questions, please contact us at community@hindutemple.ie
 
 Warm regards,
 Team HAI

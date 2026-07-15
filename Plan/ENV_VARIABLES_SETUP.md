@@ -11,7 +11,7 @@ SMTP_SECURE=true
 SMTP_USER=donation@hindutemple.ie
 SMTP_PASS=Haidonation2026$
 EMAIL_FROM=donation@hindutemple.ie
-CONTACT_ADMIN_EMAIL=info@hindutemple.ie
+CONTACT_ADMIN_EMAIL=community@hindutemple.ie
 ```
 
 ---
@@ -71,7 +71,7 @@ Value: donation@hindutemple.ie
 #### Variable 7: CONTACT_ADMIN_EMAIL
 ```
 Key:   CONTACT_ADMIN_EMAIL
-Value: info@hindutemple.ie
+Value: community@hindutemple.ie
 ```
 
 ### 3. Save Variables
@@ -117,7 +117,7 @@ https://limerickhindutemple.netlify.app/contact
 ### 3. Submit & Verify
 - [ ] Form shows "Thank you for your message!" message
 - [ ] Check your email for confirmation (from donation@hindutemple.ie)
-- [ ] Check info@hindutemple.ie for admin notification
+- [ ] Check community@hindutemple.ie for admin notification
 - [ ] Both emails arrive within 1-2 minutes
 - [ ] Emails look professional and include all information
 

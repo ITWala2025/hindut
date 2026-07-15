@@ -24,7 +24,7 @@ import { logoRow, footerInner } from './lib/emailBase.js'
 // ---------------------------------------------------------------------------
 // Mail helpers
 // ---------------------------------------------------------------------------
-const FROM_ADDRESS = process.env.MAIL_FROM_ADDRESS ?? 'info@hindutemple.ie'
+const FROM_ADDRESS = process.env.MAIL_FROM_ADDRESS ?? 'community@hindutemple.ie'
 const ORG_NAME     = 'Hindu Association of Ireland'
 
 /** Confirmation email sent after the role is successfully activated. */

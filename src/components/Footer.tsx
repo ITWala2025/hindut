@@ -150,7 +150,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Envelope className="shrink-0 text-orange-600" size={16} />
-                <span>info@hindutemple.ie</span>
+                <span>community@hindutemple.ie</span>
               </li>
             </ul>
           </div>

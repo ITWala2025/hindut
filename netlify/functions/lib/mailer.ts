@@ -8,7 +8,7 @@
  *   AZURE_TENANT_ID      — Azure AD Directory (tenant) ID
  *   AZURE_CLIENT_ID      — App registration Application (client) ID
  *   AZURE_CLIENT_SECRET  — App registration client secret value
- *   MAIL_FROM_ADDRESS    — Sending mailbox UPN (e.g. info@hindutemple.ie)
+ *   MAIL_FROM_ADDRESS    — Sending mailbox UPN (e.g. community@hindutemple.ie)
  *                          The app registration must have the
  *                          Mail.Send *application* permission granted.
  */
@@ -32,7 +32,7 @@ export interface MailAttachment {
 export const LOGO_CID = 'email-logo@hai'
 
 export interface MailMessage {
-  /** Display FROM address — e.g. '"HAI Donations" <info@hindutemple.ie>' */
+  /** Display FROM address — e.g. '"HAI Donations" <community@hindutemple.ie>' */
   from?:        string
   to:           string | string[]
   subject:      string

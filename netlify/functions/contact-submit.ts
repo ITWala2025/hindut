@@ -11,8 +11,8 @@
  *   AZURE_TENANT_ID      — Azure AD tenant ID
  *   AZURE_CLIENT_ID      — App registration client ID (Mail.Send permission)
  *   AZURE_CLIENT_SECRET  — App registration client secret
- *   MAIL_FROM_ADDRESS    — Sending mailbox (e.g. info@hindutemple.ie)
- *   EMAIL_FROM_DONATION  — Display FROM name, e.g. '"HAI" <info@hindutemple.ie>'
+ *   MAIL_FROM_ADDRESS    — Sending mailbox (e.g. community@hindutemple.ie)
+ *   EMAIL_FROM_DONATION  — Display FROM name, e.g. '"HAI" <community@hindutemple.ie>'
  *   CONTACT_ADMIN_EMAIL  — Admin email to receive form submissions
  *   URL                  — Site URL (auto-populated by Netlify)
  */
@@ -151,7 +151,7 @@ export const handler: Handler = async (event) => {
     // Send emails via Microsoft Graph API
     if (isMailConfigured()) {
       try {
-        const fromAddr = '"Hindu Association of Ireland" <info@hindutemple.ie>'
+        const fromAddr = '"Hindu Association of Ireland" <community@hindutemple.ie>'
 
         // Send confirmation email to visitor
         try {

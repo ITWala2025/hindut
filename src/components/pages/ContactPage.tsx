@@ -204,7 +204,7 @@ export function ContactPage() {
                       <div>
                         <h3 className="font-semibold text-lg mb-1 text-orange-800">Email</h3>
                         <p className="text-muted-foreground break-all">
-                          info@hindutemple.ie<br />
+                          community@hindutemple.ie<br />
                           hinduassociationireland@gmail.com
                         </p>
                       </div>

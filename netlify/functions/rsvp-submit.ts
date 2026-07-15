@@ -13,8 +13,8 @@
  *   AZURE_TENANT_ID           — Azure AD tenant ID
  *   AZURE_CLIENT_ID            — App registration client ID (Mail.Send permission)
  *   AZURE_CLIENT_SECRET        — App registration client secret
- *   MAIL_FROM_ADDRESS          — Sending mailbox (e.g. info@hindutemple.ie)
- *   EMAIL_FROM_PUJA            — Display FROM name, e.g. '"HAI Puja Seva" <info@hindutemple.ie>'
+ *   MAIL_FROM_ADDRESS          — Sending mailbox (e.g. community@hindutemple.ie)
+ *   EMAIL_FROM_PUJA            — Display FROM name, e.g. '"HAI Puja Seva" <community@hindutemple.ie>'
  */
 
 import type { Handler } from '@netlify/functions'

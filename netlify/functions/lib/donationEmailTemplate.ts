@@ -37,7 +37,7 @@ export function buildDonationEmailHtml(p: DonationEmailParams): string {
                             🔄 Your <strong>monthly donation of &euro;${p.amountEur.toFixed(2)}</strong>
                             will be charged automatically each month. To cancel or update, please
                             contact us at
-                            <a href="mailto:info@hindutemple.ie" style="color:#15803d;text-decoration:none;">info@hindutemple.ie</a>.
+                            <a href="mailto:community@hindutemple.ie" style="color:#15803d;text-decoration:none;">community@hindutemple.ie</a>.
                           </p>
                         </td>
                       </tr>
@@ -200,7 +200,7 @@ export function buildDonationEmailHtml(p: DonationEmailParams): string {
                     </p>
                     <p style="margin:4px 0 0;font-size:13px;color:#78716c;
                                font-family:Arial,sans-serif;">
-                      Hindu Association of Ireland · info@hindutemple.ie
+                      Hindu Association of Ireland · community@hindutemple.ie
                     </p>
                   </td>
                 </tr>
@@ -239,7 +239,7 @@ export function buildDonationEmailText(p: DonationEmailParams): string {
   const description = p.description ?? 'Supporting the Limerick Hindu Temple project'
 
   const recurringLine = p.recurring
-    ? `\nYour monthly donation will be charged automatically each month.\nTo cancel, contact info@hindutemple.ie.\n`
+    ? `\nYour monthly donation will be charged automatically each month.\nTo cancel, contact community@hindutemple.ie.\n`
     : ''
 
   return `Om Shree Ganeshaya Namah
@@ -264,7 +264,7 @@ May your kindness bring you and your family abundant joy and prosperity.
 
 With heartfelt gratitude,
 Team HAI
-Hindu Association of Ireland · info@hindutemple.ie
+Hindu Association of Ireland · community@hindutemple.ie
 
 Om Shanti
 `

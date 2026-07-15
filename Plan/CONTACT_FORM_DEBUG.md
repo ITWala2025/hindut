@@ -53,7 +53,7 @@ This is the **most reliable way** to diagnose issues:
 [contact-submit] Testing SMTP connection... { host: 'smtp.zoho.eu', port: '587', user: 'don...' }
 [contact-submit] ✅ SMTP connection verified successfully
 [contact-submit] ✅ Confirmation email sent to john@example.com
-[contact-submit] ✅ Admin notification sent to info@hindutemple.ie
+[contact-submit] ✅ Admin notification sent to community@hindutemple.ie
 ```
 
 **Example of a failed flow:**
@@ -93,7 +93,7 @@ This is the **most reliable way** to diagnose issues:
 ### ❌ "550 Invalid recipient"
 **Cause**: Email address doesn't exist
 **Solution**:
-1. Verify `CONTACT_ADMIN_EMAIL` in Netlify is: `info@hindutemple.ie`
+1. Verify `CONTACT_ADMIN_EMAIL` in Netlify is: `community@hindutemple.ie`
 2. Verify the visitor's email is correct
 3. Check spam filters
 
@@ -115,7 +115,7 @@ To verify all variables are set correctly:
 | `SMTP_USER` | `donation@hindutemple.ie` |
 | `SMTP_PASS` | `Haidonation2026$` |
 | `EMAIL_FROM` | `donation@hindutemple.ie` |
-| `CONTACT_ADMIN_EMAIL` | `info@hindutemple.ie` |
+| `CONTACT_ADMIN_EMAIL` | `community@hindutemple.ie` |
 
 ---
 

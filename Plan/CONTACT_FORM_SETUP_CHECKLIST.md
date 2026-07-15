@@ -46,7 +46,7 @@ You **MUST** do this for the system to work:
 | `SMTP_USER` | `donation@hindutemple.ie` |
 | `SMTP_PASS` | `Haidonation2026$` |
 | `EMAIL_FROM` | `"HAI Donations <donation@hindutemple.ie>"` |
-| `CONTACT_ADMIN_EMAIL` | `info@hindutemple.ie` |
+| `CONTACT_ADMIN_EMAIL` | `community@hindutemple.ie` |
 
 ### 3. Trigger a Redeploy
 ```
@@ -63,7 +63,7 @@ Dashboard → Deploys → Trigger deploy
 3. Server validates and sanitizes
 4. **Two emails are sent:**
    - ✉️ Confirmation to visitor (from `donation@hindutemple.ie`)
-   - ✉️ Admin notification to `info@hindutemple.ie`
+   - ✉️ Admin notification to `community@hindutemple.ie`
 5. User sees success message
 6. Form clears automatically
 
@@ -86,7 +86,7 @@ Dashboard → Deploys → Trigger deploy
 
 3. Click "Send Message"
 4. Check your email inbox for confirmation
-5. Check `info@hindutemple.ie` inbox for admin notification
+5. Check `community@hindutemple.ie` inbox for admin notification
 
 ### Troubleshooting
 - **No email received?** → Check Netlify function logs (Dashboard → Functions → contact-submit)
@@ -105,7 +105,7 @@ Dashboard → Deploys → Trigger deploy
 
 ### Email Configuration
 - From email: `donation@hindutemple.ie` (using your Zoho account)
-- Admin notification sent to: `info@hindutemple.ie`
+- Admin notification sent to: `community@hindutemple.ie`
 - Response time: 24-48 hours (as per email template)
 
 ### Files Created/Modified

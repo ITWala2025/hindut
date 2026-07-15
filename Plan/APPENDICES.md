@@ -32,7 +32,7 @@ We offer:
 ### Contact Page
 ```
 Address: 4 Upper Denmark Street, Limerick
-Email: info@hindutemple.ie
+Email: community@hindutemple.ie
 Phone: +353 123 4567
 ```
 
