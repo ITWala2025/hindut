@@ -43,9 +43,9 @@ You **MUST** do this for the system to work:
 | `SMTP_HOST` | `smtppro.zoho.eu` |
 | `SMTP_PORT` | `465` |
 | `SMTP_SECURE` | `true` |
-| `SMTP_USER` | `donation@hindutemple.ie` |
+| `SMTP_USER` | `community@hindutemple.ie` |
 | `SMTP_PASS` | `Haidonation2026$` |
-| `EMAIL_FROM` | `"HAI Donations <donation@hindutemple.ie>"` |
+| `EMAIL_FROM` | `"HAI Donations <community@hindutemple.ie>"` |
 | `CONTACT_ADMIN_EMAIL` | `community@hindutemple.ie` |
 
 ### 3. Trigger a Redeploy
@@ -62,7 +62,7 @@ Dashboard → Deploys → Trigger deploy
 2. Submitted to `/.netlify/functions/contact-submit`
 3. Server validates and sanitizes
 4. **Two emails are sent:**
-   - ✉️ Confirmation to visitor (from `donation@hindutemple.ie`)
+   - ✉️ Confirmation to visitor (from `community@hindutemple.ie`)
    - ✉️ Admin notification to `community@hindutemple.ie`
 5. User sees success message
 6. Form clears automatically
@@ -104,7 +104,7 @@ Dashboard → Deploys → Trigger deploy
 ✅ CORS protection enabled
 
 ### Email Configuration
-- From email: `donation@hindutemple.ie` (using your Zoho account)
+- From email: `community@hindutemple.ie` (using your Zoho account)
 - Admin notification sent to: `community@hindutemple.ie`
 - Response time: 24-48 hours (as per email template)
 
@@ -150,7 +150,7 @@ Modified:
 ## ⚠️ Before You Go Live
 
 - [ ] Add all 7 environment variables to Netlify
-- [ ] Verify `donation@hindutemple.ie` is active in Zoho Mail
+- [ ] Verify `community@hindutemple.ie` is active in Zoho Mail
 - [ ] Test form submission (see testing section above)
 - [ ] Verify both confirmation and admin emails are received
 - [ ] Check email spam folders
@@ -187,8 +187,8 @@ Modified:
 
 ## ❓ FAQ
 
-**Q: Will the email be sent from `donation@hindutemple.ie`?**
-A: Yes, that's the configured sender email. Recipients will see it as from "HAI Donations <donation@hindutemple.ie>".
+**Q: Will the email be sent from `community@hindutemple.ie`?**
+A: Yes, that's the configured sender email. Recipients will see it as from "HAI Donations <community@hindutemple.ie>".
 
 **Q: What if someone submits the form with invalid email?**
 A: The form will show an error: "Invalid email address" and won't send.

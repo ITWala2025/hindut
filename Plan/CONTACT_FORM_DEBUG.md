@@ -71,7 +71,7 @@ This is the **most reliable way** to diagnose issues:
 **Cause**: Wrong password or username
 **Solution**:
 1. Log into Zoho Mail: https://mail.zoho.eu
-2. Verify you can log in with: `donation@hindutemple.ie` / `Haidonation2026$`
+2. Verify you can log in with: `community@hindutemple.ie` / `Haidonation2026$`
 3. If 2FA is enabled, you might need an **app password** instead
 4. Update `SMTP_PASS` in Netlify environment variables if needed
 
@@ -112,9 +112,9 @@ To verify all variables are set correctly:
 | `SMTP_HOST` | `smtppro.zoho.eu` |
 | `SMTP_PORT` | `465` |
 | `SMTP_SECURE` | `true` |
-| `SMTP_USER` | `donation@hindutemple.ie` |
+| `SMTP_USER` | `community@hindutemple.ie` |
 | `SMTP_PASS` | `Haidonation2026$` |
-| `EMAIL_FROM` | `donation@hindutemple.ie` |
+| `EMAIL_FROM` | `community@hindutemple.ie` |
 | `CONTACT_ADMIN_EMAIL` | `community@hindutemple.ie` |
 
 ---

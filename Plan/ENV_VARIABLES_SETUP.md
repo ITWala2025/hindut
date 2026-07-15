@@ -8,9 +8,9 @@ Copy and paste these key-value pairs into your Netlify Environment Variables:
 SMTP_HOST=smtppro.zoho.eu
 SMTP_PORT=465
 SMTP_SECURE=true
-SMTP_USER=donation@hindutemple.ie
+SMTP_USER=community@hindutemple.ie
 SMTP_PASS=Haidonation2026$
-EMAIL_FROM=donation@hindutemple.ie
+EMAIL_FROM=community@hindutemple.ie
 CONTACT_ADMIN_EMAIL=community@hindutemple.ie
 ```
 
@@ -53,7 +53,7 @@ Value: true
 #### Variable 4: SMTP_USER
 ```
 Key:   SMTP_USER
-Value: donation@hindutemple.ie
+Value: community@hindutemple.ie
 ```
 
 #### Variable 5: SMTP_PASS
@@ -65,7 +65,7 @@ Value: Haidonation2026$
 #### Variable 6: EMAIL_FROM
 ```
 Key:   EMAIL_FROM
-Value: donation@hindutemple.ie
+Value: community@hindutemple.ie
 ```
 
 #### Variable 7: CONTACT_ADMIN_EMAIL
@@ -116,7 +116,7 @@ https://limerickhindutemple.netlify.app/contact
 
 ### 3. Submit & Verify
 - [ ] Form shows "Thank you for your message!" message
-- [ ] Check your email for confirmation (from donation@hindutemple.ie)
+- [ ] Check your email for confirmation (from community@hindutemple.ie)
 - [ ] Check community@hindutemple.ie for admin notification
 - [ ] Both emails arrive within 1-2 minutes
 - [ ] Emails look professional and include all information

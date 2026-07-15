@@ -191,7 +191,7 @@ export const handler: Handler = async (event) => {
             if (onetimeDonorEmail) {
               try {
                 await sendMail({
-                  from:    '"HAI Donations" <donation@hindutemple.ie>',
+                  from:    '"Hindu Association of Ireland" <community@hindutemple.ie>',
                   to:      onetimeDonorEmail,
                   subject: `Thank you for your donation — Hindu Association of Ireland`,
                   html:    buildDonationEmailHtml({ donorName: onetimeDonorName, donorEmail: onetimeDonorEmail, amountEur: onetimeAmountEur, recurring: false }),
@@ -242,7 +242,7 @@ export const handler: Handler = async (event) => {
               if (donorEmail) {
                 try {
                   await sendMail({
-                    from:    '"HAI Donations" <donation@hindutemple.ie>',
+                    from:    '"Hindu Association of Ireland" <community@hindutemple.ie>',
                     to:      donorEmail,
                     subject: `Thank you for your monthly donation — Hindu Association of Ireland`,
                     html:    buildDonationEmailHtml({ donorName, donorEmail, amountEur, recurring: true }),
@@ -650,7 +650,7 @@ export const handler: Handler = async (event) => {
 
               if (emailParams.customerEmail) {
                 await sendMail({
-                  from: '"HAI Donations" <donation@hindutemple.ie>',
+                  from: '"Hindu Association of Ireland" <community@hindutemple.ie>',
                   to: emailParams.customerEmail,
                   subject: 'Payment Failed – Donation to Hindu Association of Ireland',
                   html: buildPaymentFailedEmailHtml(emailParams),
@@ -715,7 +715,7 @@ export const handler: Handler = async (event) => {
               }
 
               await sendMail({
-                from: subKind === 'donation' ? '"HAI Donations" <donation@hindutemple.ie>' : '"Hindu Association of Ireland" <community@hindutemple.ie>',
+                from: '"Hindu Association of Ireland" <community@hindutemple.ie>',
                 to:   emailParams.customerEmail,
                 subject: subKind === 'donation'
                   ? 'Payment Failed – Monthly Donation to Hindu Association of Ireland'
@@ -774,7 +774,7 @@ export const handler: Handler = async (event) => {
 
                 if (emailParams.customerEmail) {
                   await sendMail({
-                    from: '"HAI Donations" <donation@hindutemple.ie>',
+                    from: '"Hindu Association of Ireland" <community@hindutemple.ie>',
                     to: emailParams.customerEmail,
                     subject: 'Refund Processed – Hindu Association of Ireland',
                     html: buildRefundEmailHtml(emailParams),

@@ -264,7 +264,7 @@ export const handler: Handler = async (event) => {
         }
 
         await sendMail({
-          from: '"HAI Events" <events@hindutemple.ie>',
+          from: '"Hindu Association of Ireland" <community@hindutemple.ie>',
           to: data.email,
           subject: `Ticket Confirmed – ${eventDetails.title}`,
           html: buildTicketEmailHtml(emailParams),

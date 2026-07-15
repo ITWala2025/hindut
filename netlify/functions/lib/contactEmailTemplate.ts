@@ -123,7 +123,7 @@ ${escapeHtml(p.message)}
                       Hindu Association of Ireland<br />
                       4 Upper Denmark Street<br />
                       Co. Limerick, Ireland<br />
-                      <a href="mailto:donation@hindutemple.ie\" style=\"color:#ea580c;text-decoration:none;\">donation@hindutemple.ie</a>
+                      <a href="mailto:community@hindutemple.ie" style="color:#ea580c;text-decoration:none;">community@hindutemple.ie</a>
                     </p>
                   </td>
                 </tr>
@@ -176,7 +176,7 @@ CONTACT US
 Hindu Association of Ireland
 4 Upper Denmark Street
 Co. Limerick, Ireland
-Email: donation@hindutemple.ie
+Email: community@hindutemple.ie
 Website: ${getSiteUrl()}
 
 ---

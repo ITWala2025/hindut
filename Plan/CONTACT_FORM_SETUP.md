@@ -2,7 +2,7 @@
 
 ## Overview
 The contact form now sends emails using Zoho SMTP. When a visitor submits the contact form, two emails are sent:
-1. **Confirmation email** to the visitor (from `donation@hindutemple.ie`)
+1. **Confirmation email** to the visitor (from `community@hindutemple.ie`)
 2. **Admin notification** to your team email with the full submission details
 
 ---
@@ -11,7 +11,7 @@ The contact form now sends emails using Zoho SMTP. When a visitor submits the co
 
 ### Step 1: Zoho Mail Setup
 Since you're using Zoho Mail, you already have:
-- **Email Account**: `donation@hindutemple.ie`
+- **Email Account**: `community@hindutemple.ie`
 - **Password**: `Haidonation2026$`
 
 ### Step 2: Zoho Mail SMTP Settings
@@ -46,9 +46,9 @@ Add the following variables:
 SMTP_HOST=smtppro.zoho.eu
 SMTP_PORT=465
 SMTP_SECURE=true
-SMTP_USER=donation@hindutemple.ie
+SMTP_USER=community@hindutemple.ie
 SMTP_PASS=Haidonation2026$
-EMAIL_FROM=donation@hindutemple.ie
+EMAIL_FROM=community@hindutemple.ie
 CONTACT_ADMIN_EMAIL=community@hindutemple.ie
 ```
 
@@ -59,9 +59,9 @@ CONTACT_ADMIN_EMAIL=community@hindutemple.ie
 | `SMTP_HOST` | `smtppro.zoho.eu` or `smtppro.zoho.com` | Zoho's SMTP server |
 | `SMTP_PORT` | `465` | SSL port |
 | `SMTP_SECURE` | `true` | Use SSL (not STARTTLS) |
-| `SMTP_USER` | `donation@hindutemple.ie` | Your Zoho email account |
+| `SMTP_USER` | `community@hindutemple.ie` | Your Zoho email account |
 | `SMTP_PASS` | `Haidonation2026$` | Your Zoho email password |
-| `EMAIL_FROM` | `"HAI Donations <donation@hindutemple.ie>"` | Display name and sender email |
+| `EMAIL_FROM` | `"HAI Donations <community@hindutemple.ie>"` | Display name and sender email |
 | `CONTACT_ADMIN_EMAIL` | `community@hindutemple.ie` | Where admin notifications are sent |
 
 ---
@@ -108,7 +108,7 @@ If email sending fails:
 
 ### Visitor Confirmation Email
 - **Subject**: "We received your message – Hindu Association of Ireland"
-- **From**: `donation@hindutemple.ie`
+- **From**: `community@hindutemple.ie`
 - **Contents**: 
   - Greeting with visitor's name
   - Echo of their submitted message
@@ -119,7 +119,7 @@ If email sending fails:
 ### Admin Notification Email
 - **Subject**: "New Contact Form Submission from [Visitor Name]"
 - **To**: `community@hindutemple.ie` (or `CONTACT_ADMIN_EMAIL`)
-- **From**: `donation@hindutemple.ie`
+- **From**: `community@hindutemple.ie`
 - **Contents**:
   - Visitor's name, email, phone
   - Submission timestamp
@@ -248,7 +248,7 @@ The contact form includes security measures:
 ## Maintenance & Monitoring
 
 ### Monitoring Email Delivery
-1. Check Zoho Mail sent folder: `donation@hindutemple.ie` account
+1. Check Zoho Mail sent folder: `community@hindutemple.ie` account
 2. Monitor Netlify function logs for errors
 3. Test monthly with a real submission
 
