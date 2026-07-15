@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,7 +43,6 @@ import {
   Flame,
 } from '@phosphor-icons/react'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
-import { toast } from 'sonner'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { useMembership } from '@/hooks/useMembership'
@@ -200,6 +201,7 @@ const FAQ_ITEMS = [
 
 export function MembershipPage() {
   const { plans } = useMembership()
+  const settings = useSiteSettings()
 
   // ── Membership checkout state ─────────────────────────────────────────────
   const [selected, setSelected] = useState<MembershipPlan | null>(null)
@@ -251,6 +253,10 @@ export function MembershipPage() {
   )
 
   const openFor = (plan: MembershipPlan) => {
+    if (!settings.featureMemberSignup) {
+      toast.error('Membership sign-ups are temporarily closed. Please check back soon.')
+      return
+    }
     setSelected(plan)
     setStep('details')
     setFullName('')
@@ -333,6 +339,10 @@ export function MembershipPage() {
   }
 
   const openForGiving = (tier: GivingTile) => {
+    if (!settings.featureMemberSignup) {
+      toast.error('Membership sign-ups are temporarily closed. Please check back soon.')
+      return
+    }
     if (!annualPlan) return
     setSelected(annualPlan)
     setStep('details')
@@ -350,6 +360,10 @@ export function MembershipPage() {
   }
 
   const openGiving = (tier: GivingTile) => {
+    if (!settings.featureMemberSignup) {
+      toast.error('Membership sign-ups are temporarily closed. Please check back soon.')
+      return
+    }
     setGivingTier(tier)
     setGivingName('')
     setGivingEmail('')
@@ -499,6 +513,12 @@ export function MembershipPage() {
                 a permanent home for the Hindu community in Ireland.
               </p>
             </div>
+            {!settings.featureMemberSignup && (
+              <div className="max-w-3xl mx-auto mt-4 rounded-2xl bg-amber-50 border border-amber-300 px-6 py-4 text-sm text-amber-800 font-medium">
+                Membership sign-ups and monthly giving are temporarily closed. Please check back soon or{' '}
+                <a href="/contact" className="underline hover:text-amber-900">contact us</a> for assistance.
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 xl:gap-14 items-stretch">

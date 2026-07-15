@@ -20,46 +20,82 @@ export function SettingsSection() {
 
   const [org, setOrg] = useState({
     name: 'Hindu Association of Ireland',
-    email: 'info@hindut.ie',
-    phone: '+353 89 000 0000',
-    address: 'Ahane Hall, Limerick, Ireland',
+    email: 'community@hindutemple.ie',
+    phone: '+353 87 495 3334',
+    address: '4 Denmark Street, Co. Limerick, Ireland',
     description:
-      'A registered charity supporting the Hindu community across Ireland through worship, cultural events and community service.',
+      'Hindu Association of Ireland (HAI) — a united platform working to establish a permanent Hindu Temple in Limerick to serve as a spiritual, cultural and community hub.',
   })
 
   const [trustId, setTrustId] = useState('')
-  const [trustIdLoading, setTrustIdLoading] = useState(true)
-  const [trustIdSaving, setTrustIdSaving] = useState(false)
+  const [orgLoading, setOrgLoading] = useState(true)
+  const [orgSaving, setOrgSaving] = useState(false)
 
   useEffect(() => {
     let active = true
     supabase
       .from('site_settings')
-      .select('trust_id')
+      .select('trust_id, org_name, org_email, org_phone, org_address, org_description, notify_new_members, notify_donations, notify_weekly_digest, notify_security_alerts, feature_public_events, feature_online_donations, feature_member_signup, feature_maintenance_mode')
       .eq('id', 1)
       .maybeSingle()
       .then(({ data, error }) => {
         if (!active) return
         if (error) {
-          console.error('[Settings] failed to load trust ID:', error.message)
+          console.error('[Settings] failed to load organisation profile:', error.message)
           return
         }
-        setTrustId((data as { trust_id?: string | null } | null)?.trust_id ?? '')
+        const row = data as {
+          trust_id?: string | null
+          org_name?: string | null
+          org_email?: string | null
+          org_phone?: string | null
+          org_address?: string | null
+          org_description?: string | null
+          notify_new_members?: boolean | null
+          notify_donations?: boolean | null
+          notify_weekly_digest?: boolean | null
+          notify_security_alerts?: boolean | null
+          feature_public_events?: boolean | null
+          feature_online_donations?: boolean | null
+          feature_member_signup?: boolean | null
+          feature_maintenance_mode?: boolean | null
+        } | null
+        if (!row) return
+        setTrustId(row.trust_id ?? '')
+        setOrg({
+          name: row.org_name ?? '',
+          email: row.org_email ?? '',
+          phone: row.org_phone ?? '',
+          address: row.org_address ?? '',
+          description: row.org_description ?? '',
+        })
+        setNotifications({
+          newMembers: row.notify_new_members ?? true,
+          donations: row.notify_donations ?? true,
+          weeklyDigest: row.notify_weekly_digest ?? false,
+          securityAlerts: row.notify_security_alerts ?? true,
+        })
+        setFeatures({
+          publicEvents: row.feature_public_events ?? true,
+          onlineDonations: row.feature_online_donations ?? true,
+          memberSignup: row.feature_member_signup ?? true,
+          maintenanceMode: row.feature_maintenance_mode ?? false,
+        })
       })
       .finally(() => {
-        if (active) setTrustIdLoading(false)
+        if (active) setOrgLoading(false)
       })
     return () => {
       active = false
     }
   }, [])
 
-  const saveTrustId = async () => {
+  const saveOrgProfile = async () => {
     if (!canWrite) {
       toast.error("You don't have permission to change settings.")
       return
     }
-    setTrustIdSaving(true)
+    setOrgSaving(true)
     try {
       const {
         data: { user: authUser },
@@ -67,23 +103,28 @@ export function SettingsSection() {
       const { error } = await supabase
         .from('site_settings')
         .update({
-          trust_id: trustId.trim() || null,
-          updated_at: new Date().toISOString(),
-          updated_by: authUser?.id ?? null,
+          trust_id:        trustId.trim() || null,
+          org_name:        org.name.trim(),
+          org_email:       org.email.trim(),
+          org_phone:       org.phone.trim(),
+          org_address:     org.address.trim(),
+          org_description: org.description.trim(),
+          updated_at:      new Date().toISOString(),
+          updated_by:      authUser?.id ?? null,
         })
         .eq('id', 1)
 
       if (error) {
-        console.error('[Settings] failed to save trust ID:', error.message)
-        toast.error('Failed to save trust ID.')
+        console.error('[Settings] failed to save organisation profile:', error.message)
+        toast.error('Failed to save organisation profile.')
         return
       }
-      toast.success('Trust ID saved.')
+      toast.success('Organisation profile saved.')
     } catch (err) {
-      console.error('[Settings] failed to save trust ID:', err)
-      toast.error('Network error saving trust ID.')
+      console.error('[Settings] failed to save organisation profile:', err)
+      toast.error('Network error saving organisation profile.')
     } finally {
-      setTrustIdSaving(false)
+      setOrgSaving(false)
     }
   }
 
@@ -93,6 +134,38 @@ export function SettingsSection() {
     weeklyDigest: false,
     securityAlerts: true,
   })
+  const [notificationsSaving, setNotificationsSaving] = useState(false)
+
+  const saveNotifications = async () => {
+    if (!canWrite) {
+      toast.error("You don't have permission to change settings.")
+      return
+    }
+    setNotificationsSaving(true)
+    try {
+      const { error } = await supabase
+        .from('site_settings')
+        .update({
+          notify_new_members:     notifications.newMembers,
+          notify_donations:       notifications.donations,
+          notify_weekly_digest:   notifications.weeklyDigest,
+          notify_security_alerts: notifications.securityAlerts,
+          updated_at:             new Date().toISOString(),
+        })
+        .eq('id', 1)
+      if (error) {
+        console.error('[Settings] failed to save notification preferences:', error.message)
+        toast.error('Failed to save notification preferences.')
+        return
+      }
+      toast.success('Notification preferences saved.')
+    } catch (err) {
+      console.error('[Settings] failed to save notification preferences:', err)
+      toast.error('Network error saving notification preferences.')
+    } finally {
+      setNotificationsSaving(false)
+    }
+  }
 
   const [features, setFeatures] = useState({
     publicEvents: true,
@@ -101,12 +174,31 @@ export function SettingsSection() {
     maintenanceMode: false,
   })
 
-  const save = (label: string) => {
+  const FEATURE_COLUMN = {
+    publicEvents:    'feature_public_events',
+    onlineDonations: 'feature_online_donations',
+    memberSignup:    'feature_member_signup',
+    maintenanceMode: 'feature_maintenance_mode',
+  } as const
+
+  const updateFeatureFlag = async (key: keyof typeof features, value: boolean) => {
     if (!canWrite) {
       toast.error("You don't have permission to change settings.")
       return
     }
-    toast.success(`${label} saved.`)
+    const previous = features[key]
+    setFeatures({ ...features, [key]: value })
+    const { error } = await supabase
+      .from('site_settings')
+      .update({ [FEATURE_COLUMN[key]]: value, updated_at: new Date().toISOString() })
+      .eq('id', 1)
+    if (error) {
+      console.error('[Settings] failed to save feature flag:', error.message)
+      toast.error('Failed to save feature flag.')
+      setFeatures({ ...features, [key]: previous })
+      return
+    }
+    toast.success('Feature flag updated.')
   }
 
   return (
@@ -116,11 +208,8 @@ export function SettingsSection() {
         description="Public contact information shown on the website."
         actions={
           <Button
-            onClick={() => {
-              save('Organisation profile')
-              void saveTrustId()
-            }}
-            disabled={!canWrite || trustIdSaving}
+            onClick={() => void saveOrgProfile()}
+            disabled={!canWrite || orgSaving || orgLoading}
             className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
           >
             <FloppyDisk className="mr-2" weight="bold" />
@@ -158,7 +247,7 @@ export function SettingsSection() {
             <Input
               placeholder="e.g. CHY123456"
               value={trustId}
-              disabled={trustIdLoading}
+              disabled={orgLoading}
               onChange={(e) => setTrustId(e.target.value)}
             />
             <p className="mt-1 text-xs text-muted-foreground">
@@ -181,7 +270,7 @@ export function SettingsSection() {
         title="Notifications"
         description="Choose which email alerts you want to receive."
         actions={
-          <Button variant="outline" onClick={() => save('Notification preferences')}>
+          <Button variant="outline" onClick={() => void saveNotifications()} disabled={!canWrite || notificationsSaving || orgLoading}>
             <Bell className="mr-2" />
             Save preferences
           </Button>
@@ -225,26 +314,26 @@ export function SettingsSection() {
           <ToggleRow
             title="Public events page"
             checked={features.publicEvents}
-            onChange={(v) => setFeatures({ ...features, publicEvents: v })}
+            onChange={(v) => void updateFeatureFlag('publicEvents', v)}
             disabled={!canWrite}
           />
           <ToggleRow
             title="Online donations"
             checked={features.onlineDonations}
-            onChange={(v) => setFeatures({ ...features, onlineDonations: v })}
+            onChange={(v) => void updateFeatureFlag('onlineDonations', v)}
             disabled={!canWrite}
           />
           <ToggleRow
             title="Member sign-up"
             checked={features.memberSignup}
-            onChange={(v) => setFeatures({ ...features, memberSignup: v })}
+            onChange={(v) => void updateFeatureFlag('memberSignup', v)}
             disabled={!canWrite}
           />
           <ToggleRow
             title="Maintenance mode"
             description="Show a maintenance banner across the public site."
             checked={features.maintenanceMode}
-            onChange={(v) => setFeatures({ ...features, maintenanceMode: v })}
+            onChange={(v) => void updateFeatureFlag('maintenanceMode', v)}
             disabled={!canWrite}
           />
         </div>

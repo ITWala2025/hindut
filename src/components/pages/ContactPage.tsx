@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { cn } from '@/lib/utils'
 import { SeoMeta } from '@/lib/seo'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
 
 type ContactTarget = 'address' | 'phone' | 'email' | 'form'
 
@@ -20,6 +21,7 @@ const CONTACT_PILLS: { id: ContactTarget; label: string }[] = [
 ]
 
 export function ContactPage() {
+  const settings = useSiteSettings()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -169,9 +171,9 @@ export function ContactPage() {
                       <div>
                         <h3 className="font-semibold text-lg mb-1 text-orange-800">Address</h3>
                         <p className="text-muted-foreground">
-                          4 Upper Denmark Street<br />
-                          Co. Limerick<br />
-                          Ireland
+                          {settings.orgAddress.split(',').map((line) => line.trim()).filter(Boolean).map((line, i) => (
+                            <span key={i}>{line}<br /></span>
+                          ))}
                         </p>
                       </div>
                     </div>
@@ -187,7 +189,7 @@ export function ContactPage() {
                       <div>
                         <h3 className="font-semibold text-lg mb-1 text-orange-800">Phone</h3>
                         <p className="text-muted-foreground">
-                          +353 87 495 3334<br />
+                          {settings.orgPhone}<br />
                           (available 9am - 6pm, Mon-Fri)
                         </p>
                       </div>
@@ -204,7 +206,7 @@ export function ContactPage() {
                       <div>
                         <h3 className="font-semibold text-lg mb-1 text-orange-800">Email</h3>
                         <p className="text-muted-foreground break-all">
-                          community@hindutemple.ie<br />
+                          {settings.orgEmail}<br />
                           hinduassociationireland@gmail.com
                         </p>
                       </div>

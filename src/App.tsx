@@ -29,6 +29,9 @@ import { Toaster } from '@/components/ui/sonner'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
 import { useHasActiveCauses } from '@/hooks/useSpecialCauses'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { Warning } from '@phosphor-icons/react'
+import { toast } from 'sonner'
 
 /** Minimal full-page spinner shown while lazy chunks are loading */
 function PageLoader() {
@@ -62,9 +65,26 @@ function AnalyticsTracker() {
   return null
 }
 
+/** Thin banner shown site-wide when Admin → Settings → Feature flags → Maintenance mode is on. */
+function MaintenanceBanner() {
+  return (
+    <div className="bg-amber-500 text-amber-950 text-sm font-medium px-4 py-2 flex items-center justify-center gap-2 text-center">
+      <Warning size={16} weight="fill" />
+      We're currently making improvements to the site. Some features may be temporarily unavailable.
+    </div>
+  )
+}
+
 function AppShell() {
   const [isDonationOpen, setIsDonationOpen] = useState(false)
-  const openDonation = () => setIsDonationOpen(true)
+  const settings = useSiteSettings()
+  const openDonation = () => {
+    if (!settings.featureOnlineDonations) {
+      toast.error('Online donations are temporarily unavailable. Please contact us directly.')
+      return
+    }
+    setIsDonationOpen(true)
+  }
   const hasActiveCauses = useHasActiveCauses()
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
@@ -86,6 +106,7 @@ function AppShell() {
     <div className="flex flex-col min-h-screen relative">
       <ScrollToTop />
       <AnalyticsTracker />
+      {settings.featureMaintenanceMode && <MaintenanceBanner />}
       <Header onDonateClick={openDonation} showCauses={hasActiveCauses} />
       <main className="flex-1">
         <Routes>
@@ -93,8 +114,8 @@ function AppShell() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/services/:slug" element={<Suspense fallback={<PageLoader />}><ServiceDetailPage /></Suspense>} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/events/:slug" element={<Suspense fallback={<PageLoader />}><EventDetailPage /></Suspense>} />
+          <Route path="/events" element={settings.featurePublicEvents ? <EventsPage /> : <Navigate to="/" replace />} />
+          <Route path="/events/:slug" element={settings.featurePublicEvents ? <Suspense fallback={<PageLoader />}><EventDetailPage /></Suspense> : <Navigate to="/" replace />} />
           <Route path="/news" element={<Suspense fallback={<PageLoader />}><NewsPage /></Suspense>} />
           <Route path="/news/:slug" element={<Suspense fallback={<PageLoader />}><NewsDetailPage /></Suspense>} />
           <Route path="/causes" element={<Suspense fallback={<PageLoader />}><CausesPage /></Suspense>} />
@@ -115,7 +136,7 @@ function AppShell() {
       </main>
       <Footer />
       <WhatsAppButton />
-      <DonationDialog open={isDonationOpen} onOpenChange={setIsDonationOpen} />
+      <DonationDialog open={isDonationOpen && settings.featureOnlineDonations} onOpenChange={setIsDonationOpen} />
       <CookieConsentBanner />
       <Toaster />
     </div>

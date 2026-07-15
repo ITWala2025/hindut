@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Separator } from '@/components/ui/separator'
 import { openCookiePreferences } from '@/components/CookieConsentBanner'
 import { useNewsUpdates } from '@/hooks/useNewsUpdates'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useMemo } from 'react'
 
 function LatestNewsColumn() {
@@ -55,6 +56,8 @@ function LatestNewsColumn() {
 }
 
 export function Footer() {
+  const settings = useSiteSettings()
+
   return (
     <footer className="border-t border-orange-200/40 bg-linear-to-b from-orange-50 via-amber-50 to-orange-100 shadow-inner shadow-orange-200/50">
       <div className="container mx-auto px-6 md:px-12 lg:px-24 py-16">
@@ -64,18 +67,16 @@ export function Footer() {
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md glow-saffron overflow-hidden">
                 <img
                   src="/HAI%20(Green)%20%20Hindu%20Association%20Ireland%20logo-01.jpg"
-                  alt="Hindu Association of Ireland"
+                  alt={settings.orgName}
                   className="h-full w-full object-contain"
                 />
               </div>
               <span className="text-lg font-bold text-orange-800" style={{ fontFamily: 'var(--font-heading)' }}>
-                Hindu Association of Ireland
+                {settings.orgName}
               </span>
             </div>
             <p className="text-sm text-orange-700/80 leading-relaxed">
-              Hindu Association of Ireland (HAI) — a united platform working to
-              establish a permanent Hindu Temple in Limerick to serve as a spiritual,
-              cultural and community hub.
+              {settings.orgDescription}
             </p>
             <div className="flex items-center gap-3 mt-4">
               <a
@@ -142,15 +143,15 @@ export function Footer() {
             <ul className="space-y-3 text-sm text-orange-700/80">
               <li className="flex items-start gap-2">
                 <MapPin className="mt-0.5 shrink-0 text-orange-600" size={16} />
-                <span>4 Denmark Street, Co. Limerick, Ireland</span>
+                <span>{settings.orgAddress}</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="shrink-0 text-orange-600" size={16} />
-                <span>(087) 495 3334</span>
+                <span>{settings.orgPhone}</span>
               </li>
               <li className="flex items-center gap-2">
                 <Envelope className="shrink-0 text-orange-600" size={16} />
-                <span>community@hindutemple.ie</span>
+                <span>{settings.orgEmail}</span>
               </li>
             </ul>
           </div>
@@ -183,7 +184,7 @@ export function Footer() {
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-orange-700/80">
-          <p>© {new Date().getFullYear()} Hindu Association of Ireland. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {settings.orgName}. All rights reserved.</p>
           <p className="text-center">Built with devotion and care by <a href="https://it-wala.com" className="hover:text-orange-600 transition-colors">IT Wala</a></p>
         </div>
       </div>

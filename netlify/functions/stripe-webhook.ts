@@ -29,6 +29,7 @@ import type { Handler } from '@netlify/functions'
 import Stripe from 'stripe'
 import { sendMail, isMailConfigured } from './lib/mailer.js'
 import { supabaseAdmin, jsonHeaders } from './lib/stripe.js'
+import { notifyAdmin } from './lib/notifications.js'
 import {
   buildMembershipWelcomeEmailHtml,
   buildMembershipWelcomeEmailText,
@@ -202,6 +203,12 @@ export const handler: Handler = async (event) => {
                 console.error('[stripe-webhook] failed to send donation email:', emailErr)
               }
             }
+
+            void notifyAdmin('donations', {
+              subject: `New donation received — €${onetimeAmountEur.toFixed(2)}`,
+              html:    `<p>A new one-time donation of <strong>€${onetimeAmountEur.toFixed(2)}</strong> was received${onetimeDonorName ? ` from <strong>${onetimeDonorName}</strong>` : ''}${onetimeDonorEmail ? ` (${onetimeDonorEmail})` : ''}.</p>`,
+              text:    `A new one-time donation of €${onetimeAmountEur.toFixed(2)} was received${onetimeDonorName ? ` from ${onetimeDonorName}` : ''}${onetimeDonorEmail ? ` (${onetimeDonorEmail})` : ''}.`,
+            })
           } else {
             // ── Recurring donation: create the first row immediately ─────
             // Subsequent monthly charges are handled by invoice.paid.
@@ -253,6 +260,12 @@ export const handler: Handler = async (event) => {
                   console.error('[stripe-webhook] failed to send recurring donation email:', emailErr)
                 }
               }
+
+              void notifyAdmin('donations', {
+                subject: `New recurring donation started — €${amountEur.toFixed(2)}/mo`,
+                html:    `<p>A new recurring monthly donation of <strong>€${amountEur.toFixed(2)}</strong> was started${donorName ? ` by <strong>${donorName}</strong>` : ''}${donorEmail ? ` (${donorEmail})` : ''}.</p>`,
+                text:    `A new recurring monthly donation of €${amountEur.toFixed(2)} was started${donorName ? ` by ${donorName}` : ''}${donorEmail ? ` (${donorEmail})` : ''}.`,
+              })
             }
           }
         } else if (kind === 'membership') {
@@ -386,6 +399,12 @@ export const handler: Handler = async (event) => {
           } else if (!isMailConfigured()) {
             console.log('[dev] Mail not configured — skipping welcome email for', memberEmail)
           }
+
+          void notifyAdmin('newMembers', {
+            subject: `New member joined — ${memberName}`,
+            html:    `<p><strong>${memberName}</strong>${memberEmail ? ` (${memberEmail})` : ''} joined as a member on the <strong>${planName}</strong> plan${memberCode ? ` (code: ${memberCode})` : ''}.</p>`,
+            text:    `${memberName}${memberEmail ? ` (${memberEmail})` : ''} joined as a member on the ${planName} plan${memberCode ? ` (code: ${memberCode})` : ''}.`,
+          })
 
           // ── Set up optional monthly contribution subscription ─────────────
           const monthlyContributionEur = monthlyContributionEurEarly

@@ -16,7 +16,7 @@ import {
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/Logo'
-import { useTrustId } from '@/hooks/useTrustId'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
 
 interface HeaderProps {
   onDonateClick: () => void
@@ -27,7 +27,7 @@ const BASE_navItems = [
   { path: '/',           label: 'Home',           icon: <House             size={18} weight="duotone" /> },
   { path: '/about',      label: 'About',          icon: <Info              size={18} weight="duotone" /> },
   { path: '/services',   label: 'Services',       icon: <Sparkle           size={18} weight="duotone" /> },
-  { path: '/events',     label: 'Events',         icon: <CalendarBlank     size={18} weight="duotone" /> },
+  { path: '/events',     label: 'Events',         icon: <CalendarBlank     size={18} weight="duotone" />, eventsOnly: true },
   { path: '/membership', label: 'Membership',     icon: <IdentificationCard size={18} weight="duotone" /> },
   { path: '/causes',     label: 'Special Causes', icon: <Heart             size={18} weight="duotone" />, causesOnly: true },
   { path: '/contact',    label: 'Contact',        icon: <Envelope          size={18} weight="duotone" /> },
@@ -38,9 +38,9 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
-  const trustId = useTrustId()
+  const settings = useSiteSettings()
 
-  const navItems = BASE_navItems.filter((item) => !item.causesOnly || showCauses)
+  const navItems = BASE_navItems.filter((item) => (!item.causesOnly || showCauses) && (!item.eventsOnly || settings.featurePublicEvents))
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -87,7 +87,7 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
               className="shrink-0 transition-all hover:opacity-90 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 rounded-xl"
               aria-label="Hindu Association of Ireland — Home"
             >
-              <Logo size="md" showText={true} trustId={trustId} />
+              <Logo size="md" showText={true} trustId={settings.trustId} />
             </Link>
 
             {/* ── Desktop nav ── */}
@@ -115,21 +115,23 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
             </nav>
 
             {/* ── Desktop Donate CTA ── */}
-            <div className="hidden lg:flex items-center shrink-0">
-              <Button
-                onClick={onDonateClick}
-                className={cn(
-                  'rounded-full h-10 lg:h-12 px-6 lg:px-8 text-sm lg:text-base font-semibold',
-                  'bg-linear-to-r from-orange-500 to-amber-500 text-white',
-                  'shadow-[0_4px_14px_-2px_rgba(234,88,12,0.45),0_1px_0_0_rgba(255,255,255,0.30)_inset]',
-                  'hover:from-orange-600 hover:to-amber-600 hover:shadow-[0_6px_20px_-2px_rgba(234,88,12,0.55)]',
-                  'transition-all duration-200 active:scale-[0.97]',
-                )}
-              >
-                <Heart className="mr-1.5 lg:mr-2" size={15} weight="fill" />
-                Donate
-              </Button>
-            </div>
+            {settings.featureOnlineDonations && (
+              <div className="hidden lg:flex items-center shrink-0">
+                <Button
+                  onClick={onDonateClick}
+                  className={cn(
+                    'rounded-full h-10 lg:h-12 px-6 lg:px-8 text-sm lg:text-base font-semibold',
+                    'bg-linear-to-r from-orange-500 to-amber-500 text-white',
+                    'shadow-[0_4px_14px_-2px_rgba(234,88,12,0.45),0_1px_0_0_rgba(255,255,255,0.30)_inset]',
+                    'hover:from-orange-600 hover:to-amber-600 hover:shadow-[0_6px_20px_-2px_rgba(234,88,12,0.55)]',
+                    'transition-all duration-200 active:scale-[0.97]',
+                  )}
+                >
+                  <Heart className="mr-1.5 lg:mr-2" size={15} weight="fill" />
+                  Donate
+                </Button>
+              </div>
+            )}
 
               {/* ── Mobile hamburger (opens only) ── */}
               <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -168,9 +170,9 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
                         <p className="text-[17px] font-bold text-white leading-tight drop-shadow-sm truncate" style={{ fontFamily: 'var(--font-heading)' }}>
                           Hindu Association of Ireland
                         </p>
-                        {trustId && (
+                        {settings.trustId && (
                           <p className="text-[11px] font-medium text-white/80 truncate">
-                            Trust ID: {trustId}
+                            Trust ID: {settings.trustId}
                           </p>
                         )}
                       </div>
@@ -222,24 +224,26 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
                 </nav>
 
                 {/* Donate CTA */}
-                <div className="px-4 py-5 border-t border-slate-100 shrink-0 bg-slate-50/60 space-y-2">
-                  <Button
-                    onClick={() => { onDonateClick(); setIsOpen(false) }}
-                    className={cn(
-                      'w-full rounded-xl h-11 font-semibold text-white',
-                      'bg-linear-to-r from-orange-500 to-amber-500',
-                      'shadow-[0_4px_14px_-2px_rgba(234,88,12,0.35),0_1px_0_0_rgba(255,255,255,0.20)_inset]',
-                      'hover:from-orange-600 hover:to-amber-600 hover:shadow-[0_6px_20px_-2px_rgba(234,88,12,0.45)]',
-                      'transition-all duration-200 active:scale-[0.98]',
-                    )}
-                  >
-                    <Heart className="mr-2" size={16} weight="fill" />
-                    Make a Donation
-                  </Button>
-                  <p className="text-center text-[11px] text-slate-400 leading-snug">
-                    Supporting the Hindu community across Ireland
-                  </p>
-                </div>
+                {settings.featureOnlineDonations && (
+                  <div className="px-4 py-5 border-t border-slate-100 shrink-0 bg-slate-50/60 space-y-2">
+                    <Button
+                      onClick={() => { onDonateClick(); setIsOpen(false) }}
+                      className={cn(
+                        'w-full rounded-xl h-11 font-semibold text-white',
+                        'bg-linear-to-r from-orange-500 to-amber-500',
+                        'shadow-[0_4px_14px_-2px_rgba(234,88,12,0.35),0_1px_0_0_rgba(255,255,255,0.20)_inset]',
+                        'hover:from-orange-600 hover:to-amber-600 hover:shadow-[0_6px_20px_-2px_rgba(234,88,12,0.45)]',
+                        'transition-all duration-200 active:scale-[0.98]',
+                      )}
+                    >
+                      <Heart className="mr-2" size={16} weight="fill" />
+                      Make a Donation
+                    </Button>
+                    <p className="text-center text-[11px] text-slate-400 leading-snug">
+                      Supporting the Hindu community across Ireland
+                    </p>
+                  </div>
+                )}
               </SheetContent>
             </Sheet>
 

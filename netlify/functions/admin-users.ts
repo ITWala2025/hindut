@@ -18,6 +18,7 @@ import type { Handler } from '@netlify/functions'
 import { randomBytes } from 'crypto'
 import { sendMail } from './lib/mailer.js'
 import { supabaseAdmin, jsonHeaders } from './lib/stripe.js'
+import { notifyAdmin } from './lib/notifications.js'
 import { logoRow, footerInner } from './lib/emailBase.js'
 
 // ---------------------------------------------------------------------------
@@ -266,6 +267,12 @@ export const handler: Handler = async (event) => {
         return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Failed to store invitation. Has the role_invitations migration been run in Supabase?' }) }
       }
 
+      void notifyAdmin('securityAlerts', {
+        subject: `New admin user invited — ${role}`,
+        html:    `<p><strong>${auth.callerEmail}</strong> invited <strong>${email.trim()}</strong> as <strong>${role}</strong>.</p>`,
+        text:    `${auth.callerEmail} invited ${email.trim()} as ${role}.`,
+      })
+
       return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ ok: true }) }
     }
 
@@ -329,6 +336,12 @@ export const handler: Handler = async (event) => {
         }
       }
 
+      void notifyAdmin('securityAlerts', {
+        subject: `Role change requested — ${email.trim()} → ${role}`,
+        html:    `<p><strong>${auth.callerEmail}</strong> requested a role change for <strong>${email.trim()}</strong> to <strong>${role}</strong>. Awaiting their confirmation via the activation link.</p>`,
+        text:    `${auth.callerEmail} requested a role change for ${email.trim()} to ${role}. Awaiting their confirmation via the activation link.`,
+      })
+
       return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ ok: true }) }
     }
 
@@ -361,6 +374,12 @@ export const handler: Handler = async (event) => {
     // Explicitly clean up in case FK cascade isn't set
     await supabase.from('user_roles').delete().eq('user_id', userId)
     await supabase.from('role_invitations').delete().eq('user_id', userId)
+
+    void notifyAdmin('securityAlerts', {
+      subject: 'Admin user deleted',
+      html:    `<p><strong>${auth.callerEmail}</strong> deleted the admin account with user ID <strong>${userId}</strong>.</p>`,
+      text:    `${auth.callerEmail} deleted the admin account with user ID ${userId}.`,
+    })
 
     return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ ok: true }) }
   }
