@@ -16,6 +16,7 @@ import {
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/Logo'
+import { useTrustId } from '@/hooks/useTrustId'
 
 interface HeaderProps {
   onDonateClick: () => void
@@ -37,6 +38,7 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
+  const trustId = useTrustId()
 
   const navItems = BASE_navItems.filter((item) => !item.causesOnly || showCauses)
 
@@ -85,7 +87,7 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
               className="shrink-0 transition-all hover:opacity-90 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 rounded-xl"
               aria-label="Hindu Association of Ireland — Home"
             >
-              <Logo size="md" showText={true} />
+              <Logo size="md" showText={true} trustId={trustId} />
             </Link>
 
             {/* ── Desktop nav ── */}
@@ -166,6 +168,11 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
                         <p className="text-[17px] font-bold text-white leading-tight drop-shadow-sm truncate" style={{ fontFamily: 'var(--font-heading)' }}>
                           Hindu Association of Ireland
                         </p>
+                        {trustId && (
+                          <p className="text-[11px] font-medium text-white/80 truncate">
+                            Trust ID: {trustId}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {/* ── Close button inside drawer ── */}

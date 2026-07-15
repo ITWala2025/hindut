@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { FloppyDisk, Buildings, EnvelopeSimple, Globe, Bell, ShieldCheck } from '@phosphor-icons/react'
+import { useEffect, useState } from 'react'
+import { FloppyDisk, Buildings, EnvelopeSimple, Globe, Bell, ShieldCheck, IdentificationCard } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { SectionCard } from '@/components/admin/adminUi'
 import { StripePaymentsCard } from '@/components/admin/sections/StripePaymentsCard'
 import { useAuth } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 
 export function SettingsSection() {
   const { user, can } = useAuth()
@@ -25,6 +26,66 @@ export function SettingsSection() {
     description:
       'A registered charity supporting the Hindu community across Ireland through worship, cultural events and community service.',
   })
+
+  const [trustId, setTrustId] = useState('')
+  const [trustIdLoading, setTrustIdLoading] = useState(true)
+  const [trustIdSaving, setTrustIdSaving] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    supabase
+      .from('site_settings')
+      .select('trust_id')
+      .eq('id', 1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) {
+          console.error('[Settings] failed to load trust ID:', error.message)
+          return
+        }
+        setTrustId((data as { trust_id?: string | null } | null)?.trust_id ?? '')
+      })
+      .finally(() => {
+        if (active) setTrustIdLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const saveTrustId = async () => {
+    if (!canWrite) {
+      toast.error("You don't have permission to change settings.")
+      return
+    }
+    setTrustIdSaving(true)
+    try {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+      const { error } = await supabase
+        .from('site_settings')
+        .update({
+          trust_id: trustId.trim() || null,
+          updated_at: new Date().toISOString(),
+          updated_by: authUser?.id ?? null,
+        })
+        .eq('id', 1)
+
+      if (error) {
+        console.error('[Settings] failed to save trust ID:', error.message)
+        toast.error('Failed to save trust ID.')
+        return
+      }
+      toast.success('Trust ID saved.')
+    } catch (err) {
+      console.error('[Settings] failed to save trust ID:', err)
+      toast.error('Network error saving trust ID.')
+    } finally {
+      setTrustIdSaving(false)
+    }
+  }
 
   const [notifications, setNotifications] = useState({
     newMembers: true,
@@ -55,8 +116,11 @@ export function SettingsSection() {
         description="Public contact information shown on the website."
         actions={
           <Button
-            onClick={() => save('Organisation profile')}
-            disabled={!canWrite}
+            onClick={() => {
+              save('Organisation profile')
+              void saveTrustId()
+            }}
+            disabled={!canWrite || trustIdSaving}
             className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700"
           >
             <FloppyDisk className="mr-2" weight="bold" />
@@ -89,6 +153,17 @@ export function SettingsSection() {
               value={org.address}
               onChange={(e) => setOrg({ ...org, address: e.target.value })}
             />
+          </Field>
+          <Field icon={<IdentificationCard size={16} />} label="Trust ID">
+            <Input
+              placeholder="e.g. CHY123456"
+              value={trustId}
+              disabled={trustIdLoading}
+              onChange={(e) => setTrustId(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shown to the public just below the logo name in the site header.
+            </p>
           </Field>
           <div className="md:col-span-2">
             <Field label="About">

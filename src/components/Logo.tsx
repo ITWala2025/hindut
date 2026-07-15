@@ -1,10 +1,12 @@
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
   showText?: boolean
+  /** Show the registered charity/trust ID beneath the org name (header only). */
+  trustId?: string | null
   className?: string
 }
 
-export function Logo({ size = 'md', showText = true, className = '' }: LogoProps) {
+export function Logo({ size = 'md', showText = true, trustId, className = '' }: LogoProps) {
   const containerSize = {
     sm: 'h-9 w-9 md:h-10 md:w-10',
     md: 'h-11 w-11 md:h-14 md:w-14',
@@ -43,6 +45,11 @@ export function Logo({ size = 'md', showText = true, className = '' }: LogoProps
           >
             Hindu Association of Ireland
           </span>
+          {trustId && (
+            <span className="text-[10px] md:text-[11px] font-medium tracking-wide text-orange-600/80">
+              Trust ID: {trustId}
+            </span>
+          )}
         </div>
       )}
     </div>
