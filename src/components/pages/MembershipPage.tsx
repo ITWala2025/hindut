@@ -252,7 +252,7 @@ export function MembershipPage() {
     [plans],
   )
 
-  const openFor = (plan: MembershipPlan) => {
+  const openDialog = (plan: MembershipPlan, withMonthly: boolean) => {
     if (!settings.featureMemberSignup) {
       toast.error('Membership sign-ups are temporarily closed. Please check back soon.')
       return
@@ -265,15 +265,23 @@ export function MembershipPage() {
     setFamilySize('')
     setArea('')
     setGdprConsent(false)
-    setAddMonthly(true)
-    const defaultAmt =
-      plans.find((p) => p.category === 'giving' && p.active && p.popular)?.price ??
-      plans.find((p) => p.category === 'giving' && p.active)?.price ??
-      0
-    setMonthlyAmount(defaultAmt)
+    setAddMonthly(withMonthly)
+    if (withMonthly) {
+      const defaultAmt =
+        plans.find((p) => p.category === 'giving' && p.active && p.popular)?.price ??
+        plans.find((p) => p.category === 'giving' && p.active)?.price ??
+        0
+      setMonthlyAmount(defaultAmt)
+    } else {
+      setMonthlyAmount(0)
+    }
     setMonthlyCustom('')
     setProcessing(false)
     setDialogOpen(true)
+  }
+
+  const openFor = (plan: MembershipPlan) => {
+    openDialog(plan, true)
   }
 
   const closeDialog = () => {
@@ -338,27 +346,6 @@ export function MembershipPage() {
     }
   }
 
-  const openForGiving = (tier: GivingTile) => {
-    if (!settings.featureMemberSignup) {
-      toast.error('Membership sign-ups are temporarily closed. Please check back soon.')
-      return
-    }
-    if (!annualPlan) return
-    setSelected(annualPlan)
-    setStep('details')
-    setFullName('')
-    setEmail('')
-    setPhone('')
-    setFamilySize('')
-    setArea('')
-    setGdprConsent(false)
-    setAddMonthly(true)
-    setMonthlyAmount(tier.amount ?? 0)
-    setMonthlyCustom('')
-    setProcessing(false)
-    setDialogOpen(true)
-  }
-
   const openGiving = (tier: GivingTile) => {
     if (!settings.featureMemberSignup) {
       toast.error('Membership sign-ups are temporarily closed. Please check back soon.')
@@ -371,6 +358,16 @@ export function MembershipPage() {
     setGivingConsent(false)
     setGivingProcessing(false)
     setGivingOpen(true)
+  }
+
+  const handleGivingClick = (tier: GivingTile) => {
+    if (!annualPlan) return
+    openDialog(annualPlan, true)
+    if (tier.id === 'custom') {
+      setMonthlyAmount(0)
+    } else {
+      setMonthlyAmount(tier.amount ?? 0)
+    }
   }
 
   const closeGiving = () => {
@@ -664,7 +661,7 @@ export function MembershipPage() {
                         ))}
                       </ul>
                       <Button
-                        onClick={() => openGiving(tier)}
+                        onClick={() => handleGivingClick(tier)}
                         size="sm"
                         className={cn(
                           'w-full font-semibold rounded-xl text-xs h-8',

@@ -953,6 +953,9 @@ export function MembersSection() {
                       Plan
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                      Subscribed
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">
                       Expires
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden xl:table-cell">
@@ -1005,6 +1008,11 @@ export function MembersSection() {
                             {m.planId.replace('-', ' ')}
                           </span>
                         </div>
+                      </td>
+
+                      {/* Subscribed (start date) */}
+                      <td className="px-4 py-3.5 text-slate-600 text-xs hidden lg:table-cell">
+                        {m.startDate || '—'}
                       </td>
 
                       {/* Expires */}
