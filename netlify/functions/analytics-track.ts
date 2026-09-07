@@ -252,7 +252,7 @@ export const handler: Handler = async (event) => {
 
   const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },
-    realtime: { transport: ws },
+    realtime: { transport: ws as any },
   })
 
   // -------------------------------------------------------------------------
@@ -322,9 +322,9 @@ export const handler: Handler = async (event) => {
       .from('analytics_sessions')
       .update({
         last_seen_at:     new Date().toISOString(),
-        pageviews:        (existingSession.pageviews    ?? 0) + (eventType === 'pageview' ? 1 : 0),
-        events_count:     (existingSession.events_count ?? 0) + 1,
-        total_duration_ms:(existingSession.total_duration_ms ?? 0) + dur,
+        pageviews:        ((existingSession?.pageviews)    ?? 0) + (eventType === 'pageview' ? 1 : 0),
+        events_count:     ((existingSession?.events_count) ?? 0) + 1,
+        total_duration_ms:((existingSession?.total_duration_ms) ?? 0) + dur,
       })
       .eq('id', sessionId!)
   }

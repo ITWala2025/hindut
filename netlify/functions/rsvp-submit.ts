@@ -101,7 +101,7 @@ function buildEventDates(
   startDateStr: string,
   startTimeStr: string | null,
   endTimeStr:   string | null,
-): { startDate: Date; endDate: Date } {
+): { startDate: Date; endDate: Date } | null {
   const datePart = startDateStr.slice(0, 10) // "YYYY-MM-DD"
 
   // Probe Dublin UTC offset for this date (noon avoids DST edge cases)
@@ -196,7 +196,7 @@ export const handler: Handler = async (event) => {
     // -- Supabase admin client (bypasses RLS via service role)
     const supabase = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
-      realtime: { transport: ws },
+      realtime: { transport: ws as any },
     })
 
     // -- Verify event exists, is free, and is published

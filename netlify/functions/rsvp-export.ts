@@ -67,7 +67,7 @@ export const handler: Handler = async (event) => {
 
     const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
-      realtime: { transport: ws },
+      realtime: { transport: ws as any },
     })
 
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
