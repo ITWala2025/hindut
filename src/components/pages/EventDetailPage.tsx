@@ -204,6 +204,86 @@ export function EventDetailPage() {
                   </div>
                 </div>
 
+                {/* ── Multi-Day & Time Slots Timeline ── */}
+                {event.schedules && event.schedules.length > 0 && (
+                  <div className="rounded-2xl border border-amber-200/70 bg-white p-6 shadow-xs space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700">
+                        <CalendarBlank size={18} weight="bold" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-orange-950" style={{ fontFamily: 'var(--font-heading)' }}>
+                          Event Schedule & Time Slots
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          This event runs across multiple days/sessions. Select your preferred slots when booking.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      {event.schedules.map((slot, idx) => (
+                        <div key={slot.id || idx} className="rounded-xl border border-orange-100 bg-orange-50/40 p-4 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-orange-800 bg-orange-100/80 px-2 py-0.5 rounded-full">
+                              {slot.title || `Session ${idx + 1}`}
+                            </span>
+                            {slot.price !== undefined && slot.price > 0 && (
+                              <span className="text-xs font-bold text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full">
+                                €{slot.price.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5 pt-1">
+                            <CalendarBlank size={14} className="text-orange-600" />
+                            {slot.date}
+                          </p>
+                          {slot.startTime && (
+                            <p className="text-xs text-slate-600 flex items-center gap-1.5">
+                              <Clock size={13} className="text-orange-600" />
+                              {slot.startTime}{slot.endTime ? ` – ${slot.endTime}` : ''}
+                            </p>
+                          )}
+                          {slot.description && (
+                            <p className="text-xs text-slate-500 pt-1 italic">{slot.description}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Attendance Conditions & Rules ── */}
+                {event.attendanceConditions?.enabled && (event.attendanceConditions?.rules ?? []).length > 0 && (
+                  <div className="rounded-2xl border border-orange-200/70 bg-gradient-to-br from-orange-50/80 to-amber-50/60 p-6 shadow-xs space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-700">
+                        <ClipboardText size={18} weight="bold" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-orange-950" style={{ fontFamily: 'var(--font-heading)' }}>
+                          Attendance Conditions & Guidelines
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Please review the following requirements for attending this event.
+                        </p>
+                      </div>
+                    </div>
+                    <ul className="space-y-2">
+                      {(event.attendanceConditions.rules ?? []).map((rule, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5 text-sm text-slate-700 bg-white/90 border border-orange-100 rounded-xl p-3">
+                          <span className="text-orange-600 font-bold text-base leading-none">•</span>
+                          <span>{rule}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {event.attendanceConditions.customNotes && (
+                      <p className="text-xs text-slate-600 bg-white border border-orange-200/80 rounded-xl p-3 italic">
+                        📌 Note: {event.attendanceConditions.customNotes}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Mobile CTA */}
                 <div className="lg:hidden">
                   <EventCta event={event} onRsvp={() => setRsvpOpen(true)} onBookTicket={() => setTicketOpen(true)} />

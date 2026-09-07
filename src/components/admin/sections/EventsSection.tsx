@@ -15,6 +15,10 @@ import {
   Tag,
   Spinner,
   Users,
+  CalendarPlus,
+  ShieldCheck,
+  CheckSquare,
+  ListPlus,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,6 +51,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
 import { useEvents, sortByDate, toSlug } from '@/hooks/useEvents'
@@ -58,6 +63,8 @@ import {
   type EventService,
   type TempleEvent,
   type TicketTier,
+  type EventSchedule,
+  type EventAttendanceConditions,
 } from '@/data/events'
 import { useAuth } from '@/lib/auth'
 import { SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
@@ -203,11 +210,27 @@ function TimePicker({ value, onChange, label }: TimePickerProps) {
   )
 }
 
+const DEFAULT_ATTENDANCE_CONDITIONS: EventAttendanceConditions = {
+  enabled: true,
+  rules: [
+    'Traditional Indian/Temple attire is encouraged.',
+    'Please remove footwear before entering the prayer hall.',
+    'Arrive 15 minutes prior to the start time.',
+    'Pure vegetarian Prasadam will be served on premises.',
+  ],
+  requireAcknowledgment: true,
+  customNotes: '',
+}
+
 const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
   slug: '',
   title: '',
   description: '',
   date: new Date().toISOString().slice(0, 10),
+  endDate: undefined,
+  isMultiDay: false,
+  schedules: [],
+  attendanceConditions: DEFAULT_ATTENDANCE_CONDITIONS,
   startTime: '',
   endTime: '',
   location: 'Ahane Hall, Limerick',
@@ -220,6 +243,15 @@ const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
   eventServices: [],
   published: true,
 }
+
+const PRESET_ATTENDANCE_RULES = [
+  'Traditional Indian/Temple attire is encouraged.',
+  'Please remove footwear before entering the prayer hall.',
+  'Arrive 15 minutes prior to the start time.',
+  'Pure vegetarian Prasadam will be served on premises.',
+  'Children under 12 must be accompanied by an adult.',
+  'Please keep mobile phones silent during rituals.',
+]
 
 export function EventsSection() {
   const { can } = useAuth()
@@ -277,9 +309,94 @@ export function EventsSection() {
       stripeProductId: rest.stripeProductId ?? '',
       ticketTiers: rest.ticketTiers ?? [],
       eventServices: rest.eventServices ?? [],
+      schedules: rest.schedules ?? [],
+      attendanceConditions: rest.attendanceConditions ?? DEFAULT_ATTENDANCE_CONDITIONS,
     })
     setSlugManuallyEdited(true)
     setOpen(true)
+  }
+
+  const addScheduleSlot = () => {
+    setForm((f) => ({
+      ...f,
+      schedules: [
+        ...(f.schedules ?? []),
+        {
+          id: `slot-${Date.now()}`,
+          date: f.date,
+          startTime: '10:00 AM',
+          endTime: '12:00 PM',
+          title: `Session ${(f.schedules?.length ?? 0) + 1}`,
+          price: f.isPaid ? (f.price ?? 10) : undefined,
+        },
+      ],
+    }))
+  }
+
+  const updateScheduleSlot = (id: string, patch: Partial<EventSchedule>) => {
+    setForm((f) => ({
+      ...f,
+      schedules: (f.schedules ?? []).map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    }))
+  }
+
+  const removeScheduleSlot = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      schedules: (f.schedules ?? []).filter((s) => s.id !== id),
+    }))
+  }
+
+  const togglePresetRule = (rule: string) => {
+    setForm((f) => {
+      const current = f.attendanceConditions?.rules ?? []
+      const exists = current.includes(rule)
+      const updated = exists ? current.filter((r) => r !== rule) : [...current, rule]
+      return {
+        ...f,
+        attendanceConditions: {
+          ...(f.attendanceConditions ?? { enabled: true, requireAcknowledgment: true, rules: [] }),
+          rules: updated,
+        },
+      }
+    })
+  }
+
+  const addCustomRule = () => {
+    setForm((f) => ({
+      ...f,
+      attendanceConditions: {
+        ...(f.attendanceConditions ?? { enabled: true, requireAcknowledgment: true, rules: [] }),
+        rules: [...(f.attendanceConditions?.rules ?? []), 'New Custom Requirement'],
+      },
+    }))
+  }
+
+  const updateRule = (index: number, val: string) => {
+    setForm((f) => {
+      const current = [...(f.attendanceConditions?.rules ?? [])]
+      current[index] = val
+      return {
+        ...f,
+        attendanceConditions: {
+          ...(f.attendanceConditions ?? { enabled: true, requireAcknowledgment: true, rules: [] }),
+          rules: current,
+        },
+      }
+    })
+  }
+
+  const removeRule = (index: number) => {
+    setForm((f) => {
+      const current = (f.attendanceConditions?.rules ?? []).filter((_, i) => i !== index)
+      return {
+        ...f,
+        attendanceConditions: {
+          ...(f.attendanceConditions ?? { enabled: true, requireAcknowledgment: true, rules: [] }),
+          rules: current,
+        },
+      }
+    })
   }
 
   const save = async (ev: React.FormEvent) => {
@@ -518,9 +635,16 @@ export function EventsSection() {
                 return (
                 <tr key={e.id} className={cn('border-t border-slate-100 align-top', isPast && 'opacity-60 bg-slate-50')}>
                   <Td>
-                    <div className="font-semibold text-slate-900">{e.date}</div>
+                    <div className="font-semibold text-slate-900">
+                      {e.isMultiDay && e.endDate ? `${e.date} to ${e.endDate}` : e.date}
+                    </div>
                     {e.time && (
                       <div className="text-xs text-muted-foreground">{e.time}</div>
+                    )}
+                    {e.schedules && e.schedules.length > 0 && (
+                      <Badge variant="outline" className="mt-1 bg-amber-50 text-amber-800 border-amber-300 text-[10px] px-1.5 py-0">
+                        {e.schedules.length} Time Slots
+                      </Badge>
                     )}
                     {isPast && (
                       <Badge className="mt-1 bg-slate-400 text-white text-[10px] px-1.5 py-0">
@@ -809,6 +933,292 @@ export function EventsSection() {
                   </div>
                 </Field>
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Multi-Day & Multi-Time Schedule Builder */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Multi-Day & Time Slots Configuration
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Configure multiple event days, sessions, or time slots for attendees to RSVP/book.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.isMultiDay}
+                  onCheckedChange={(checked) =>
+                    setForm({
+                      ...form,
+                      isMultiDay: checked,
+                      endDate: checked ? (form.endDate ?? form.date) : undefined,
+                    })
+                  }
+                />
+              </div>
+
+              {form.isMultiDay && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50/40 p-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Start Date">
+                      <Input
+                        type="date"
+                        value={form.date}
+                        onChange={(e) => setForm({ ...form, date: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="End Date">
+                      <Input
+                        type="date"
+                        value={form.endDate ?? form.date}
+                        onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Schedule slot list */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs font-bold text-orange-900 uppercase tracking-wider">
+                        Schedule Slots / Sessions
+                      </Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={addScheduleSlot}
+                        className="bg-white text-orange-700 border-orange-300 hover:bg-orange-100"
+                      >
+                        <Plus size={13} className="mr-1" /> Add Time Slot
+                      </Button>
+                    </div>
+
+                    {(form.schedules ?? []).length === 0 ? (
+                      <div className="text-xs text-slate-500 bg-white border border-dashed border-orange-200 rounded-lg p-3 text-center">
+                        No distinct time slots created yet. Click "Add Time Slot" to define daily sessions or specific slots.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {(form.schedules ?? []).map((slot, index) => (
+                          <div
+                            key={slot.id}
+                            className="bg-white border border-orange-200 rounded-xl p-3.5 shadow-xs space-y-3"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-orange-800 bg-orange-100 px-2 py-0.5 rounded-full">
+                                Slot #{index + 1}
+                              </span>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-red-500 hover:bg-red-50"
+                                onClick={() => removeScheduleSlot(slot.id)}
+                              >
+                                <X size={14} />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-[11px] text-slate-600 mb-1 block">Slot / Session Name</Label>
+                                <Input
+                                  value={slot.title ?? ''}
+                                  onChange={(e) => updateScheduleSlot(slot.id, { title: e.target.value })}
+                                  placeholder="e.g. Day 1 - Morning Puja"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[11px] text-slate-600 mb-1 block">Slot Date</Label>
+                                <Input
+                                  type="date"
+                                  value={slot.date ?? form.date}
+                                  onChange={(e) => updateScheduleSlot(slot.id, { date: e.target.value })}
+                                />
+                              </div>
+                              <TimePicker
+                                label="Start Time"
+                                value={slot.startTime ?? ''}
+                                onChange={(v) => updateScheduleSlot(slot.id, { startTime: v })}
+                              />
+                              <TimePicker
+                                label="End Time"
+                                value={slot.endTime ?? ''}
+                                onChange={(v) => updateScheduleSlot(slot.id, { endTime: v })}
+                              />
+                            </div>
+                            {form.isPaid && (
+                              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                                <div>
+                                  <Label className="text-[11px] text-slate-600 mb-1 block">Slot Price Override (€)</Label>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={slot.price ?? form.price ?? 0}
+                                    onChange={(e) => updateScheduleSlot(slot.id, { price: Number(e.target.value) })}
+                                    placeholder="Leave blank for event price"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-[11px] text-slate-600 mb-1 block">Max Capacity (Optional)</Label>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={slot.maxCapacity ?? ''}
+                                    onChange={(e) =>
+                                      updateScheduleSlot(slot.id, {
+                                        maxCapacity: e.target.value ? Number(e.target.value) : undefined,
+                                      })
+                                    }
+                                    placeholder="Unlimited"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Attendance Conditions & Rules Configurator */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Attendance Conditions & Rules
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Set event guidelines, dress code, and attendance conditions for attendees.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.attendanceConditions?.enabled ?? false}
+                  onCheckedChange={(checked) =>
+                    setForm({
+                      ...form,
+                      attendanceConditions: {
+                        ...(form.attendanceConditions ?? DEFAULT_ATTENDANCE_CONDITIONS),
+                        enabled: checked,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              {form.attendanceConditions?.enabled && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                  {/* Presets */}
+                  <div>
+                    <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">
+                      Common Guidelines & Presets
+                    </Label>
+                    <div className="space-y-2">
+                      {PRESET_ATTENDANCE_RULES.map((ruleText) => {
+                        const isSelected = (form.attendanceConditions?.rules ?? []).includes(ruleText)
+                        return (
+                          <div key={ruleText} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`rule-${ruleText}`}
+                              checked={isSelected}
+                              onCheckedChange={() => togglePresetRule(ruleText)}
+                            />
+                            <Label
+                              htmlFor={`rule-${ruleText}`}
+                              className="text-xs text-slate-700 font-normal cursor-pointer select-none"
+                            >
+                              {ruleText}
+                            </Label>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Active/Custom Rules List */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Configured Attendance Rules ({form.attendanceConditions?.rules?.length ?? 0})
+                      </Label>
+                      <Button type="button" size="sm" variant="outline" onClick={addCustomRule}>
+                        <Plus size={13} className="mr-1" /> Add Custom Rule
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {(form.attendanceConditions?.rules ?? []).map((ruleText, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Input
+                            value={ruleText}
+                            onChange={(e) => updateRule(idx, e.target.value)}
+                            className="text-xs bg-white"
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 shrink-0 text-red-500 hover:bg-red-50"
+                            onClick={() => removeRule(idx)}
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Acknowledgment setting */}
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-800">Mandatory Attendee Agreement</p>
+                      <p className="text-[11px] text-slate-500">
+                        Require attendees to check "I agree to the event attendance conditions" before completing RSVP/booking.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.attendanceConditions?.requireAcknowledgment ?? true}
+                      onCheckedChange={(checked) =>
+                        setForm({
+                          ...form,
+                          attendanceConditions: {
+                            ...(form.attendanceConditions ?? DEFAULT_ATTENDANCE_CONDITIONS),
+                            requireAcknowledgment: checked,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+
+                  {/* Custom notes text area */}
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700 mb-1 block">
+                      Additional Attendance Notes (Optional)
+                    </Label>
+                    <Textarea
+                      rows={2}
+                      value={form.attendanceConditions?.customNotes ?? ''}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          attendanceConditions: {
+                            ...(form.attendanceConditions ?? DEFAULT_ATTENDANCE_CONDITIONS),
+                            customNotes: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="e.g. Parking available at hall entrance. Bring your own mat if desired."
+                      className="text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <Separator />

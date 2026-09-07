@@ -16,6 +16,7 @@ export interface RsvpRow {
   status: 'confirmed' | 'cancelled'
   confirmation_sent_at: string | null
   created_at: string
+  selected_schedules?: any[] | null
 }
 
 export interface RsvpFilters {
@@ -45,7 +46,7 @@ export function useRsvps(filters?: RsvpFilters) {
       .select(
         `id, event_id, reference_number, first_name, last_name,
          phone_masked, email_masked, num_adults, num_children,
-         consent_gdpr, status, confirmation_sent_at, created_at,
+         consent_gdpr, status, confirmation_sent_at, created_at, selected_schedules,
          events!inner(title)`,
       )
       .order('created_at', { ascending: false })

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { EventCategory, EventService, TempleEvent, TicketTier } from '@/data/events'
+import type { EventAttendanceConditions, EventCategory, EventSchedule, EventService, TempleEvent, TicketTier } from '@/data/events'
 
 export function toSlug(title: string): string {
   return title
@@ -16,6 +16,7 @@ interface EventRow {
   title: string
   description: string | null
   start_date: string
+  end_date: string | null
   location: string | null
   image_url: string | null
   is_paid: boolean
@@ -29,6 +30,9 @@ interface EventRow {
   end_time: string | null
   published: boolean
   slug: string | null
+  is_multi_day?: boolean | null
+  schedules?: EventSchedule[] | null
+  attendance_conditions?: EventAttendanceConditions | null
 }
 
 function toTempleEvent(row: EventRow): TempleEvent {
@@ -44,6 +48,10 @@ function toTempleEvent(row: EventRow): TempleEvent {
     title: row.title,
     description: row.description ?? '',
     date: row.start_date.slice(0, 10),
+    endDate: row.end_date ? row.end_date.slice(0, 10) : undefined,
+    isMultiDay: row.is_multi_day ?? (Boolean(row.schedules && row.schedules.length > 0)),
+    schedules: row.schedules ?? undefined,
+    attendanceConditions: row.attendance_conditions ?? undefined,
     startTime,
     endTime,
     time,
@@ -93,6 +101,10 @@ export function useEvents() {
         title: event.title,
         description: event.description,
         start_date: event.date,
+        end_date: event.endDate ?? null,
+        is_multi_day: event.isMultiDay ?? false,
+        schedules: event.schedules ?? [],
+        attendance_conditions: event.attendanceConditions ?? null,
         location: event.location,
         category: event.category,
         start_time: event.startTime ?? null,
@@ -122,6 +134,10 @@ export function useEvents() {
       if (patch.title !== undefined)         update.title            = patch.title
       if (patch.description !== undefined)   update.description      = patch.description
       if (patch.date !== undefined)          update.start_date       = patch.date
+      if (patch.endDate !== undefined)       update.end_date         = patch.endDate ?? null
+      if (patch.isMultiDay !== undefined)    update.is_multi_day     = patch.isMultiDay
+      if (patch.schedules !== undefined)     update.schedules        = patch.schedules
+      if (patch.attendanceConditions !== undefined) update.attendance_conditions = patch.attendanceConditions
       if (patch.location !== undefined)      update.location         = patch.location
       if (patch.category !== undefined)      update.category         = patch.category
       if (patch.startTime !== undefined)     update.start_time       = patch.startTime ?? null

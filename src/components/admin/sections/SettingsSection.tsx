@@ -33,12 +33,14 @@ export function SettingsSection() {
 
   useEffect(() => {
     let active = true
-    supabase
-      .from('site_settings')
-      .select('trust_id, org_name, org_email, org_phone, org_address, org_description, notify_new_members, notify_donations, notify_weekly_digest, notify_security_alerts, feature_public_events, feature_online_donations, feature_member_signup, feature_maintenance_mode')
-      .eq('id', 1)
-      .maybeSingle()
-      .then(({ data, error }) => {
+    async function loadSettings() {
+      try {
+        const { data, error } = await supabase
+          .from('site_settings')
+          .select('trust_id, org_name, org_email, org_phone, org_address, org_description, notify_new_members, notify_donations, notify_weekly_digest, notify_security_alerts, feature_public_events, feature_online_donations, feature_member_signup, feature_maintenance_mode')
+          .eq('id', 1)
+          .maybeSingle()
+
         if (!active) return
         if (error) {
           console.error('[Settings] failed to load organisation profile:', error.message)
@@ -81,10 +83,12 @@ export function SettingsSection() {
           memberSignup: row.feature_member_signup ?? true,
           maintenanceMode: row.feature_maintenance_mode ?? false,
         })
-      })
-      .finally(() => {
+      } finally {
         if (active) setOrgLoading(false)
-      })
+      }
+    }
+
+    loadSettings()
     return () => {
       active = false
     }

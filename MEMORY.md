@@ -278,8 +278,11 @@ netlify dev          # Starts frontend + functions together
 - **PDF receipts:** Generated client-side using `jsPDF` + `html2canvas` via `src/lib/receiptPdf.ts`.
 - **Analytics:** Custom lightweight analytics table (`analytics_events`, `analytics_daily`) — not GA. Tracked via `analytics-track` function and `src/lib/analytics.ts`.
 - **Media/gallery:** Images stored in Supabase Storage. Public read via anonymous grant (migration 023). Upload scripts in `scripts/`.
-- **Cookie consent:** Managed via `src/hooks/useCookieConsent.ts` and `src/lib/cookieConsent.ts`. Banner in `CookieConsentBanner.tsx`.
-- **CSP:** Strict Content-Security-Policy set in `netlify.toml` headers. Any new external script/style/image domain must be added there.
+- **Multi-day & Multi-time Events:** `public.events` contains `is_multi_day` (boolean), `schedules` (JSONB array of `EventSchedule`), `end_date` (timestamptz), and `attendance_conditions` (JSONB object of `EventAttendanceConditions`).
+- **Attendance Conditions & Rules:** Admin-configured event guidelines (Traditional Attire, Footwear Policy, Punctuality, Vegetarian Prasadam, Supervision, Mobile Policy) with optional mandatory attendee acknowledgment checkbox.
+- **Multi-Slot Selection & Unified Payment Checkout:** Attendees can select multiple days and distinct time slots in a single RSVP (`RsvpDialog.tsx`) or paid Ticket Booking (`TicketBookingDialog.tsx`) flow. Paid events aggregate all selected time slots into a single unified payment transaction at checkout via Stripe.
+- **Automated Per-Slot Communications:** `netlify/functions/rsvp-submit.ts` generates and dispatches **separate confirmation emails** and **individual `.ics` calendar files** for each reserved slot post-purchase/RSVP.
+- **RSVP Selected Schedules:** `public.event_rsvps` contains `selected_schedules` (JSONB). Displayed in `/admin/rsvps` detail sheet and included in CSV exports.
 
 ---
 
@@ -302,4 +305,4 @@ The `Plan/` directory contains specification documents. They are useful for inte
 
 ---
 
-*Last updated: 2026-06-24*
+*Last updated: 2026-09-07*

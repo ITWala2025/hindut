@@ -128,11 +128,37 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set())
 
+  // Schedule slot state for multi-slot selection
+  const eventSchedules = event.schedules ?? []
+  const hasSchedules = eventSchedules.length > 0
+  const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(() =>
+    new Set(hasSchedules ? eventSchedules.map((s) => s.id) : [])
+  )
+
+  // Attendance conditions state
+  const conditions = event.attendanceConditions
+  const hasConditions = conditions?.enabled && (conditions.rules ?? []).length > 0
+  const requireConditionsAck = conditions?.enabled && conditions?.requireAcknowledgment
+  const [conditionsAck, setConditionsAck] = useState(false)
+
   const availableServices: EventService[] = event.eventServices ?? []
   const hasServices = availableServices.length > 0
 
   const selectedServices = availableServices.filter((s) => selectedServiceIds.has(s.serviceId))
   const servicesTotal = selectedServices.reduce((sum, s) => sum + s.amountEur, 0)
+
+  const toggleSlot = (slotId: string) => {
+    setSelectedSlotIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(slotId)) {
+        if (next.size > 1) next.delete(slotId)
+        else toast.info('Please select at least one time slot/session.')
+      } else {
+        next.add(slotId)
+      }
+      return next
+    })
+  }
 
   const toggleService = (serviceId: string) => {
     setSelectedServiceIds((prev) => {
@@ -149,7 +175,7 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
     setValue,
     watch,
     reset,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<RsvpFormData>({
     resolver: zodResolver(rsvpSchema),
     mode: 'onChange',
@@ -167,27 +193,39 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
         reset()
         setStep('form')
         setSelectedServiceIds(new Set())
+        setSelectedSlotIds(new Set(hasSchedules ? eventSchedules.map((s) => s.id) : []))
+        setConditionsAck(false)
       }, 300)
     }
     onOpenChange(v)
   }
 
   const onSubmit = async (data: RsvpFormData) => {
+    if (requireConditionsAck && !conditionsAck) {
+      toast.error('Please accept the event attendance conditions to proceed.')
+      return
+    }
+
+    const chosenSlots = hasSchedules
+      ? eventSchedules.filter((s) => selectedSlotIds.has(s.id))
+      : []
+
     setIsSubmitting(true)
     try {
-      // Step 1: Submit RSVP
+      // Step 1: Submit RSVP with selected multi-slots
       const res = await fetch('/.netlify/functions/rsvp-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventId:     event.id,
-          firstName:   data.firstName,
-          lastName:    data.lastName,
-          phone:       data.phone,
-          email:       data.email,
-          numAdults:   data.numAdults,
-          numChildren: data.numChildren ?? 0,
-          consentGdpr: true,
+          eventId:           event.id,
+          firstName:         data.firstName,
+          lastName:          data.lastName,
+          phone:             data.phone,
+          email:             data.email,
+          numAdults:         data.numAdults,
+          numChildren:       data.numChildren ?? 0,
+          consentGdpr:       true,
+          selectedSchedules: chosenSlots,
         }),
       })
 
@@ -400,6 +438,99 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                     <FieldError message={errors.numChildren?.message} />
                   </div>
                 </div>
+
+                {/* Multi-Slot Selection */}
+                {hasSchedules && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-amber-950 flex items-center gap-1.5">
+                        <CalendarBlank size={16} className="text-amber-600" weight="bold" />
+                        Select Event Days & Time Slots
+                      </p>
+                      <p className="text-xs text-amber-800/80 mt-0.5">
+                        Choose which days and sessions you plan to attend. You will receive separate calendar invites for each.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {eventSchedules.map((slot) => {
+                        const isSelected = selectedSlotIds.has(slot.id)
+                        return (
+                          <label
+                            key={slot.id}
+                            className={cn(
+                              'flex items-start justify-between gap-3 rounded-xl border p-3 cursor-pointer transition-all',
+                              isSelected
+                                ? 'border-amber-500 bg-white shadow-xs'
+                                : 'border-amber-200/60 bg-white/70 hover:border-amber-300',
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSlot(slot.id)}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <p className="text-sm font-bold text-slate-900">{slot.title || 'Event Session'}</p>
+                                <p className="text-xs text-slate-600 mt-0.5">
+                                  📅 {slot.date} {slot.startTime ? `· ⏰ ${slot.startTime}${slot.endTime ? ` – ${slot.endTime}` : ''}` : ''}
+                                </p>
+                                {slot.description && (
+                                  <p className="text-[11px] text-slate-500 mt-1">{slot.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            {slot.price !== undefined && slot.price > 0 && (
+                              <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
+                                €{slot.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Attendance Conditions & Rules */}
+                {hasConditions && (
+                  <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={18} className="text-orange-600 shrink-0" weight="fill" />
+                      <p className="text-sm font-bold text-orange-950">Attendance Conditions & Guidelines</p>
+                    </div>
+                    <ul className="space-y-1.5 pl-1">
+                      {(conditions?.rules ?? []).map((rule, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-xs text-slate-700 leading-snug">
+                          <span className="text-orange-500 font-bold">•</span>
+                          <span>{rule}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {conditions?.customNotes && (
+                      <p className="text-xs text-slate-600 bg-white/80 border border-orange-200/60 rounded-lg p-2.5 italic">
+                        Note: {conditions.customNotes}
+                      </p>
+                    )}
+                    {requireConditionsAck && (
+                      <div className="pt-2 border-t border-orange-200/70 flex items-start gap-2.5">
+                        <Checkbox
+                          id="rsvp-conditions-ack"
+                          checked={conditionsAck}
+                          onCheckedChange={(c) => setConditionsAck(c === true)}
+                          className="mt-0.5"
+                        />
+                        <Label
+                          htmlFor="rsvp-conditions-ack"
+                          className="text-xs font-medium text-slate-800 cursor-pointer select-none leading-relaxed"
+                        >
+                          I have read and agree to follow all event attendance conditions and guidelines.{' '}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Optional Services */}
                 {hasServices && (

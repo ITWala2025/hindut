@@ -29,6 +29,8 @@ import {
   Users,
   Baby,
   Warning,
+  CalendarBlank,
+  CheckCircle,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -112,11 +114,37 @@ interface TicketBookingDialogProps {
 export function TicketBookingDialog({ open, onOpenChange, event }: TicketBookingDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false)
 
+  // Schedule slots state
+  const eventSchedules = event.schedules ?? []
+  const hasSchedules = eventSchedules.length > 0
+  const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(() =>
+    new Set(hasSchedules ? eventSchedules.map((s) => s.id) : [])
+  )
+
+  // Attendance conditions state
+  const conditions = event.attendanceConditions
+  const hasConditions = conditions?.enabled && (conditions.rules ?? []).length > 0
+  const requireConditionsAck = conditions?.enabled && conditions?.requireAcknowledgment
+  const [conditionsAck, setConditionsAck] = useState(false)
+
   const adultPrice = event.price ?? 0
   const hasTiers   = (event.ticketTiers ?? []).length > 0
   const [tierQtys, setTierQtys] = useState<Record<string, number>>(() =>
     Object.fromEntries((event.ticketTiers ?? []).map((t) => [t.id, 0]))
   )
+
+  const toggleSlot = (slotId: string) => {
+    setSelectedSlotIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(slotId)) {
+        if (next.size > 1) next.delete(slotId)
+        else toast.info('Please select at least one time slot/session.')
+      } else {
+        next.add(slotId)
+      }
+      return next
+    })
+  }
 
   const {
     register,
@@ -135,19 +163,25 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
   const numChildren  = watch('numChildren') || 0
   const consentValue = watch('consentGdpr')
 
-  const total = hasTiers
+  const slotMultiplier = hasSchedules ? selectedSlotIds.size : 1
+
+  const baseSingleSlotTotal = hasTiers
     ? (event.ticketTiers ?? []).reduce((sum, t) => sum + (tierQtys[t.id] ?? 0) * t.price, 0)
     : Number(numAdults) * adultPrice
+
+  const total = baseSingleSlotTotal * slotMultiplier
 
   const handleClose = (v: boolean) => {
     if (!v) setTimeout(() => {
       reset()
       setTierQtys(Object.fromEntries((event.ticketTiers ?? []).map((t) => [t.id, 0])))
+      setSelectedSlotIds(new Set(hasSchedules ? eventSchedules.map((s) => s.id) : []))
+      setConditionsAck(false)
     }, 300)
     onOpenChange(v)
   }
 
-  // On submit: call create-checkout-session and redirect to Stripe Checkout.
+  // On submit: call create-checkout-session with aggregated total for unified checkout transaction
   const onDetailsSubmit = async (data: DetailsFormData) => {
     if (hasTiers) {
       const totalTickets = Object.values(tierQtys).reduce((s, q) => s + q, 0)
@@ -156,6 +190,16 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
         return
       }
     }
+
+    if (requireConditionsAck && !conditionsAck) {
+      toast.error('Please accept the event attendance conditions to proceed.')
+      return
+    }
+
+    const chosenSlots = hasSchedules
+      ? eventSchedules.filter((s) => selectedSlotIds.has(s.id))
+      : []
+
     setIsProcessing(true)
     const tierQuantities = hasTiers
       ? (event.ticketTiers ?? [])
@@ -167,12 +211,14 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          kind:      'ticket',
-          eventId:   event.id,
-          firstName: data.firstName,
-          lastName:  data.lastName,
-          phone:     data.phone,
-          email:     data.email,
+          kind:              'ticket',
+          eventId:           event.id,
+          firstName:         data.firstName,
+          lastName:          data.lastName,
+          phone:             data.phone,
+          email:             data.email,
+          selectedSchedules: chosenSlots,
+          totalAmountEur:    total,
           ...(hasTiers
             ? { tierQuantities }
             : { numAdults: data.numAdults, numChildren: data.numChildren ?? 0 }),
@@ -271,6 +317,96 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
                       <span>Children (under 12)</span>
                       <span>Free</span>
                     </div>
+                  </div>
+                )}
+
+                {/* Multi-Slot Selection */}
+                {hasSchedules && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-amber-950 flex items-center gap-1.5">
+                        <CalendarBlank size={16} className="text-amber-600" weight="bold" />
+                        Select Event Days & Time Slots
+                      </p>
+                      <p className="text-xs text-amber-800/80 mt-0.5">
+                        Select multiple days/slots. Your tickets will be aggregated into a single unified payment at checkout.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {eventSchedules.map((slot) => {
+                        const isSelected = selectedSlotIds.has(slot.id)
+                        return (
+                          <label
+                            key={slot.id}
+                            className={cn(
+                              'flex items-start justify-between gap-3 rounded-xl border p-3 cursor-pointer transition-all',
+                              isSelected
+                                ? 'border-amber-500 bg-white shadow-xs'
+                                : 'border-amber-200/60 bg-white/70 hover:border-amber-300',
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSlot(slot.id)}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <p className="text-sm font-bold text-slate-900">{slot.title || 'Event Session'}</p>
+                                <p className="text-xs text-slate-600 mt-0.5">
+                                  📅 {slot.date} {slot.startTime ? `· ⏰ ${slot.startTime}${slot.endTime ? ` – ${slot.endTime}` : ''}` : ''}
+                                </p>
+                              </div>
+                            </div>
+                            {slot.price !== undefined && slot.price > 0 && (
+                              <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
+                                €{slot.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Attendance Conditions & Rules */}
+                {hasConditions && (
+                  <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={18} className="text-orange-600 shrink-0" weight="fill" />
+                      <p className="text-sm font-bold text-orange-950">Attendance Conditions & Guidelines</p>
+                    </div>
+                    <ul className="space-y-1.5 pl-1">
+                      {(conditions?.rules ?? []).map((rule, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-xs text-slate-700 leading-snug">
+                          <span className="text-orange-500 font-bold">•</span>
+                          <span>{rule}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {conditions?.customNotes && (
+                      <p className="text-xs text-slate-600 bg-white/80 border border-orange-200/60 rounded-lg p-2.5 italic">
+                        Note: {conditions.customNotes}
+                      </p>
+                    )}
+                    {requireConditionsAck && (
+                      <div className="pt-2 border-t border-orange-200/70 flex items-start gap-2.5">
+                        <Checkbox
+                          id="tb-conditions-ack"
+                          checked={conditionsAck}
+                          onCheckedChange={(c) => setConditionsAck(c === true)}
+                          className="mt-0.5"
+                        />
+                        <Label
+                          htmlFor="tb-conditions-ack"
+                          className="text-xs font-medium text-slate-800 cursor-pointer select-none leading-relaxed"
+                        >
+                          I have read and agree to follow all event attendance conditions and guidelines.{' '}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                      </div>
+                    )}
                   </div>
                 )}
 

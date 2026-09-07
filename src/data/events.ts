@@ -17,12 +17,34 @@ export interface EventService {
   amountEur: number
 }
 
+export interface EventSchedule {
+  id: string
+  date: string        // YYYY-MM-DD
+  startTime?: string  // e.g. "10:00 AM"
+  endTime?: string    // e.g. "2:00 PM"
+  title?: string      // e.g. "Day 1 - Morning Pooja" or "Session 1"
+  description?: string
+  price?: number      // optional price override for this specific slot (EUR)
+  maxCapacity?: number
+}
+
+export interface EventAttendanceConditions {
+  enabled: boolean
+  rules: string[]
+  requireAcknowledgment: boolean
+  customNotes?: string
+}
+
 export interface TempleEvent {
   id: string
   slug: string
   title: string
   description: string
   date: string
+  endDate?: string
+  isMultiDay?: boolean
+  schedules?: EventSchedule[]
+  attendanceConditions?: EventAttendanceConditions
   startTime?: string   // e.g. "4:00 PM" — Ireland time (Europe/Dublin)
   endTime?: string     // e.g. "7:00 PM" — Ireland time, optional
   time?: string        // computed: "${startTime} – ${endTime}" or startTime; kept for display compat

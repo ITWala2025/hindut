@@ -35,14 +35,15 @@ import {
 // Validation schema — must match client-side schema in RsvpDialog.tsx
 // ---------------------------------------------------------------------------
 const RsvpSchema = z.object({
-  eventId:     z.string().uuid('Invalid event ID'),
-  firstName:   z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
-  lastName:    z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
-  phone:       z.string().regex(/^\+[1-9]\d{1,14}$/, 'Phone must be E.164 format'),
-  email:       z.string().email().max(254),
-  numAdults:   z.number().int().min(1).max(50),
-  numChildren: z.number().int().min(0).max(50).optional().default(0),
-  consentGdpr: z.literal(true),
+  eventId:           z.string().uuid('Invalid event ID'),
+  firstName:         z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
+  lastName:          z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
+  phone:             z.string().regex(/^\+[1-9]\d{1,14}$/, 'Phone must be E.164 format'),
+  email:             z.string().email().max(254),
+  numAdults:         z.number().int().min(1).max(50),
+  numChildren:       z.number().int().min(0).max(50).optional().default(0),
+  consentGdpr:       z.literal(true),
+  selectedSchedules: z.array(z.any()).optional().default([]),
 })
 
 // ---------------------------------------------------------------------------
@@ -245,94 +246,108 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // -- Build calendar URLs + ICS
-    // Prefer explicit start_time/end_time DB fields; fall back to parsing time_display
-    // (e.g. "4:00 PM - 7:00 PM") so events that only have time_display still get
-    // correct calendar times instead of UTC midnight.
-    let calStartTime: string | null = evtRow.start_time ?? null
-    let calEndTime:   string | null = evtRow.end_time   ?? null
-    if ((!calStartTime || !calEndTime) && evtRow.time_display) {
-      const tm = evtRow.time_display.match(
-        /^(\d{1,2}:\d{2}\s*[AP]M)\s*[-\u2013]\s*(\d{1,2}:\d{2}\s*[AP]M)/i
-      )
-      if (tm) {
-        if (!calStartTime) calStartTime = tm[1].trim()
-        if (!calEndTime)   calEndTime   = tm[2].trim()
-      }
+    // Save selected_schedules if present
+    if (data.selectedSchedules && data.selectedSchedules.length > 0) {
+      await supabase
+        .from('event_rsvps')
+        .update({ selected_schedules: data.selectedSchedules })
+        .eq('id', rsvpId as string)
     }
-    const eventDates = buildEventDates(evtRow.start_date, calStartTime, calEndTime)
-    const datePart   = evtRow.start_date.slice(0, 10)
 
-    // Date for email body — always Dublin timezone, derived from start_date
-    const formattedDate = new Date(`${datePart}T12:00:00Z`).toLocaleDateString('en-IE', {
-      timeZone: 'Europe/Dublin',
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-    })
-    // Time for email body — blank when not defined
-    const formattedTime: string = evtRow.time_display ?? ''
-
-    // Calendar start/end: timed Date objects when available; YYYY-MM-DD strings for all-day
-    const calStartVal: Date | string = eventDates?.startDate ?? datePart
-    const calEndVal:   Date | string = eventDates?.endDate   ?? (() => {
-      const d = new Date(`${datePart}T12:00:00Z`)
-      d.setUTCDate(d.getUTCDate() + 1)
-      return d.toISOString().slice(0, 10)
-    })()
-
-    const gcUrl = buildGoogleCalUrl({
-      title:    evtRow.title,
-      start:    calStartVal,
-      end:      calEndVal,
-      location: evtRow.location ?? '',
-      details:  `RSVP Reference: ${reference}`,
-    })
-    const olUrl = buildOutlookCalUrl({
-      title:    evtRow.title,
-      start:    calStartVal,
-      end:      calEndVal,
-      location: evtRow.location ?? '',
-      body:     `RSVP Reference: ${reference}`,
-    })
-    const icsContent = buildICS({
-      uid:         rsvpId as string,
-      title:       evtRow.title,
-      start:       calStartVal,
-      end:         calEndVal,
-      location:    evtRow.location ?? '',
-      description: `RSVP Reference: ${reference}`,
-    })
-
-    // -- Send confirmation email via SMTP
-    const emailParams = {
-      firstName,
-      lastName,
-      eventTitle:    evtRow.title,
-      eventDate:     formattedDate,
-      eventTime:     formattedTime,
-      eventLocation: evtRow.location ?? '',
-      referenceNumber: reference,
-      numAdults:     data.numAdults,
-      numChildren:   data.numChildren ?? 0,
-      googleCalUrl:  gcUrl,
-      outlookCalUrl: olUrl,
-    }
+    // Build slots list (either explicit selectedSchedules or default single event slot)
+    const slotsToNotify = (data.selectedSchedules && data.selectedSchedules.length > 0)
+      ? data.selectedSchedules
+      : [{
+          id: 'default',
+          title: evtRow.title,
+          date: evtRow.start_date.slice(0, 10),
+          startTime: evtRow.start_time ?? undefined,
+          endTime: evtRow.end_time ?? undefined,
+        }]
 
     if (isMailConfigured()) {
       try {
-        await sendMail({
-          from:    '"HAI Puja Seva" <puja@hindutemple.ie>',
-          to:      data.email,
-          subject: `Your RSVP Confirmation – ${evtRow.title} – Ref #${reference}`,
-          html:    buildEmailHtml(emailParams),
-          text:    buildEmailText(emailParams),
-          attachments: [
-            {
-              filename:    'event.ics',
-              content:     icsContent,
-              contentType: 'text/calendar; method=REQUEST',
-            },
-          ],
-        })
+        for (let i = 0; i < slotsToNotify.length; i++) {
+          const slot = slotsToNotify[i]
+          const slotDateStr = slot.date ?? evtRow.start_date.slice(0, 10)
+          const slotTitle = slot.title ? `${evtRow.title} – ${slot.title}` : evtRow.title
+          const slotStartTime = slot.startTime ?? evtRow.start_time ?? null
+          const slotEndTime   = slot.endTime   ?? evtRow.end_time   ?? null
+
+          const slotDates = buildEventDates(slotDateStr, slotStartTime, slotEndTime)
+          const formattedSlotDate = new Date(`${slotDateStr}T12:00:00Z`).toLocaleDateString('en-IE', {
+            timeZone: 'Europe/Dublin',
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          })
+          const formattedSlotTime = (slotStartTime && slotEndTime)
+            ? `${slotStartTime} – ${slotEndTime}`
+            : (slotStartTime ?? evtRow.time_display ?? '')
+
+          const calStartVal: Date | string = slotDates?.startDate ?? slotDateStr
+          const calEndVal:   Date | string = slotDates?.endDate   ?? (() => {
+            const d = new Date(`${slotDateStr}T12:00:00Z`)
+            d.setUTCDate(d.getUTCDate() + 1)
+            return d.toISOString().slice(0, 10)
+          })()
+
+          const slotUid = `${rsvpId}-${slot.id || i}`
+
+          const gcUrl = buildGoogleCalUrl({
+            title:    slotTitle,
+            start:    calStartVal,
+            end:      calEndVal,
+            location: evtRow.location ?? '',
+            details:  `RSVP Reference: ${reference} (${slot.title || 'Session'})`,
+          })
+          const olUrl = buildOutlookCalUrl({
+            title:    slotTitle,
+            start:    calStartVal,
+            end:      calEndVal,
+            location: evtRow.location ?? '',
+            body:     `RSVP Reference: ${reference} (${slot.title || 'Session'})`,
+          })
+          const icsContent = buildICS({
+            uid:         slotUid,
+            title:       slotTitle,
+            start:       calStartVal,
+            end:         calEndVal,
+            location:    evtRow.location ?? '',
+            description: `RSVP Reference: ${reference} (${slot.title || 'Session'})`,
+          })
+
+          const emailParams = {
+            firstName,
+            lastName,
+            eventTitle:    slotTitle,
+            eventDate:     formattedSlotDate,
+            eventTime:     formattedSlotTime,
+            eventLocation: evtRow.location ?? '',
+            referenceNumber: reference,
+            numAdults:     data.numAdults,
+            numChildren:   data.numChildren ?? 0,
+            googleCalUrl:  gcUrl,
+            outlookCalUrl: olUrl,
+          }
+
+          const slotSubject = slotsToNotify.length > 1
+            ? `Your RSVP Confirmation [Slot ${i + 1}/${slotsToNotify.length}: ${slot.title || 'Session'}] – ${evtRow.title} – Ref #${reference}`
+            : `Your RSVP Confirmation – ${evtRow.title} – Ref #${reference}`
+
+          await sendMail({
+            from:    '"HAI Puja Seva" <puja@hindutemple.ie>',
+            to:      data.email,
+            subject: slotSubject,
+            html:    buildEmailHtml(emailParams),
+            text:    buildEmailText(emailParams),
+            attachments: [
+              {
+                filename:    `event-slot-${i + 1}.ics`,
+                content:     icsContent,
+                contentType: 'text/calendar; method=REQUEST',
+              },
+            ],
+          })
+        }
 
         // Mark confirmation as sent
         await supabase
@@ -344,7 +359,7 @@ export const handler: Handler = async (event) => {
         console.error('Graph API send error:', emailErr)
       }
     } else {
-      console.log('[dev] Mail not configured — skipping email for ref', reference)
+      console.log('[dev] Mail not configured — skipping emails for ref', reference, 'slots count:', slotsToNotify.length)
     }
 
     return {

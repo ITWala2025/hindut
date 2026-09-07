@@ -519,6 +519,24 @@ export function RsvpsSection() {
                 <hr className="border-slate-100" />
                 <DetailRow label="Adults"       value={String(detail.num_adults)} />
                 <DetailRow label="Children"     value={String(detail.num_children)} />
+                {detail.selected_schedules && detail.selected_schedules.length > 0 && (
+                  <>
+                    <hr className="border-slate-100" />
+                    <DetailRow
+                      label="Reserved Slots"
+                      value={
+                        <div className="space-y-1 text-left">
+                          {detail.selected_schedules.map((s: any, idx: number) => (
+                            <div key={idx} className="bg-amber-50 border border-amber-200 rounded px-2 py-1 text-xs">
+                              <span className="font-semibold text-amber-900">{s.title || `Slot ${idx + 1}`}</span>
+                              {s.date && <span className="text-amber-700 ml-1">({s.date})</span>}
+                            </div>
+                          ))}
+                        </div>
+                      }
+                    />
+                  </>
+                )}
                 <hr className="border-slate-100" />
                 <DetailRow label="GDPR Consent" value={detail.consent_gdpr ? 'Yes' : 'No'} />
                 <DetailRow label="Email Sent"   value={
