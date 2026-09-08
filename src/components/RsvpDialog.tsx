@@ -131,9 +131,8 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
   // Schedule slot state for multi-slot selection
   const eventSchedules = event.schedules ?? []
   const hasSchedules = eventSchedules.length > 0
-  const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(() =>
-    new Set(hasSchedules ? eventSchedules.map((s) => s.id) : [])
-  )
+  const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set())
+  const [slotError, setSlotError] = useState(false)
 
   // Attendance conditions state
   const conditions = event.attendanceConditions
@@ -148,11 +147,11 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
   const servicesTotal = selectedServices.reduce((sum, s) => sum + s.amountEur, 0)
 
   const toggleSlot = (slotId: string) => {
+    setSlotError(false)
     setSelectedSlotIds((prev) => {
       const next = new Set(prev)
       if (next.has(slotId)) {
-        if (next.size > 1) next.delete(slotId)
-        else toast.info('Please select at least one time slot/session.')
+        next.delete(slotId)
       } else {
         next.add(slotId)
       }
@@ -193,7 +192,8 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
         reset()
         setStep('form')
         setSelectedServiceIds(new Set())
-        setSelectedSlotIds(new Set(hasSchedules ? eventSchedules.map((s) => s.id) : []))
+        setSelectedSlotIds(new Set())
+        setSlotError(false)
         setConditionsAck(false)
       }, 300)
     }
@@ -201,6 +201,12 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
   }
 
   const onSubmit = async (data: RsvpFormData) => {
+    if (hasSchedules && selectedSlotIds.size === 0) {
+      setSlotError(true)
+      toast.error('Please select at least one event day or time slot before proceeding.')
+      return
+    }
+
     if (requireConditionsAck && !conditionsAck) {
       toast.error('Please accept the event attendance conditions to proceed.')
       return
@@ -441,11 +447,18 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
 
                 {/* Multi-Slot Selection */}
                 {hasSchedules && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-3">
+                  <div
+                    className={cn(
+                      'rounded-xl border p-4 space-y-3 transition-colors',
+                      slotError && selectedSlotIds.size === 0
+                        ? 'border-red-400 bg-red-50/70'
+                        : 'border-amber-200 bg-amber-50/50',
+                    )}
+                  >
                     <div>
                       <p className="text-sm font-semibold text-amber-950 flex items-center gap-1.5">
                         <CalendarBlank size={16} className="text-amber-600" weight="bold" />
-                        Select Event Days & Time Slots
+                        Select Event Days & Time Slots <span className="text-red-500">*</span>
                       </p>
                       <p className="text-xs text-amber-800/80 mt-0.5">
                         Choose which days and sessions you plan to attend. You will receive separate calendar invites for each.
@@ -489,6 +502,9 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                         )
                       })}
                     </div>
+                    {slotError && selectedSlotIds.size === 0 && (
+                      <FieldError message="Please select at least one event day or time slot before proceeding." />
+                    )}
                   </div>
                 )}
 

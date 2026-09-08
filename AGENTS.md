@@ -33,7 +33,11 @@ All engineers and AI coding agents working on this codebase must adhere strictly
 ### 4. Security & Privacy
 - **DO** mask contact PII (email, phone) in admin views and use server-side `pgcrypto` encryption for storing sensitive contact info.
 - **DO** format dates and times explicitly using Ireland time (`Europe/Dublin` / `en-IE`).
-- **DO** update `MEMORY.md` whenever new features, API endpoints, or database structures are introduced.
+
+### 5. Documentation, Testing & Test Data Cleanup
+- **DO** keep both `MEMORY.md` and `Test.md` updated after **every** code change, feature addition, or schema update.
+- **DO** execute the relevant functional test suites from `Test.md` to verify feature correctness.
+- **DO** immediately delete and clean up all test data (test RSVPs, tickets, members, donations, test events) created during test execution.
 
 ---
 
@@ -48,12 +52,16 @@ All engineers and AI coding agents working on this codebase must adhere strictly
 - **NEVER** bypass Row Level Security (RLS) directly in frontend queries; use service role calls strictly within Netlify serverless functions.
 - **NEVER** break backward compatibility with existing single-day events or legacy RSVP data.
 
-### 3. UI & User Experience
+### 3. Production Database Safety & Test Cleanup Protocol
+- **NEVER** leave test data in the database after running tests. Because there is only 1 database (the Production database), all test records MUST be removed immediately after test runs.
+- **NEVER** delete, modify, or truncate original production data during test runs. All test execution cleanup queries MUST strictly target test record IDs/emails created during the test run.
+
+### 4. UI & User Experience
 - **NEVER** replace established shadcn/ui components or custom CSS tokens in `src/styles/theme.css` with arbitrary ad-hoc inline styles.
 - **NEVER** send a single merged calendar invite when an attendee reserves multiple distinct time slots (each slot must have its own calendar invite).
 - **NEVER** leave non-functional placeholder buttons or broken links on public pages.
 
-### 4. Project Documentation
+### 5. Project Documentation
 - **NEVER** treat specification docs in `Plan/` as ground truth if they contradict `MEMORY.md` or actual workspace source code. `Plan/` contains initial designs for a Next.js app that was replaced by Vite + Netlify.
 
 ---
@@ -64,6 +72,7 @@ All engineers and AI coding agents working on this codebase must adhere strictly
 |---------|-----------|
 | **Project Memory** | [`MEMORY.md`](file:///Users/prashant/Documents/Application%20directory/HinduT/MEMORY.md) |
 | **Agent Guidelines** | [`AGENTS.md`](file:///Users/prashant/Documents/Application%20directory/HinduT/AGENTS.md) |
+| **Test Suites & Protocol** | [`Test.md`](file:///Users/prashant/Documents/Application%20directory/HinduT/Test.md) |
 | **Event Types** | [`src/data/events.ts`](file:///Users/prashant/Documents/Application%20directory/HinduT/src/data/events.ts) |
 | **Event Data Hook** | [`src/hooks/useEvents.ts`](file:///Users/prashant/Documents/Application%20directory/HinduT/src/hooks/useEvents.ts) |
 | **RSVP Data Hook** | [`src/hooks/useRsvps.ts`](file:///Users/prashant/Documents/Application%20directory/HinduT/src/hooks/useRsvps.ts) |

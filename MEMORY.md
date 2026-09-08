@@ -280,9 +280,10 @@ netlify dev          # Starts frontend + functions together
 - **Media/gallery:** Images stored in Supabase Storage. Public read via anonymous grant (migration 023). Upload scripts in `scripts/`.
 - **Multi-day & Multi-time Events:** `public.events` contains `is_multi_day` (boolean), `schedules` (JSONB array of `EventSchedule`), `end_date` (timestamptz), and `attendance_conditions` (JSONB object of `EventAttendanceConditions`).
 - **Attendance Conditions & Rules:** Admin-configured event guidelines (Traditional Attire, Footwear Policy, Punctuality, Vegetarian Prasadam, Supervision, Mobile Policy) with optional mandatory attendee acknowledgment checkbox.
-- **Multi-Slot Selection & Unified Payment Checkout:** Attendees can select multiple days and distinct time slots in a single RSVP (`RsvpDialog.tsx`) or paid Ticket Booking (`TicketBookingDialog.tsx`) flow. Paid events aggregate all selected time slots into a single unified payment transaction at checkout via Stripe.
+- **Multi-Slot Selection & Mandatory Enforcement:** In `RsvpDialog.tsx` and `TicketBookingDialog.tsx`, multi-day/multi-slot event days and slots are **unselected by default** (`new Set()`). Users are required to select at least 1 slot before proceeding, with submission blocking and error highlighting when 0 slots are selected. Paid events aggregate selected slots into a single unified payment transaction at checkout via Stripe (`total = baseSingleSlotTotal * selectedSlotIds.size`).
 - **Automated Per-Slot Communications:** `netlify/functions/rsvp-submit.ts` generates and dispatches **separate confirmation emails** and **individual `.ics` calendar files** for each reserved slot post-purchase/RSVP.
 - **RSVP Selected Schedules:** `public.event_rsvps` contains `selected_schedules` (JSONB). Displayed in `/admin/rsvps` detail sheet and included in CSV exports.
+- **Testing & Production Database Cleanup Policy:** Functional test suites are maintained in [`Test.md`](file:///Users/prashant/Documents/Application%20directory/HinduT/Test.md). Because the system relies on a single shared Production database, all test runs must immediately clean up and delete test records (RSVPs, ticket bookings, members, donations, test events) post-execution without altering original production data.
 
 ---
 
@@ -305,4 +306,4 @@ The `Plan/` directory contains specification documents. They are useful for inte
 
 ---
 
-*Last updated: 2026-09-07*
+*Last updated: 2026-09-08*
