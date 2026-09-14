@@ -26,6 +26,7 @@
 6. [Suite 6: Admin Portal, Event Management & RBAC](#suite-6-admin-portal-event-management--rbac)
 7. [Suite 7: Role Activation & Permission Management](#suite-7-role-activation--permission-management)
 8. [Suite 8: Analytics Event Tracking & Aggregation](#suite-8-analytics-event-tracking--aggregation)
+9. [Suite 9: Dedicated /donate Route, Modal Trigger, & QR Code Generation](#suite-9-dedicated-donate-route-modal-trigger--qr-code-generation)
 
 ---
 
@@ -275,6 +276,43 @@ Verify page view and CTA click tracking, sanitisation of tracking payloads, and 
 ```sql
 DELETE FROM public.analytics_events WHERE event_category = 'test_execution';
 ```
+
+---
+
+## Suite 9: Dedicated /donate Route, Modal Trigger, & QR Code Generation
+
+### Objective
+Verify that navigating directly to `/donate` immediately triggers the `DonationDialog` modal, that closing the modal displays the rich `DonatePage` with functional preset chips, that live QR codes generate and download correctly, and that preset query parameters (`/donate?amount=108`) preselect donation amounts.
+
+### Test Cases
+
+#### 9.1 Direct Route Navigation & Modal Auto-Open
+- **Steps:**
+  1. Navigate directly to `/donate`.
+  2. **Verify:** `DonationDialog` modal ("Support Our Temple") appears automatically without needing user clicks.
+  3. Click close button ('X') on the modal.
+  4. **Verify:** Modal dismisses cleanly and user is presented with the `DonatePage` view (showing hero, preset donation cards, Irish tax relief info, and QR code card).
+
+#### 9.2 Amount Preset via Query Parameters
+- **Steps:**
+  1. Navigate to `/donate?amount=108`.
+  2. **Verify:** `DonationDialog` modal opens automatically with the €108 preset button highlighted and pre-selected.
+  3. Advance to details step and verify the amount displays €108.
+
+#### 9.3 Preset Buttons & Re-Opening Modal
+- **Steps:**
+  1. On `/donate` with dialog closed, click any preset chip (e.g., €51 "Puja Seva").
+  2. **Verify:** `DonationDialog` opens immediately with €51 selected.
+  3. Close dialog, click "Donate Now".
+  4. **Verify:** `DonationDialog` opens smoothly.
+
+#### 9.4 QR Code Generation & Download
+- **Steps:**
+  1. On `/donate`, inspect the "Scan to Donate" QR Code card.
+  2. Switch between "General" and "€108" preset tabs.
+  3. **Verify:** QR image updates to reflect the active URL.
+  4. Click "Copy Route Link" and verify clipboard notification.
+  5. Click "Download QR" and verify image file downloads (`HAI-Donation-QR-*.png`).
 
 ---
 

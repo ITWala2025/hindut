@@ -108,6 +108,7 @@ HinduT/
 | `/services` | `ServicesPage` | Temple services by category |
 | `/services/:id` | `ServiceDetailPage` | Single service detail |
 | `/membership` | `MembershipPage` | Membership plans + Stripe checkout |
+| `/donate` | `DonatePage` | Direct donation access + Donation modal trigger + QR Code generator |
 | `/causes` | `CausesPage` | Special causes / fundraising |
 | `/causes/:id` | `CauseDetailPage` | Donation dialog |
 | `/news` | `NewsPage` | News & updates |

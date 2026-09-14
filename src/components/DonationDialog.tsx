@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Dialog, DialogPortal, DialogOverlay, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -70,9 +70,10 @@ function BlessingText() {
 interface DonationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialAmount?: number | null
 }
 
-export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
+export function DonationDialog({ open, onOpenChange, initialAmount }: DonationDialogProps) {
   const [step, setStep] = useState<'amount' | 'details' | 'payment' | 'success'>('amount')
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null)
   const [customAmount, setCustomAmount] = useState('')
@@ -82,6 +83,18 @@ export function DonationDialog({ open, onOpenChange }: DonationDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false)
 
   const presetAmounts = [11, 21, 51, 108, 251, 501]
+
+  useEffect(() => {
+    if (open && initialAmount && initialAmount > 0) {
+      if (presetAmounts.includes(initialAmount)) {
+        setSelectedAmount(initialAmount)
+        setCustomAmount('')
+      } else {
+        setSelectedAmount(null)
+        setCustomAmount(String(initialAmount))
+      }
+    }
+  }, [open, initialAmount])
 
   const getDonationAmount = () => selectedAmount || parseFloat(customAmount) || 0
 

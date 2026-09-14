@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Header } from '@/components/Header'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
 import { Footer } from '@/components/Footer'
@@ -25,6 +25,7 @@ const ActivateRolePage     = lazy(() => import('@/components/pages/ActivateRoleP
 const EventDetailPage      = lazy(() => import('@/components/pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })))
 const NewsPage             = lazy(() => import('@/components/pages/NewsPage').then(m => ({ default: m.NewsPage })))
 const NewsDetailPage       = lazy(() => import('@/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
+const DonatePage             = lazy(() => import('@/components/pages/DonatePage').then(m => ({ default: m.DonatePage })))
 import { Toaster } from '@/components/ui/sonner'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
@@ -77,16 +78,25 @@ function MaintenanceBanner() {
 
 function AppShell() {
   const [isDonationOpen, setIsDonationOpen] = useState(false)
+  const [donationInitialAmount, setDonationInitialAmount] = useState<number | null>(null)
   const settings = useSiteSettings()
-  const openDonation = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const openDonation = (amount?: number) => {
     if (!settings.featureOnlineDonations) {
       toast.error('Online donations are temporarily unavailable. Please contact us directly.')
       return
     }
+    if (amount && amount > 0) {
+      setDonationInitialAmount(amount)
+    }
     setIsDonationOpen(true)
+    if (location.pathname !== '/donate') {
+      navigate(amount ? `/donate?amount=${amount}` : '/donate')
+    }
   }
   const hasActiveCauses = useHasActiveCauses()
-  const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
 
   if (isAdminRoute) {
@@ -112,6 +122,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<HomePage onDonateClick={openDonation} />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/donate" element={<Suspense fallback={<PageLoader />}><DonatePage onDonateClick={openDonation} /></Suspense>} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/services/:slug" element={<Suspense fallback={<PageLoader />}><ServiceDetailPage /></Suspense>} />
           <Route path="/events" element={settings.featurePublicEvents ? <EventsPage /> : <Navigate to="/" replace />} />
@@ -136,7 +147,11 @@ function AppShell() {
       </main>
       <Footer />
       <WhatsAppButton />
-      <DonationDialog open={isDonationOpen && settings.featureOnlineDonations} onOpenChange={setIsDonationOpen} />
+      <DonationDialog
+        open={isDonationOpen && settings.featureOnlineDonations}
+        onOpenChange={setIsDonationOpen}
+        initialAmount={donationInitialAmount}
+      />
       <CookieConsentBanner />
       <Toaster />
     </div>
