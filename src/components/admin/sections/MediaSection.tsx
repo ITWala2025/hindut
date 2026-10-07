@@ -11,6 +11,8 @@ import {
   LinkSimple,
   ArrowSquareOut,
   ImagesSquare,
+  Sparkle,
+  X,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +48,7 @@ import { type MediaItem } from '@/lib/types'
 import { useMedia } from '@/hooks/useMedia'
 import { useAuth } from '@/lib/auth'
 import { KpiCard, SectionCard, EmptyState } from '@/components/admin/adminUi'
+import { MediaPickerDialog } from '@/components/admin/MediaPickerDialog'
 
 type FolderFilter = 'all' | MediaItem['folder']
 
@@ -68,6 +71,7 @@ export function MediaSection() {
   const [folder, setFolder] = useState<FolderFilter>('all')
   const [search, setSearch] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const coverFileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Upload dialog
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -81,7 +85,7 @@ export function MediaSection() {
 
   // Edit dialog
   const [editItem, setEditItem] = useState<MediaItem | null>(null)
-  const [editForm, setEditForm] = useState({ title: '', alt: '' })
+  const [editForm, setEditForm] = useState({ title: '', alt: '', url: '', thumbnailUrl: '' })
   const [saving, setSaving] = useState(false)
 
   // External link dialog
@@ -105,10 +109,16 @@ export function MediaSection() {
   const [albumSaving, setAlbumSaving] = useState(false)
   const [albumFetching, setAlbumFetching] = useState(false)
 
-  // Auto-fetch OG image when the album URL is pasted
+  // Media picker dialog for choosing album featured/cover image
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerTarget, setPickerTarget] = useState<'add-album' | 'edit-album' | null>(null)
+  const [pickerSearch, setPickerSearch] = useState('')
+  const [coverUploading, setCoverUploading] = useState(false)
+
+  // Auto-fetch OG image when the album URL is entered in Add Album dialog
   useEffect(() => {
     const url = albumForm.url.trim()
-    if (!url || !albumOpen) return
+    if (!url || !albumOpen || albumForm.thumbnailUrl) return
     const t = setTimeout(async () => {
       setAlbumFetching(true)
       try {
@@ -118,14 +128,13 @@ export function MediaSection() {
           if (thumbnail) setAlbumForm((f) => ({ ...f, thumbnailUrl: thumbnail }))
         }
       } catch {
-        // silent — user can still proceed without a thumbnail
+        // silent — user can still proceed or pick custom image
       } finally {
         setAlbumFetching(false)
       }
     }, 800)
     return () => clearTimeout(t)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [albumForm.url, albumOpen])
+  }, [albumForm.url, albumOpen, albumForm.thumbnailUrl])
 
   // Pagination
   const PAGE_SIZE = 20
@@ -194,15 +203,27 @@ export function MediaSection() {
 
   const openEdit = (m: MediaItem) => {
     setEditItem(m)
-    setEditForm({ title: m.title, alt: m.alt })
+    setEditForm({
+      title: m.title,
+      alt: m.alt,
+      url: m.url,
+      thumbnailUrl: m.thumbnailUrl || '',
+    })
   }
 
   const handleEditSave = async () => {
     if (!editItem) return
     setSaving(true)
     try {
-      await update(editItem.id, { title: editForm.title, alt: editForm.alt })
-      toast.success('Image details updated.')
+      await update(editItem.id, {
+        title: editForm.title,
+        alt: editForm.alt,
+        ...(editItem.mediaType === 'album' && {
+          url: editForm.url,
+          thumbnailUrl: editForm.thumbnailUrl,
+        }),
+      })
+      toast.success(editItem.mediaType === 'album' ? 'Album details & featured image updated.' : 'Image details updated.')
       setEditItem(null)
     } catch (err) {
       toast.error((err as Error).message)
@@ -230,7 +251,7 @@ export function MediaSection() {
     setAlbumSaving(true)
     try {
       await addAlbum(albumForm.url.trim(), albumForm.folder, albumForm.title.trim(), albumForm.thumbnailUrl.trim() || undefined)
-      toast.success('Photo album added.')
+      toast.success('Photo album added with featured image.')
       setAlbumOpen(false)
       setAlbumForm({ url: '', title: '', thumbnailUrl: '', folder: 'general' })
     } catch (err) {
@@ -260,11 +281,82 @@ export function MediaSection() {
     }
   }
 
+  // Cover / Featured Image handlers
+  const openCoverPicker = (target: 'add-album' | 'edit-album') => {
+    setPickerTarget(target)
+    setPickerSearch('')
+    setPickerOpen(true)
+  }
+
+  const handleCoverSelected = (url: string) => {
+    if (pickerTarget === 'add-album') {
+      setAlbumForm((f) => ({ ...f, thumbnailUrl: url }))
+    } else if (pickerTarget === 'edit-album') {
+      setEditForm((f) => ({ ...f, thumbnailUrl: url }))
+    }
+    setPickerOpen(false)
+    toast.success('Featured cover image set.')
+  }
+
+  const handleCoverFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !pickerTarget) return
+    setCoverUploading(true)
+    try {
+      const item = await upload(file, 'events', `Cover image for ${file.name}`, file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '))
+      if (pickerTarget === 'add-album') {
+        setAlbumForm((f) => ({ ...f, thumbnailUrl: item.url }))
+      } else if (pickerTarget === 'edit-album') {
+        setEditForm((f) => ({ ...f, thumbnailUrl: item.url }))
+      }
+      toast.success('Cover image uploaded and set as featured image.')
+    } catch (err) {
+      toast.error((err as Error).message)
+    } finally {
+      setCoverUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const handleRefetchOgImage = async (url: string, target: 'add-album' | 'edit-album') => {
+    if (!url.trim()) {
+      toast.error('Please enter an album URL first.')
+      return
+    }
+    setAlbumFetching(true)
+    try {
+      const res = await fetch(`/.netlify/functions/fetch-og-image?url=${encodeURIComponent(url.trim())}`)
+      if (res.status === 200) {
+        const { thumbnail } = await res.json() as { thumbnail: string }
+        if (thumbnail) {
+          if (target === 'add-album') setAlbumForm((f) => ({ ...f, thumbnailUrl: thumbnail }))
+          else setEditForm((f) => ({ ...f, thumbnailUrl: thumbnail }))
+          toast.success('Featured cover image auto-fetched.')
+        } else {
+          toast.error('Could not auto-detect cover image from album URL. You can upload or pick an image manually.')
+        }
+      }
+    } catch {
+      toast.error('Failed to auto-fetch cover image.')
+    } finally {
+      setAlbumFetching(false)
+    }
+  }
+
   if (loading) return <div className="p-8 text-center text-muted-foreground">Loading media...</div>
   if (error) return <div className="p-8 text-center text-red-600">Error loading media: {error}</div>
 
   return (
     <div className="space-y-6">
+      {/* Hidden file input for cover image upload */}
+      <input
+        ref={coverFileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleCoverFileUpload}
+        className="hidden"
+      />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Images"
@@ -294,7 +386,7 @@ export function MediaSection() {
 
       <SectionCard
         title="Media library"
-        description="Upload and manage images used on the public site and in events."
+        description="Upload and manage images and photo albums used on the public site and in events."
         actions={
           canCreate && (
             <>
@@ -371,46 +463,60 @@ export function MediaSection() {
               {paginated.map((m) => (
               <div
                 key={m.id}
-                className="group rounded-xl border border-slate-200 overflow-hidden bg-white hover:shadow-md transition-shadow"
+                className="group rounded-xl border border-slate-200 overflow-hidden bg-white hover:shadow-md transition-shadow relative"
               >
                 {m.mediaType === 'album' ? (
                   /* ── Album card ── */
-                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="block">
-                    <div className="aspect-square relative overflow-hidden bg-linear-to-br from-indigo-500 to-purple-600">
-                      {m.thumbnailUrl && (
-                        <img
-                          src={m.thumbnailUrl}
-                          alt={m.title}
-                          loading="lazy"
-                          className="absolute inset-0 h-full w-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
-                      )}
-                      {/* dark scrim so title + badges are always readable */}
-                      <div className="absolute inset-0 bg-black/30" />
-                      {!m.thumbnailUrl && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                          <ImagesSquare size={48} weight="duotone" className="text-white/90" />
+                  <div className="relative">
+                    <a href={m.url} target="_blank" rel="noopener noreferrer" className="block">
+                      <div className="aspect-square relative overflow-hidden bg-linear-to-br from-indigo-500 to-purple-600">
+                        {m.thumbnailUrl ? (
+                          <img
+                            src={m.thumbnailUrl}
+                            alt={m.title}
+                            loading="lazy"
+                            className="absolute inset-0 h-full w-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/90">
+                            <ImagesSquare size={48} weight="duotone" />
+                            <span className="text-[11px] font-medium bg-black/40 px-2 py-0.5 rounded-full">No featured image</span>
+                          </div>
+                        )}
+                        {/* dark scrim so title + badges are always readable */}
+                        <div className="absolute inset-0 bg-black/30" />
+                        <Badge
+                          variant="outline"
+                          className="absolute top-2 right-2 bg-black/50 text-white border-white/30 text-[10px] flex items-center gap-1 z-10"
+                        >
+                          <ArrowSquareOut size={10} />
+                          Album
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="absolute top-2 left-2 capitalize bg-black/50 text-white border-white/30 text-[10px] z-10"
+                        >
+                          {m.folder}
+                        </Badge>
+                        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2 pt-6 pb-2 z-10">
+                          <span className="text-white text-xs font-semibold line-clamp-2 leading-tight">{m.title}</span>
                         </div>
-                      )}
-                      <Badge
-                        variant="outline"
-                        className="absolute top-2 right-2 bg-black/50 text-white border-white/30 text-[10px] flex items-center gap-1 z-10"
-                      >
-                        <ArrowSquareOut size={10} />
-                        Album
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className="absolute top-2 left-2 capitalize bg-black/50 text-white border-white/30 text-[10px] z-10"
-                      >
-                        {m.folder}
-                      </Badge>
-                      <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2 pt-6 pb-2 z-10">
-                        <span className="text-white text-xs font-semibold line-clamp-2 leading-tight">{m.title}</span>
                       </div>
-                    </div>
-                  </a>
+                    </a>
+                    {/* Quick action button to set/change featured image */}
+                    {canUpdate && (
+                      <button
+                        type="button"
+                        onClick={() => openEdit(m)}
+                        className="absolute bottom-2 right-2 z-20 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium px-2 py-1 rounded-md shadow-xs flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity"
+                        title="Set or change featured cover image for this album"
+                      >
+                        <ImageIcon size={12} weight="bold" />
+                        {m.thumbnailUrl ? 'Edit cover' : 'Set cover'}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   /* ── Image card thumbnail ── */
                   <div className="aspect-square bg-slate-100 overflow-hidden relative">
@@ -490,7 +596,7 @@ export function MediaSection() {
                           size="sm"
                           className="h-7 text-slate-600 hover:bg-slate-100"
                           onClick={() => openEdit(m)}
-                          title="Edit title / alt"
+                          title={m.mediaType === 'album' ? 'Edit album & featured image' : 'Edit title / alt'}
                           disabled={!canUpdate}
                         >
                           <PencilSimple size={12} />
@@ -744,37 +850,163 @@ export function MediaSection() {
 
       {/* Edit dialog */}
       <Dialog open={!!editItem} onOpenChange={(open) => { if (!open) setEditItem(null) }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit image details</DialogTitle>
-            <DialogDescription>Update the title and alt text for this image.</DialogDescription>
+            <DialogTitle>
+              {editItem?.mediaType === 'album' ? 'Edit Photo Album & Featured Image' : 'Edit image details'}
+            </DialogTitle>
+            <DialogDescription>
+              {editItem?.mediaType === 'album'
+                ? 'Update the album title, link, and choose any image from the album or media library as the featured cover image.'
+                : 'Update the title and alt text for this image.'}
+            </DialogDescription>
           </DialogHeader>
           {editItem && (
             <div className="space-y-4">
-              <img
-                src={editItem.url}
-                alt={editItem.alt}
-                className="w-full max-h-40 object-contain rounded-lg border border-slate-200"
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-title">Title</Label>
-                <Input
-                  id="edit-title"
-                  value={editForm.title}
-                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-alt">Alt text</Label>
-                <Input
-                  id="edit-alt"
-                  value={editForm.alt}
-                  onChange={(e) => setEditForm((f) => ({ ...f, alt: e.target.value }))}
-                />
-              </div>
+              {editItem.mediaType === 'album' ? (
+                <>
+                  {/* Album Title */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-album-title">Album Title <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="edit-album-title"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                      placeholder="e.g. Diwali Celebrations 2025"
+                    />
+                  </div>
+
+                  {/* Album Link URL */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-album-url">Album Link URL <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="edit-album-url"
+                      type="url"
+                      value={editForm.url}
+                      onChange={(e) => setEditForm((f) => ({ ...f, url: e.target.value }))}
+                      placeholder="https://photos.app.goo.gl/..."
+                    />
+                  </div>
+
+                  {/* Featured / Cover Image Section */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-semibold text-slate-900 flex items-center gap-1.5">
+                        <ImageIcon size={16} className="text-indigo-600" />
+                        Featured Image (Cover Image)
+                      </Label>
+                      {editForm.thumbnailUrl && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[11px] text-red-600 hover:bg-red-50"
+                          onClick={() => setEditForm((f) => ({ ...f, thumbnailUrl: '' }))}
+                        >
+                          <Trash size={12} className="mr-1" /> Clear cover
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Preview box */}
+                    <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center relative aspect-video">
+                      {editForm.thumbnailUrl ? (
+                        <img
+                          src={editForm.thumbnailUrl}
+                          alt="Featured cover preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            toast.error('Unable to load preview image URL.')
+                          }}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-1 p-4 text-center text-muted-foreground">
+                          <ImagesSquare size={36} weight="duotone" className="text-slate-400" />
+                          <span className="text-xs font-medium">No featured image selected yet</span>
+                          <span className="text-[11px] text-slate-400">Choose an image below or paste an image URL</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Direct URL Input */}
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-cover-url" className="text-xs text-muted-foreground">Featured Image URL</Label>
+                      <Input
+                        id="edit-cover-url"
+                        type="url"
+                        value={editForm.thumbnailUrl}
+                        onChange={(e) => setEditForm((f) => ({ ...f, thumbnailUrl: e.target.value }))}
+                        placeholder="https://example.com/cover-photo.jpg"
+                      />
+                    </div>
+
+                    {/* Action buttons to set cover image */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                        onClick={() => openCoverPicker('edit-album')}
+                      >
+                        <ImageIcon size={14} className="mr-1.5" />
+                        Pick from Media Library
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        disabled={coverUploading}
+                        onClick={() => {
+                          setPickerTarget('edit-album')
+                          coverFileInputRef.current?.click()
+                        }}
+                      >
+                        <UploadSimple size={14} className="mr-1.5" />
+                        {coverUploading ? 'Uploading...' : 'Upload Cover Image'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-slate-600"
+                        disabled={albumFetching}
+                        onClick={() => handleRefetchOgImage(editForm.url, 'edit-album')}
+                      >
+                        <Sparkle size={14} className="mr-1.5 text-amber-500" />
+                        Auto-detect Cover
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img
+                    src={editItem.url}
+                    alt={editItem.alt}
+                    className="w-full max-h-40 object-contain rounded-lg border border-slate-200"
+                    onError={(e) => {
+                      ;(e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-title">Title</Label>
+                    <Input
+                      id="edit-title"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-alt">Alt text</Label>
+                    <Input
+                      id="edit-alt"
+                      value={editForm.alt}
+                      onChange={(e) => setEditForm((f) => ({ ...f, alt: e.target.value }))}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -782,7 +1014,7 @@ export function MediaSection() {
             <Button
               disabled={saving || !editForm.title.trim()}
               onClick={handleEditSave}
-              className="bg-orange-600 text-white hover:bg-orange-700"
+              className="bg-indigo-600 text-white hover:bg-indigo-700"
             >
               {saving ? 'Saving...' : 'Save changes'}
             </Button>
@@ -794,7 +1026,7 @@ export function MediaSection() {
       <AlertDialog open={!!deleteItem} onOpenChange={(open) => { if (!open) setDeleteItem(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete image?</AlertDialogTitle>
+            <AlertDialogTitle>Delete media item?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete{' '}
               <span className="font-semibold">{deleteItem?.title || deleteItem?.filename}</span>{' '}
@@ -815,14 +1047,14 @@ export function MediaSection() {
 
       {/* Add photo album dialog */}
       <Dialog open={albumOpen} onOpenChange={(open) => { if (!open) setAlbumOpen(false) }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ImagesSquare size={20} className="text-indigo-600" weight="duotone" />
               Add photo album
             </DialogTitle>
             <DialogDescription>
-              Paste a Google Photos, Flickr, or any other shared album URL. It will be stored as a link — not downloaded.
+              Paste a Google Photos, Flickr, or shared album URL. Choose or auto-detect a featured cover image to represent this album across your website.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -845,21 +1077,101 @@ export function MediaSection() {
                 placeholder="e.g. Diwali Celebrations 2025"
               />
             </div>
-            {/* Thumbnail preview — auto-fetched from og:image */}
-            <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center" style={{ minHeight: '7rem' }}>
-              {albumFetching ? (
-                <span className="text-xs text-muted-foreground animate-pulse">Fetching cover image…</span>
-              ) : albumForm.thumbnailUrl ? (
-                <img
-                  src={albumForm.thumbnailUrl}
-                  alt="cover preview"
-                  className="w-full max-h-36 object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+
+            {/* Featured Cover Image Section */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <Label className="font-semibold text-slate-900 flex items-center gap-1.5">
+                  <ImageIcon size={16} className="text-indigo-600" />
+                  Featured Cover Image
+                </Label>
+                {albumForm.thumbnailUrl && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] text-red-600 hover:bg-red-50"
+                    onClick={() => setAlbumForm((f) => ({ ...f, thumbnailUrl: '' }))}
+                  >
+                    <Trash size={12} className="mr-1" /> Clear cover
+                  </Button>
+                )}
+              </div>
+
+              {/* Thumbnail preview */}
+              <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center relative aspect-video">
+                {albumFetching ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                    <Sparkle size={16} className="text-amber-500 animate-spin" />
+                    Auto-detecting cover image from album URL…
+                  </div>
+                ) : albumForm.thumbnailUrl ? (
+                  <img
+                    src={albumForm.thumbnailUrl}
+                    alt="cover preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-1 p-4 text-center text-muted-foreground">
+                    <ImagesSquare size={36} weight="duotone" className="text-slate-400" />
+                    <span className="text-xs font-medium">Cover image preview will appear here</span>
+                    <span className="text-[11px] text-slate-400">Auto-detects from URL or choose manually below</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Direct Cover Image URL Input */}
+              <div className="space-y-1">
+                <Label htmlFor="album-cover-url" className="text-xs text-muted-foreground">Featured Image URL</Label>
+                <Input
+                  id="album-cover-url"
+                  type="url"
+                  value={albumForm.thumbnailUrl}
+                  onChange={(e) => setAlbumForm((f) => ({ ...f, thumbnailUrl: e.target.value }))}
+                  placeholder="https://example.com/album-cover.jpg"
                 />
-              ) : (
-                <span className="text-xs text-muted-foreground">Cover image will appear here after URL is entered</span>
-              )}
+              </div>
+
+              {/* Buttons to set cover image */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                  onClick={() => openCoverPicker('add-album')}
+                >
+                  <ImageIcon size={14} className="mr-1.5" />
+                  Pick from Media Library
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  disabled={coverUploading}
+                  onClick={() => {
+                    setPickerTarget('add-album')
+                    coverFileInputRef.current?.click()
+                  }}
+                >
+                  <UploadSimple size={14} className="mr-1.5" />
+                  {coverUploading ? 'Uploading...' : 'Upload Cover Image'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-slate-600"
+                  disabled={albumFetching}
+                  onClick={() => handleRefetchOgImage(albumForm.url, 'add-album')}
+                >
+                  <Sparkle size={14} className="mr-1.5 text-amber-500" />
+                  Re-fetch Cover
+                </Button>
+              </div>
             </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="album-folder">Folder</Label>
               <Select
@@ -882,13 +1194,30 @@ export function MediaSection() {
             <Button
               disabled={albumSaving || !albumForm.url.trim() || !albumForm.title.trim()}
               onClick={handleAlbumConfirm}
-              className="bg-indigo-600 text-white hover:bg-indigo-700"
+              className="bg-indigo-600 text-white hover:bg-indigo-700 font-semibold"
             >
-              {albumSaving ? 'Adding...' : 'Add album'}
+              {albumSaving ? 'Adding...' : 'Add photo album'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Media Picker Dialog for selecting an image from Media Library as featured image */}
+      <MediaPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        selectedUrl={pickerTarget === 'add-album' ? albumForm.thumbnailUrl : editForm.thumbnailUrl}
+        onSelect={handleCoverSelected}
+        onRemove={() => {
+          if (pickerTarget === 'add-album') setAlbumForm((f) => ({ ...f, thumbnailUrl: '' }))
+          else if (pickerTarget === 'edit-album') setEditForm((f) => ({ ...f, thumbnailUrl: '' }))
+          setPickerOpen(false)
+        }}
+        description="Select an image from your Media Library to use as the featured cover image for this album."
+        search={pickerSearch}
+        onSearchChange={setPickerSearch}
+        mediaTypeFilter="image"
+      />
     </div>
   )
 }

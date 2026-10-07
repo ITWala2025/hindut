@@ -316,6 +316,44 @@ Verify that navigating directly to `/donate` immediately triggers the `DonationD
 
 ---
 
+20. 10. [Suite 10: Media Library & Photo Album Featured Cover Image Management](#suite-10-media-library--photo-album-featured-cover-image-management)
+
+---
+
+## Suite 10: Media Library & Photo Album Featured Cover Image Management
+
+### Objective
+Verify that admins can add photo albums, set or update featured cover images (`thumbnail_url`) via URL input, pick an image from the Media Library using `MediaPickerDialog`, upload a new cover image file, or auto-fetch OG cover images.
+
+### Test Cases
+
+#### 10.1 Add Photo Album with Custom / Picked Featured Image
+- **Steps:**
+  1. Open `/admin` -> Media section.
+  2. Click "Add photo album".
+  3. Enter Album URL: `https://photos.app.goo.gl/testalbum123`, Album Title: `Test Album 2026`.
+  4. Click "Pick from Media Library" -> Choose an existing media image (or enter a custom Cover Image URL).
+  5. Click "Add photo album".
+- **Expected Result:**
+  - Album is created in `public.media` with `media_type = 'album'` and `thumbnail_url` populated with the selected cover image.
+  - Album card displays the selected featured cover image in the admin grid and public photo gallery.
+
+#### 10.2 Edit Album Details & Update Featured Cover Image
+- **Steps:**
+  1. On any album card in `/admin` Media Library, click "Edit cover" or pencil icon.
+  2. Modify album title / link, and choose/upload a new featured cover image.
+  3. Click "Save changes".
+- **Expected Result:**
+  - `useMedia.update` patches `thumbnail_url`, `path`, and `title` in `public.media`.
+  - Grid card updates immediately with the new cover preview.
+
+### Cleanup Commands (Database)
+```sql
+DELETE FROM public.media WHERE title = 'Test Album 2026' OR path = 'https://photos.app.goo.gl/testalbum123';
+```
+
+---
+
 ## 🛠️ Execution Checklist for Engineers & AI Agents
 
 Before declaring any feature complete:

@@ -23,6 +23,8 @@ interface MediaPickerDialogProps {
   description?: string
   search: string
   onSearchChange: (q: string) => void
+  /** Filter items by media type (defaults to 'image') */
+  mediaTypeFilter?: 'image' | 'album' | 'all'
 }
 
 /**
@@ -38,19 +40,21 @@ export function MediaPickerDialog({
   description = 'Click an image to select it.',
   search,
   onSearchChange,
+  mediaTypeFilter = 'image',
 }: MediaPickerDialogProps) {
   const { media } = useMedia()
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return q
-      ? media.filter(
-          (m) =>
-            m.title.toLowerCase().includes(q) ||
-            m.filename.toLowerCase().includes(q),
-        )
-      : media
-  }, [media, search])
+    return media.filter((m) => {
+      if (mediaTypeFilter !== 'all' && m.mediaType !== mediaTypeFilter) return false
+      if (!q) return true
+      return (
+        m.title.toLowerCase().includes(q) ||
+        m.filename.toLowerCase().includes(q)
+      )
+    })
+  }, [media, search, mediaTypeFilter])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

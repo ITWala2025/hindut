@@ -122,12 +122,14 @@ export function useMedia() {
   }, [media])
 
   const update = useCallback(
-    async (id: string, patch: { title?: string; alt?: string }): Promise<void> => {
+    async (id: string, patch: { title?: string; alt?: string; thumbnailUrl?: string; url?: string }): Promise<void> => {
       const { error: err } = await supabase
         .from('media')
         .update({
           ...(patch.title !== undefined && { title: patch.title }),
           ...(patch.alt !== undefined && { alt_text: patch.alt }),
+          ...(patch.thumbnailUrl !== undefined && { thumbnail_url: patch.thumbnailUrl }),
+          ...(patch.url !== undefined && { path: patch.url }),
         })
         .eq('id', id)
       if (err) throw new Error(err.message)
@@ -138,6 +140,8 @@ export function useMedia() {
                 ...m,
                 ...(patch.title !== undefined && { title: patch.title! }),
                 ...(patch.alt !== undefined && { alt: patch.alt! }),
+                ...(patch.thumbnailUrl !== undefined && { thumbnailUrl: patch.thumbnailUrl }),
+                ...(patch.url !== undefined && { url: patch.url! }),
               }
             : m,
         ),
