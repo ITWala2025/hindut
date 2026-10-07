@@ -172,7 +172,7 @@ export function Header({ onDonateClick, showCauses = false }: HeaderProps) {
                         </p>
                         {settings.trustId && (
                           <p className="text-[11px] font-medium text-white/80 truncate">
-                            Trust ID: {settings.trustId}
+                            Registered Charity Number: {settings.trustId}
                           </p>
                         )}
                       </div>

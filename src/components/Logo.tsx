@@ -47,7 +47,7 @@ export function Logo({ size = 'md', showText = true, trustId, className = '' }: 
           </span>
           {trustId && (
             <span className="text-[10px] md:text-[11px] font-medium tracking-wide text-orange-600/80">
-              Trust ID: {trustId}
+              Registered Charity Number: {trustId}
             </span>
           )}
         </div>

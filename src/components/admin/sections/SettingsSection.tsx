@@ -247,7 +247,7 @@ export function SettingsSection() {
               onChange={(e) => setOrg({ ...org, address: e.target.value })}
             />
           </Field>
-          <Field icon={<IdentificationCard size={16} />} label="Trust ID">
+          <Field icon={<IdentificationCard size={16} />} label="Registered Charity Number">
             <Input
               placeholder="e.g. CHY123456"
               value={trustId}
