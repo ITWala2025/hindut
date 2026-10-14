@@ -283,7 +283,11 @@ netlify dev          # Starts frontend + functions together
 - **Attendance Conditions & Rules:** Admin-configured event guidelines (Traditional Attire, Footwear Policy, Punctuality, Vegetarian Prasadam, Supervision, Mobile Policy) with optional mandatory attendee acknowledgment checkbox.
 - **Multi-Slot Selection & Mandatory Enforcement:** In `RsvpDialog.tsx` and `TicketBookingDialog.tsx`, multi-day/multi-slot event days and slots are **unselected by default** (`new Set()`). Users are required to select at least 1 slot before proceeding, with submission blocking and error highlighting when 0 slots are selected. Paid events aggregate selected slots into a single unified payment transaction at checkout via Stripe (`total = baseSingleSlotTotal * selectedSlotIds.size`).
 - **Automated Per-Slot Communications:** `netlify/functions/rsvp-submit.ts` generates and dispatches **separate confirmation emails** and **individual `.ics` calendar files** for each reserved slot post-purchase/RSVP.
-- **RSVP Selected Schedules:** `public.event_rsvps` contains `selected_schedules` (JSONB). Displayed in `/admin/rsvps` detail sheet and included in CSV exports.
+- **RSVP Selected Schedules & Session Attendance:** `public.event_rsvps` contains `selected_schedules` (JSONB). In `/admin/rsvps`, an interactive Session Attendance Breakdown banner and Session/Slot filter dropdown allow admins to monitor and isolate guests by session (e.g. morning vs afternoon). The main DataTable features 2 dedicated distinct columns: **"Selected Day"** (displaying the date/day badges) and **"Selected Slot"** (displaying session title, start/end times). The detail sheet displays complete session information (title, date, time, description, pricing). CSV export via `netlify/functions/rsvp-export.ts` also splits schedule data into 2 distinct columns **`Selected Day`** and **`Selected Slot`** (along with `Slot Count`), with optional `slotId` filtering supported and seamless client-side CSV export fallback when running in local dev environments (`npm run dev`) without Netlify CLI. Migration `20261014000092_add_selected_schedules_to_rsvp_export.sql` updates `export_rsvps_decrypted` RPC to return `selected_schedules jsonb` with direct table query fallback.
+- **Date Standardization Lifecycle (Selection, Storing, Rendering):** All dates across the application are strictly standardized:
+  1. **Selection:** UI pickers, dialog lists (`RsvpDialog.tsx`, `TicketBookingDialog.tsx`), and event pages (`EventDetailPage.tsx`) render schedule slot dates in uniform Irish format (`DD/MM/YYYY`, `en-IE`) via `formatDateDisplay()`.
+  2. **Storing:** Persisted in Supabase PostgreSQL (`events.schedules`, `events.start_date`, `event_rsvps.selected_schedules`) strictly as normalized ISO strings `YYYY-MM-DD` via `normalizeDateToIso()`.
+  3. **Rendering:** Uniformly displayed as `DD/MM/YYYY` in admin UI table badges (`RsvpsSection.tsx`), session breakdown banner, detail sheet, and CSV export (`Selected Day` column). Single dates (`18/10/2026`) and multiple dates (`17/10/2026; 18/10/2026`) match identically without conflicting formatting.
 - **Testing & Production Database Cleanup Policy:** Functional test suites are maintained in [`Test.md`](file:///Users/prashant/Documents/Application%20directory/HinduT/Test.md). Because the system relies on a single shared Production database, all test runs must immediately clean up and delete test records (RSVPs, ticket bookings, members, donations, test events) post-execution without altering original production data.
 
 ---
@@ -307,4 +311,4 @@ The `Plan/` directory contains specification documents. They are useful for inte
 
 ---
 
-*Last updated: 2026-10-07*
+*Last updated: 2026-10-14*

@@ -55,14 +55,16 @@ Verify free event RSVP submission, multi-day/multi-slot selection default state 
 #### 1.2 Multi-Day / Multi-Slot Event RSVP — Default Unselected & Mandatory Selection Validation
 - **Steps:**
   1. Open RSVP modal for a multi-day event with time slots (`schedules`).
-  2. **Verify:** None of the time slots/days are pre-selected by default (all checkboxes are unchecked).
-  3. Leave all slots unchecked, fill attendee details + GDPR consent, and click "Confirm RSVP".
-  4. **Verify:** Submission is blocked. Toast error appears (*"Please select at least one event day or time slot before proceeding."*) and the time slot section shows an inline red error.
-  5. Check 1 or more time slots. Inline error clears.
-  6. Click "Confirm RSVP".
+    2. **Verify:** None of the time slots/days are pre-selected by default (all checkboxes are unchecked).
+  3. **Verify Date Selection Format:** Confirm all schedule slot dates in the modal list are formatted in standard Irish date format `DD/MM/YYYY` (e.g. `📅 17/10/2026`).
+  4. Leave all slots unchecked, fill attendee details + GDPR consent, and click "Confirm RSVP".
+  5. **Verify:** Submission is blocked. Toast error appears (*"Please select at least one event day or time slot before proceeding."*) and the time slot section shows an inline red error.
+  6. Check 1 or more time slots. Inline error clears.
+  7. Click "Confirm RSVP".
 - **Expected Result:**
   - Mandatory slot selection is strictly enforced.
-  - Upon selecting at least 1 slot, RSVP submits successfully with `selected_schedules` stored in DB.
+  - Dates in modal selection display in `DD/MM/YYYY`.
+  - Upon selecting at least 1 slot, RSVP submits successfully with `selected_schedules` stored in DB normalized to ISO `YYYY-MM-DD`.
   - Separate email confirmation and individual `.ics` files dispatched per selected slot.
 
 #### 1.3 Attendance Conditions & Guidelines Validation
@@ -217,13 +219,22 @@ Verify admin login, role-gated section rendering, event creation/editing (includ
   - Event created in `public.events` with `is_multi_day = true`, `schedules` JSONB populated, and `attendance_conditions` set.
   - Appears in public `/events` listing.
 
-#### 6.2 RSVP Inspection & CSV Export
+#### 6.2 RSVP Inspection, Multi-Slot Attendance & CSV Export
 - **Steps:**
   1. Navigate to `/admin/rsvps`.
   2. Verify attendee PII (email, phone) is masked by default in table view.
-  3. Click "Export CSV".
+  3. Locate RSVPs for a multi-day or multi-slot event.
+  4. **Verify 2 Separate Columns & Date Format:** Confirm the table includes **"Selected Day"** (displaying date badges) and **"Selected Slot"** (displaying session title, start/end times) for each attendee. Verify all date badges are uniformly rendered in Irish format `DD/MM/YYYY` (e.g. `17/10/2026`).
+  5. Select a multi-slot event in the Event filter dropdown.
+  6. **Verify Session Breakdown Banner:** Confirm the session attendance breakdown banner displays real-time guest counts for morning and afternoon/evening sessions, with dates formatted in `DD/MM/YYYY`.
+  7. Filter by a specific session (e.g. "Morning Pooja") using the session breakdown pills or the Session/Slot select dropdown. Confirm table and KPI counts isolate guests attending that session.
+  8. Click on an RSVP row's Eye action icon and verify the Detail Sheet renders complete session details (title, date formatted as `DD/MM/YYYY`, time, description).
+  9. Click "Export Session CSV" (or "Export CSV").
 - **Expected Result:**
-  - `rsvp-export` Netlify function generates a valid CSV file containing reference numbers, slot selections, and attendee details.
+  - `rsvp-export` Netlify function (or local dev client-side export fallback) generates a valid CSV file.
+  - CSV contains 2 distinct columns **`Selected Day`** and **`Selected Slot`** (plus `Slot Count`) clearly listing the sessions each guest is attending.
+  - **Date Format Consistency:** Both single-day entries (e.g. `18/10/2026`) and multi-day entries (e.g. `17/10/2026; 18/10/2026`) in the **`Selected Day`** column are formatted consistently in `DD/MM/YYYY` without mixing ISO strings (`YYYY-MM-DD`).
+  - When filtered by session, the exported CSV contains only guests reserved for that selected session.
 
 ### Cleanup Commands (Database)
 ```sql

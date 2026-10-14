@@ -13,6 +13,38 @@ import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
 
+function normalizeDateToIso(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  const trimmed = String(dateStr).trim()
+  if (!trimmed) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+  const dmyMatch = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0')
+    const month = dmyMatch[2].padStart(2, '0')
+    const year = dmyMatch[3]
+    return `${year}-${month}-${day}`
+  }
+  if (trimmed.length >= 10 && trimmed.charAt(4) === '-' && trimmed.charAt(7) === '-') {
+    return trimmed.slice(0, 10)
+  }
+  const parsed = new Date(trimmed)
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10)
+  }
+  return trimmed
+}
+
+function formatDateDisplay(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  const iso = normalizeDateToIso(dateStr)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [year, month, day] = iso.split('-')
+    return `${day}/${month}/${year}`
+  }
+  return dateStr
+}
+
 function escapeCSV(value: unknown, forceText: boolean = false): string {
   if (value === null || value === undefined) return ''
   const str = String(value)
@@ -107,14 +139,14 @@ export const handler: Handler = async (event) => {
 
     // -- Parse filter params
     const body = JSON.parse(event.body ?? '{}') as {
-      eventId?: string; fromDate?: string; toDate?: string; status?: string
+      eventId?: string; fromDate?: string; toDate?: string; status?: string; slotId?: string
     }
 
-    console.log('Export request:', { eventId: body.eventId, fromDate: body.fromDate, toDate: body.toDate, status: body.status })
+    console.log('Export request:', { eventId: body.eventId, fromDate: body.fromDate, toDate: body.toDate, status: body.status, slotId: body.slotId })
 
     // -- Fetch decrypted data via the secure Postgres function
     // Cast parameters to match function signature (uuid, date, date, text)
-    const { data: rows, error: dbErr } = await supabaseAdmin.rpc('export_rsvps_decrypted', {
+    const { data: rawRows, error: dbErr } = await supabaseAdmin.rpc('export_rsvps_decrypted', {
       p_enc_key:   encKey,
       p_event_id:  body.eventId ? body.eventId : null,  // String UUID or null
       p_from_date: body.fromDate ? body.fromDate : null,  // YYYY-MM-DD string or null
@@ -127,22 +159,90 @@ export const handler: Handler = async (event) => {
       return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: `Database error: ${dbErr.message}` }) }
     }
 
-    if (!rows || !Array.isArray(rows)) {
-      console.warn('export_rsvps_decrypted returned non-array:', typeof rows, rows)
+    if (!rawRows || !Array.isArray(rawRows)) {
+      console.warn('export_rsvps_decrypted returned non-array:', typeof rawRows, rawRows)
       return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Invalid response from database' }) }
     }
 
+    // Attach selected_schedules if not already returned by the DB function
+    const hasSchedulesInDb = rawRows.length > 0 && 'selected_schedules' in rawRows[0] && rawRows[0].selected_schedules !== undefined
+    const schedulesMap = new Map<string, any[]>()
+
+    if (!hasSchedulesInDb && rawRows.length > 0) {
+      const ids = rawRows.map((r: any) => r.id).filter(Boolean)
+      if (ids.length > 0) {
+        const { data: scheduleData } = await supabaseAdmin
+          .from('event_rsvps')
+          .select('id, selected_schedules')
+          .in('id', ids)
+
+        if (scheduleData) {
+          for (const item of scheduleData) {
+            schedulesMap.set(item.id, item.selected_schedules ?? [])
+          }
+        }
+      }
+    }
+
+    // Format single schedule slot helper
+    const formatSlot = (slot: any): string => {
+      if (!slot) return ''
+      const parts: string[] = []
+      if (slot.title) parts.push(slot.title)
+      if (slot.date) parts.push(formatDateDisplay(slot.date))
+      if (slot.startTime) {
+        parts.push(slot.endTime ? `${slot.startTime} – ${slot.endTime}` : slot.startTime)
+      }
+      return parts.join(' · ')
+    }
+
+    // Filter by slotId if requested
+    const targetSlotId = body.slotId && body.slotId !== 'all' ? body.slotId : null
+
+    const processedRows = rawRows
+      .map((r: any) => {
+        const schedules: any[] = hasSchedulesInDb
+          ? (Array.isArray(r.selected_schedules) ? r.selected_schedules : [])
+          : (schedulesMap.get(r.id) ?? [])
+        return {
+          ...r,
+          _schedules: schedules,
+        }
+      })
+      .filter((r) => {
+        if (!targetSlotId) return true
+        return r._schedules.some((s: any) => s.id === targetSlotId || s.title === targetSlotId)
+      })
+
     // -- Build CSV
     const csvHeaders = [
-      'Reference', 'Event', 'First Name', 'Last Name',
-      'Phone', 'Email', 'Adults', 'Children',
-      'Status', 'Confirmation Sent', 'Submitted At',
+      'Reference', 'Event', 'Selected Day', 'Selected Slot', 'Slot Count',
+      'First Name', 'Last Name', 'Phone', 'Email',
+      'Adults', 'Children', 'Status', 'Confirmation Sent', 'Submitted At',
     ]
 
-    const csvRows = (rows ?? []).map((r: Record<string, unknown>) => {
+    const csvRows = processedRows.map((r: any) => {
+      const schedules: any[] = r._schedules ?? []
+
+      const selectedDay = schedules.length > 0
+        ? Array.from(new Set(schedules.map((s: any) => formatDateDisplay(s.date)).filter(Boolean))).join('; ')
+        : 'Single Event'
+
+      const selectedSlot = schedules.length > 0
+        ? schedules.map((s: any) => {
+            const timeStr = s.startTime ? (s.endTime ? `${s.startTime} – ${s.endTime}` : s.startTime) : ''
+            return `${s.title || 'Session'}${timeStr ? ` (${timeStr})` : ''}`
+          }).filter(Boolean).join('; ')
+        : 'General Entry'
+
+      const slotCount = schedules.length > 0 ? schedules.length : 1
+
       const values = [
         r.reference_number,
         r.event_title,
+        selectedDay,
+        selectedSlot,
+        slotCount,
         r.first_name,
         r.last_name,
         r.phone,
@@ -154,9 +254,8 @@ export const handler: Handler = async (event) => {
         new Date(r.created_at as string).toISOString(),
       ]
       
-      // Force phone (index 4) to be treated as text (prevents scientific notation)
-      // Email doesn't need forcing - it's already text
-      const textForceFields = new Set([4])
+      // Force phone (index 7) to be treated as text (prevents scientific notation in Excel)
+      const textForceFields = new Set([7])
       
       return values
         .map((v, idx) => escapeCSV(v, textForceFields.has(idx)))

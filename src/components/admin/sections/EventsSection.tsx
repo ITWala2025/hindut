@@ -68,7 +68,7 @@ import {
 } from '@/data/events'
 import { useAuth } from '@/lib/auth'
 import { SectionCard, DataTable, Th, Td, EmptyState } from '@/components/admin/adminUi'
-import { cn } from '@/lib/utils'
+import { cn, normalizeDateToIso, formatDateDisplay } from '@/lib/utils'
 import { useTicketBookings, type TicketBookingRow } from '@/hooks/useTicketBookings'
 
 function parseTimeStr(val: string): { h: string; m: string; period: string } | null {
@@ -323,7 +323,7 @@ export function EventsSection() {
         ...(f.schedules ?? []),
         {
           id: `slot-${Date.now()}`,
-          date: f.date,
+          date: normalizeDateToIso(f.date) || f.date,
           startTime: '10:00 AM',
           endTime: '12:00 PM',
           title: `Session ${(f.schedules?.length ?? 0) + 1}`,
@@ -336,7 +336,15 @@ export function EventsSection() {
   const updateScheduleSlot = (id: string, patch: Partial<EventSchedule>) => {
     setForm((f) => ({
       ...f,
-      schedules: (f.schedules ?? []).map((s) => (s.id === id ? { ...s, ...patch } : s)),
+      schedules: (f.schedules ?? []).map((s) => (
+        s.id === id
+          ? {
+              ...s,
+              ...patch,
+              ...(patch.date !== undefined ? { date: normalizeDateToIso(patch.date) } : {}),
+            }
+          : s
+      )),
     }))
   }
 
@@ -410,12 +418,19 @@ export function EventsSection() {
       toast.error('A URL slug is required.')
       return
     }
+    const normalizedSchedules = (form.schedules ?? []).map((s) => ({
+      ...s,
+      date: normalizeDateToIso(s.date || form.date),
+    }))
     const payload = {
       ...form,
       slug,
       title: form.title.trim(),
       description: form.description.trim(),
       location: form.location.trim(),
+      date: normalizeDateToIso(form.date),
+      endDate: form.endDate ? normalizeDateToIso(form.endDate) : undefined,
+      schedules: normalizedSchedules,
       // Use undefined (not || undefined) so the key is always present in the object,
       // letting updateEvent know to explicitly clear image_url when there's no image.
       image: form.image ? form.image : undefined,
@@ -1034,7 +1049,7 @@ export function EventsSection() {
                                 <Label className="text-[11px] text-slate-600 mb-1 block">Slot Date</Label>
                                 <Input
                                   type="date"
-                                  value={slot.date ?? form.date}
+                                  value={normalizeDateToIso(slot.date ?? form.date)}
                                   onChange={(e) => updateScheduleSlot(slot.id, { date: e.target.value })}
                                 />
                               </div>

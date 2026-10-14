@@ -15,6 +15,7 @@ import { TicketBookingDialog } from '@/components/TicketBookingDialog'
 import { useEventBySlug } from '@/hooks/useEvents'
 import { CATEGORY_LABELS, type TempleEvent } from '@/data/events'
 import { SeoMeta } from '@/lib/seo'
+import { formatDateDisplay } from '@/lib/utils'
 
 function formatEventDate(iso: string) {
   const d = new Date(iso + 'T00:00:00')
@@ -235,7 +236,7 @@ export function EventDetailPage() {
                           </div>
                           <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5 pt-1">
                             <CalendarBlank size={14} className="text-orange-600" />
-                            {slot.date}
+                            {formatDateDisplay(slot.date)}
                           </p>
                           {slot.startTime && (
                             <p className="text-xs text-slate-600 flex items-center gap-1.5">

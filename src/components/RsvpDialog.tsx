@@ -40,7 +40,7 @@ import {
   CreditCard,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, formatDateDisplay, normalizeDateToIso } from '@/lib/utils'
 import type { EventService, TempleEvent } from '@/data/events'
 
 // ---------------------------------------------------------------------------
@@ -213,7 +213,12 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
     }
 
     const chosenSlots = hasSchedules
-      ? eventSchedules.filter((s) => selectedSlotIds.has(s.id))
+      ? eventSchedules
+          .filter((s) => selectedSlotIds.has(s.id))
+          .map((s) => ({
+            ...s,
+            date: normalizeDateToIso(s.date) || normalizeDateToIso(event.date),
+          }))
       : []
 
     setIsSubmitting(true)
@@ -486,7 +491,7 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                               <div>
                                 <p className="text-sm font-bold text-slate-900">{slot.title || 'Event Session'}</p>
                                 <p className="text-xs text-slate-600 mt-0.5">
-                                  📅 {slot.date} {slot.startTime ? `· ⏰ ${slot.startTime}${slot.endTime ? ` – ${slot.endTime}` : ''}` : ''}
+                                  📅 {formatDateDisplay(slot.date)} {slot.startTime ? `· ⏰ ${slot.startTime}${slot.endTime ? ` – ${slot.endTime}` : ''}` : ''}
                                 </p>
                                 {slot.description && (
                                   <p className="text-[11px] text-slate-500 mt-1">{slot.description}</p>

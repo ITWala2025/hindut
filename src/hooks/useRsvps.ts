@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { formatDateDisplay } from '@/lib/utils'
 
 export interface RsvpRow {
   id: string
@@ -24,6 +25,80 @@ export interface RsvpFilters {
   fromDate?: string
   toDate?: string
   status?: string
+  slotId?: string
+}
+
+function escapeCSV(value: unknown, forceText: boolean = false): string {
+  if (value === null || value === undefined) return ''
+  const str = String(value)
+  const isNumericLooking = /^\d+$/.test(str)
+  const needsQuotePrefix = forceText || isNumericLooking
+  let result = str
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    result = `"${str.replace(/"/g, '""')}"`
+  }
+  if (needsQuotePrefix && !result.startsWith('"')) {
+    result = `'${result}`
+  }
+  return result
+}
+
+function generateClientSideCsv(rows: RsvpRow[], slotId?: string): string {
+  const csvHeaders = [
+    'Reference', 'Event', 'Selected Day', 'Selected Slot', 'Slot Count',
+    'First Name', 'Last Name', 'Phone', 'Email',
+    'Adults', 'Children', 'Status', 'Confirmation Sent', 'Submitted At',
+  ]
+
+  let targetRows = rows
+  if (slotId && slotId !== 'all') {
+    targetRows = rows.filter((r) =>
+      Array.isArray(r.selected_schedules) &&
+      r.selected_schedules.some((s: any) => s.id === slotId || s.title === slotId)
+    )
+  }
+
+  const csvRows = targetRows.map((r) => {
+    const schedules: any[] = Array.isArray(r.selected_schedules) ? r.selected_schedules : []
+
+    const selectedDay = schedules.length > 0
+      ? Array.from(new Set(schedules.map((s: any) => formatDateDisplay(s.date)).filter(Boolean))).join('; ')
+      : 'Single Event'
+
+    const selectedSlot = schedules.length > 0
+      ? schedules.map((s: any) => {
+          const timeStr = s.startTime ? (s.endTime ? `${s.startTime} – ${s.endTime}` : s.startTime) : ''
+          return `${s.title || 'Session'}${timeStr ? ` (${timeStr})` : ''}`
+        }).filter(Boolean).join('; ')
+      : 'General Entry'
+
+    const slotCount = schedules.length > 0 ? schedules.length : 1
+
+    const values = [
+      r.reference_number,
+      r.event_title,
+      selectedDay,
+      selectedSlot,
+      slotCount,
+      r.first_name,
+      r.last_name,
+      r.phone_masked,
+      r.email_masked,
+      r.num_adults,
+      r.num_children,
+      r.status,
+      r.confirmation_sent_at ? new Date(r.confirmation_sent_at).toISOString() : '',
+      new Date(r.created_at).toISOString(),
+    ]
+
+    const textForceFields = new Set([7])
+
+    return values
+      .map((v, idx) => escapeCSV(v, textForceFields.has(idx)))
+      .join(',')
+  })
+
+  return [csvHeaders.join(','), ...csvRows].join('\r\n')
 }
 
 export function useRsvps(filters?: RsvpFilters) {
@@ -31,9 +106,11 @@ export function useRsvps(filters?: RsvpFilters) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Stabilise filter reference so useEffect doesn't loop
+  // Stabilise filter and data references
   const filtersRef = useRef(filters)
   filtersRef.current = filters
+  const rsvpsRef = useRef(rsvps)
+  rsvpsRef.current = rsvps
 
   const fetchRsvps = useCallback(async () => {
     setLoading(true)
@@ -85,7 +162,7 @@ export function useRsvps(filters?: RsvpFilters) {
     [fetchRsvps],
   )
 
-  /** Trigger a CSV download via the rsvp-export Netlify Function. */
+  /** Trigger a CSV download via the rsvp-export Netlify Function, with dev fallback. */
   const exportCsv = useCallback(
     async (exportFilters?: RsvpFilters) => {
       const {
@@ -96,43 +173,79 @@ export function useRsvps(filters?: RsvpFilters) {
       }
 
       const f = exportFilters ?? filtersRef.current
-      const res = await fetch('/.netlify/functions/rsvp-export', {
-        method: 'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          eventId:  f?.eventId  ?? null,
-          fromDate: f?.fromDate ?? null,
-          toDate:   f?.toDate   ?? null,
-          status:   f?.status   ?? null,
-        }),
-      })
+      try {
+        const res = await fetch('/.netlify/functions/rsvp-export', {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            eventId:  f?.eventId  ?? null,
+            fromDate: f?.fromDate ?? null,
+            toDate:   f?.toDate   ?? null,
+            status:   f?.status   ?? null,
+            slotId:   f?.slotId   ?? null,
+          }),
+        })
 
-      if (!res.ok) {
-        let errorMsg = 'Export failed'
-        try {
-          const errorData = await res.json()
-          errorMsg = errorData?.error ?? errorMsg
-        } catch {
-          errorMsg = `HTTP ${res.status}: ${res.statusText}`
+        if (!res.ok) {
+          // If running in local Vite dev server without Netlify Functions CLI (HTTP 404),
+          // fallback to client-side CSV generation so development and testing works smoothly.
+          if (res.status === 404) {
+            console.warn('[useRsvps] Netlify function rsvp-export returned 404. Falling back to client-side CSV generation.')
+            const csvText = generateClientSideCsv(rsvpsRef.current, f?.slotId)
+            const blob = new Blob([csvText], { type: 'text/csv; charset=utf-8' })
+            const url  = URL.createObjectURL(blob)
+            const a    = document.createElement('a')
+            a.href     = url
+            a.download = `rsvps-${new Date().toISOString().slice(0, 10)}.csv`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            return
+          }
+
+          let errorMsg = 'Export failed'
+          try {
+            const errorData = await res.json()
+            errorMsg = errorData?.error ?? errorMsg
+          } catch {
+            errorMsg = `HTTP ${res.status}: ${res.statusText}`
+          }
+          const cleanMsg = errorMsg.split('\n')[0].trim()
+          console.error('RSVP export API error:', { status: res.status, message: errorMsg })
+          throw new Error(cleanMsg)
         }
-        // Extract only first line (avoid showing code snippets in error messages)
-        const cleanMsg = errorMsg.split('\n')[0].trim()
-        console.error('RSVP export API error:', { status: res.status, message: errorMsg })
-        throw new Error(cleanMsg)
-      }
 
-      const blob = await res.blob()
-      const url  = URL.createObjectURL(blob)
-      const a    = document.createElement('a')
-      a.href     = url
-      a.download = `rsvps-${new Date().toISOString().slice(0, 10)}.csv`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+        const blob = await res.blob()
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href     = url
+        a.download = `rsvps-${new Date().toISOString().slice(0, 10)}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } catch (err: any) {
+        // Fallback if fetch itself failed (e.g. network failure)
+        if (err?.message?.includes('404') || err?.message?.includes('Failed to fetch')) {
+          console.warn('[useRsvps] Fetch failed, generating client-side CSV fallback:', err)
+          const csvText = generateClientSideCsv(rsvpsRef.current, f?.slotId)
+          const blob = new Blob([csvText], { type: 'text/csv; charset=utf-8' })
+          const url  = URL.createObjectURL(blob)
+          const a    = document.createElement('a')
+          a.href     = url
+          a.download = `rsvps-${new Date().toISOString().slice(0, 10)}.csv`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+          return
+        }
+        throw err
+      }
     },
     [],
   )

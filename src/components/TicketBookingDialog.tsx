@@ -33,7 +33,7 @@ import {
   CheckCircle,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, formatDateDisplay, normalizeDateToIso } from '@/lib/utils'
 import type { TempleEvent } from '@/data/events'
 
 // ---------------------------------------------------------------------------
@@ -203,7 +203,12 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
     }
 
     const chosenSlots = hasSchedules
-      ? eventSchedules.filter((s) => selectedSlotIds.has(s.id))
+      ? eventSchedules
+          .filter((s) => selectedSlotIds.has(s.id))
+          .map((s) => ({
+            ...s,
+            date: normalizeDateToIso(s.date) || normalizeDateToIso(event.date),
+          }))
       : []
 
     setIsProcessing(true)
@@ -367,7 +372,7 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
                               <div>
                                 <p className="text-sm font-bold text-slate-900">{slot.title || 'Event Session'}</p>
                                 <p className="text-xs text-slate-600 mt-0.5">
-                                  📅 {slot.date} {slot.startTime ? `· ⏰ ${slot.startTime}${slot.endTime ? ` – ${slot.endTime}` : ''}` : ''}
+                                  📅 {formatDateDisplay(slot.date)} {slot.startTime ? `· ⏰ ${slot.startTime}${slot.endTime ? ` – ${slot.endTime}` : ''}` : ''}
                                 </p>
                               </div>
                             </div>

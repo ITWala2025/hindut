@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { normalizeDateToIso } from '@/lib/utils'
 import type { EventAttendanceConditions, EventCategory, EventSchedule, EventService, TempleEvent, TicketTier } from '@/data/events'
 
 export function toSlug(title: string): string {
@@ -100,10 +101,13 @@ export function useEvents() {
       .insert({
         title: event.title,
         description: event.description,
-        start_date: event.date,
-        end_date: event.endDate ?? null,
+        start_date: normalizeDateToIso(event.date),
+        end_date: event.endDate ? normalizeDateToIso(event.endDate) : null,
         is_multi_day: event.isMultiDay ?? false,
-        schedules: event.schedules ?? [],
+        schedules: (event.schedules ?? []).map((s) => ({
+          ...s,
+          date: normalizeDateToIso(s.date) || normalizeDateToIso(event.date),
+        })),
         attendance_conditions: event.attendanceConditions ?? null,
         location: event.location,
         category: event.category,
@@ -133,10 +137,13 @@ export function useEvents() {
       const update: Record<string, unknown> = {}
       if (patch.title !== undefined)         update.title            = patch.title
       if (patch.description !== undefined)   update.description      = patch.description
-      if (patch.date !== undefined)          update.start_date       = patch.date
-      if (patch.endDate !== undefined)       update.end_date         = patch.endDate ?? null
+      if (patch.date !== undefined)          update.start_date       = normalizeDateToIso(patch.date)
+      if (patch.endDate !== undefined)       update.end_date         = patch.endDate ? normalizeDateToIso(patch.endDate) : null
       if (patch.isMultiDay !== undefined)    update.is_multi_day     = patch.isMultiDay
-      if (patch.schedules !== undefined)     update.schedules        = patch.schedules
+      if (patch.schedules !== undefined)     update.schedules        = (patch.schedules ?? []).map((s) => ({
+        ...s,
+        date: normalizeDateToIso(s.date) || (patch.date ? normalizeDateToIso(patch.date) : ''),
+      }))
       if (patch.attendanceConditions !== undefined) update.attendance_conditions = patch.attendanceConditions
       if (patch.location !== undefined)      update.location         = patch.location
       if (patch.category !== undefined)      update.category         = patch.category

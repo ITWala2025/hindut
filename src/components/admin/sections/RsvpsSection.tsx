@@ -12,6 +12,7 @@ import {
   Prohibit,
   CurrencyEur,
   ChartBar,
+  Clock,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,7 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, formatDateDisplay } from '@/lib/utils'
 import { useRsvps, type RsvpRow } from '@/hooks/useRsvps'
 import { useEvents, sortByDate } from '@/hooks/useEvents'
 import { useAuth } from '@/lib/auth'
@@ -68,11 +69,12 @@ export function RsvpsSection() {
   const canWrite = canCreate || canUpdate || canDelete
 
   // Filters
-  const [search,         setSearch]     = useState('')
+  const [search,         setSearch]       = useState('')
   const [eventFilter,    setEventFilter]  = useState<string>('all')
   const [statusFilter,   setStatusFilter] = useState<StatusFilter>('all')
-  const [fromDate,       setFromDate]    = useState('')
-  const [toDate,         setToDate]      = useState('')
+  const [slotFilter,     setSlotFilter]   = useState<string>('all')
+  const [fromDate,       setFromDate]     = useState('')
+  const [toDate,         setToDate]       = useState('')
 
   // UI state
   const [detail,         setDetail]      = useState<RsvpRow | null>(null)
@@ -106,27 +108,77 @@ export function RsvpsSection() {
     [events],
   )
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return rsvps
-    const q = search.toLowerCase()
+  const selectedEvent = useMemo(
+    () => events.find((e) => e.id === eventFilter) ?? null,
+    [events, eventFilter],
+  )
+
+  const availableSlots = useMemo(
+    () => selectedEvent?.schedules ?? [],
+    [selectedEvent],
+  )
+
+  // Per-slot attendee and RSVP statistics for the currently selected event
+  const slotStats = useMemo(() => {
+    if (!selectedEvent || availableSlots.length === 0) return {}
+    const stats: Record<string, { rsvps: number; adults: number; children: number; totalPax: number }> = {}
+    for (const slot of availableSlots) {
+      stats[slot.id] = { rsvps: 0, adults: 0, children: 0, totalPax: 0 }
+    }
+    for (const r of rsvps) {
+      if (r.status === 'confirmed' && Array.isArray(r.selected_schedules)) {
+        for (const s of r.selected_schedules) {
+          if (s && s.id && stats[s.id]) {
+            stats[s.id].rsvps += 1
+            stats[s.id].adults += r.num_adults
+            stats[s.id].children += r.num_children
+            stats[s.id].totalPax += (r.num_adults + r.num_children)
+          }
+        }
+      }
+    }
+    return stats
+  }, [selectedEvent, availableSlots, rsvps])
+
+  // Current list filtered by slot if a specific session is selected
+  const currentList = useMemo(() => {
+    if (slotFilter === 'all') return rsvps
     return rsvps.filter(
+      (r) =>
+        Array.isArray(r.selected_schedules) &&
+        r.selected_schedules.some((s: any) => s.id === slotFilter || s.title === slotFilter)
+    )
+  }, [rsvps, slotFilter])
+
+  const filtered = useMemo(() => {
+    let list = currentList
+    if (!search.trim()) return list
+    const q = search.toLowerCase()
+    return list.filter(
       (r) =>
         r.first_name.toLowerCase().includes(q) ||
         r.last_name.toLowerCase().includes(q) ||
         r.reference_number.toLowerCase().includes(q) ||
         r.email_masked.toLowerCase().includes(q) ||
-        r.event_title.toLowerCase().includes(q),
+        r.event_title.toLowerCase().includes(q) ||
+        (Array.isArray(r.selected_schedules) &&
+          r.selected_schedules.some((s: any) =>
+            (s.title && s.title.toLowerCase().includes(q)) ||
+            (s.date && (s.date.toLowerCase().includes(q) || formatDateDisplay(s.date).includes(q))) ||
+            (s.startTime && s.startTime.toLowerCase().includes(q)) ||
+            (s.endTime && s.endTime.toLowerCase().includes(q))
+          )),
     )
-  }, [rsvps, search])
+  }, [currentList, search])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const safePage   = Math.min(page, totalPages)
   const pageRows   = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
 
-  // KPIs
-  const confirmed  = rsvps.filter((r) => r.status === 'confirmed').length
-  const cancelled  = rsvps.filter((r) => r.status === 'cancelled').length
-  const totalPax   = rsvps
+  // KPIs (reflecting active slot filter)
+  const confirmed  = currentList.filter((r) => r.status === 'confirmed').length
+  const cancelled  = currentList.filter((r) => r.status === 'cancelled').length
+  const totalPax   = currentList
     .filter((r) => r.status === 'confirmed')
     .reduce((acc, r) => acc + r.num_adults + r.num_children, 0)
 
@@ -150,8 +202,13 @@ export function RsvpsSection() {
         fromDate: fromDate     || undefined,
         toDate:   toDate       || undefined,
         status:   statusFilter !== 'all' ? statusFilter : undefined,
+        slotId:   slotFilter   !== 'all' ? slotFilter   : undefined,
       })
-      toast.success('CSV downloaded successfully.')
+      toast.success(
+        slotFilter !== 'all'
+          ? 'CSV for selected session downloaded successfully.'
+          : 'CSV downloaded successfully.'
+      )
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
       // Extract only first line to avoid showing code snippets
@@ -272,15 +329,16 @@ export function RsvpsSection() {
               <Button
                 size="sm"
                 onClick={handleExport}
-                disabled={exporting || rsvps.length === 0}
+                disabled={exporting || filtered.length === 0}
                 className="bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                title={slotFilter !== 'all' ? 'Export CSV for selected session' : 'Export all RSVPs'}
               >
                 {exporting ? (
                   <ArrowsClockwise size={15} className="mr-1.5 animate-spin" />
                 ) : (
                   <DownloadSimple size={15} className="mr-1.5" />
                 )}
-                Export CSV
+                {slotFilter !== 'all' ? 'Export Session CSV' : 'Export CSV'}
               </Button>
             )}
           </>
@@ -295,7 +353,7 @@ export function RsvpsSection() {
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
             <Input
-              placeholder="Search name, ref, email, event…"
+              placeholder="Search name, ref, email, event, session…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               className="pl-9"
@@ -305,7 +363,11 @@ export function RsvpsSection() {
           {/* Event filter */}
           <Select
             value={eventFilter}
-            onValueChange={(v) => { setEventFilter(v); setPage(1) }}
+            onValueChange={(v) => {
+              setEventFilter(v)
+              setSlotFilter('all')
+              setPage(1)
+            }}
           >
             <SelectTrigger className="md:w-52">
               <SelectValue placeholder="All free events" />
@@ -319,6 +381,32 @@ export function RsvpsSection() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Session / Slot filter (shown when the selected event has multi-slots) */}
+          {availableSlots.length > 0 && (
+            <Select
+              value={slotFilter}
+              onValueChange={(v) => { setSlotFilter(v); setPage(1) }}
+            >
+              <SelectTrigger className="md:w-60 border-amber-300 bg-amber-50/50">
+                <SelectValue placeholder="All sessions / slots" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sessions / slots</SelectItem>
+                {availableSlots.map((slot) => {
+                  const stat = slotStats[slot.id]
+                  return (
+                    <SelectItem key={slot.id} value={slot.id}>
+                      {slot.title || 'Session'}
+                      {slot.date ? ` · ${formatDateDisplay(slot.date)}` : ''}
+                      {slot.startTime ? ` (${slot.startTime})` : ''}
+                      {stat ? ` · ${stat.totalPax} pax` : ''}
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Status filter */}
           <Select
@@ -356,6 +444,82 @@ export function RsvpsSection() {
           </div>
         </div>
 
+        {/* Interactive Session Attendance Breakdown Banner */}
+        {availableSlots.length > 0 && (
+          <div className="mb-5 p-3.5 bg-linear-to-r from-amber-50/90 via-orange-50/50 to-amber-50/90 border border-amber-200/90 rounded-xl space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                <Clock size={14} className="text-amber-600" weight="bold" />
+                Session Attendance Breakdown ({selectedEvent?.title})
+              </p>
+              {slotFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => { setSlotFilter('all'); setPage(1) }}
+                  className="text-xs text-amber-700 hover:text-amber-900 underline font-medium cursor-pointer"
+                >
+                  Reset to all sessions
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => { setSlotFilter('all'); setPage(1) }}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5',
+                  slotFilter === 'all'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-white text-slate-700 border border-amber-200 hover:bg-amber-100/60'
+                )}
+              >
+                <span>All Sessions</span>
+                <span className={cn(
+                  'px-1.5 py-0.5 rounded-full text-[10px] font-bold',
+                  slotFilter === 'all' ? 'bg-amber-800 text-amber-100' : 'bg-slate-100 text-slate-800'
+                )}>
+                  {rsvps.filter((r) => r.status === 'confirmed').reduce((acc, r) => acc + r.num_adults + r.num_children, 0)} guests
+                </span>
+              </button>
+              {availableSlots.map((slot) => {
+                const stat = slotStats[slot.id] ?? { rsvps: 0, adults: 0, children: 0, totalPax: 0 }
+                const isSelected = slotFilter === slot.id
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => { setSlotFilter(isSelected ? 'all' : slot.id); setPage(1) }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-2',
+                      isSelected
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-white text-slate-800 border border-amber-200 hover:bg-amber-100/60'
+                    )}
+                  >
+                    <span>{slot.title || 'Session'}</span>
+                    {slot.date && (
+                      <span className={cn('text-[11px] font-normal', isSelected ? 'text-amber-100' : 'text-slate-500')}>
+                        {formatDateDisplay(slot.date)}
+                      </span>
+                    )}
+                    {slot.startTime && (
+                      <span className={cn('text-[11px]', isSelected ? 'text-amber-100' : 'text-slate-500')}>
+                        {slot.startTime}{slot.endTime ? `–${slot.endTime}` : ''}
+                      </span>
+                    )}
+                    <span className={cn(
+                      'px-1.5 py-0.5 rounded-full text-[10px] font-bold',
+                      isSelected ? 'bg-amber-800 text-amber-100' : 'bg-amber-100 text-amber-900'
+                    )}>
+                      {stat.totalPax} guests ({stat.rsvps} RSVPs)
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Error */}
         {error && (
           <p className="text-sm text-red-600 mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2">
@@ -380,6 +544,8 @@ export function RsvpsSection() {
                   <Th>Ref #</Th>
                   <Th>Name</Th>
                   <Th>Event</Th>
+                  <Th>Selected Day</Th>
+                  <Th>Selected Slot</Th>
                   <Th>Attendees</Th>
                   <Th>Contact (masked)</Th>
                   <Th>Status</Th>
@@ -401,9 +567,51 @@ export function RsvpsSection() {
                       </span>
                     </Td>
                     <Td>
-                      <span className="text-slate-700 max-w-[160px] line-clamp-1 block">
+                      <span className="text-slate-700 max-w-[150px] line-clamp-1 block font-medium">
                         {r.event_title}
                       </span>
+                    </Td>
+                    <Td>
+                      {r.selected_schedules && r.selected_schedules.length > 0 ? (
+                        <div className="flex flex-col gap-1 max-w-[130px]">
+                          {Array.from(new Set(r.selected_schedules.map((s: any) => formatDateDisplay(s.date)).filter(Boolean))).map((formattedDate: any, idx) => (
+                            <div
+                              key={idx}
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-900 border border-amber-200/80 whitespace-nowrap"
+                            >
+                              <CalendarBlank size={12} className="text-amber-600 shrink-0" weight="bold" />
+                              <span>{formattedDate}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">Single event</span>
+                      )}
+                    </Td>
+                    <Td>
+                      {r.selected_schedules && r.selected_schedules.length > 0 ? (
+                        <div className="flex flex-col gap-1 max-w-[200px]">
+                          {r.selected_schedules.map((s: any, idx: number) => (
+                            <div
+                              key={s.id || idx}
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-orange-50/90 text-orange-950 border border-orange-200/80"
+                              title={`${s.title || 'Session'}${s.startTime ? ` (${s.startTime}${s.endTime ? ' – ' + s.endTime : ''})` : ''}`}
+                            >
+                              <Clock size={12} className="text-orange-600 shrink-0" weight="bold" />
+                              <span className="font-semibold truncate">
+                                {s.title || `Slot ${idx + 1}`}
+                              </span>
+                              {s.startTime && (
+                                <span className="text-orange-700/80 text-[11px] shrink-0 font-medium">
+                                  {s.startTime}{s.endTime ? `–${s.endTime}` : ''}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">General entry</span>
+                      )}
                     </Td>
                     <Td>
                       <span className="text-sm">
@@ -525,11 +733,28 @@ export function RsvpsSection() {
                     <DetailRow
                       label="Reserved Slots"
                       value={
-                        <div className="space-y-1 text-left">
+                        <div className="space-y-2 text-left w-full">
                           {detail.selected_schedules.map((s: any, idx: number) => (
-                            <div key={idx} className="bg-amber-50 border border-amber-200 rounded px-2 py-1 text-xs">
-                              <span className="font-semibold text-amber-900">{s.title || `Slot ${idx + 1}`}</span>
-                              {s.date && <span className="text-amber-700 ml-1">({s.date})</span>}
+                            <div key={s.id || idx} className="bg-amber-50/80 border border-amber-200 rounded-lg p-3 text-xs space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-amber-950 text-sm">
+                                  {s.title || `Slot ${idx + 1}`}
+                                </span>
+                                {s.price !== undefined && s.price > 0 && (
+                                  <span className="font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded text-[11px]">
+                                    €{s.price.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5">
+                                {s.date && <span>📅 {formatDateDisplay(s.date)}</span>}
+                                {s.startTime && (
+                                  <span>⏰ {s.startTime}{s.endTime ? ` – ${s.endTime}` : ''}</span>
+                                )}
+                              </div>
+                              {s.description && (
+                                <p className="text-[11px] text-slate-500 italic mt-1">{s.description}</p>
+                              )}
                             </div>
                           ))}
                         </div>

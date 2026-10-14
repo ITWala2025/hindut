@@ -55,6 +55,28 @@ function sanitiseText(s: string): string {
   )
 }
 
+function normalizeDateToIso(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  const trimmed = String(dateStr).trim()
+  if (!trimmed) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+  const dmyMatch = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0')
+    const month = dmyMatch[2].padStart(2, '0')
+    const year = dmyMatch[3]
+    return `${year}-${month}-${day}`
+  }
+  if (trimmed.length >= 10 && trimmed.charAt(4) === '-' && trimmed.charAt(7) === '-') {
+    return trimmed.slice(0, 10)
+  }
+  const parsed = new Date(trimmed)
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10)
+  }
+  return trimmed
+}
+
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@')
   if (!domain) return '***@***'
@@ -246,17 +268,24 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // Save selected_schedules if present
-    if (data.selectedSchedules && data.selectedSchedules.length > 0) {
+    // Save selected_schedules if present, normalized to ISO YYYY-MM-DD
+    const normalizedSelectedSchedules = (data.selectedSchedules && data.selectedSchedules.length > 0)
+      ? data.selectedSchedules.map((s: any) => ({
+          ...s,
+          date: normalizeDateToIso(s.date) || evtRow.start_date.slice(0, 10),
+        }))
+      : []
+
+    if (normalizedSelectedSchedules.length > 0) {
       await supabase
         .from('event_rsvps')
-        .update({ selected_schedules: data.selectedSchedules })
+        .update({ selected_schedules: normalizedSelectedSchedules })
         .eq('id', rsvpId as string)
     }
 
-    // Build slots list (either explicit selectedSchedules or default single event slot)
-    const slotsToNotify = (data.selectedSchedules && data.selectedSchedules.length > 0)
-      ? data.selectedSchedules
+    // Build slots list (either explicit normalized selectedSchedules or default single event slot)
+    const slotsToNotify = normalizedSelectedSchedules.length > 0
+      ? normalizedSelectedSchedules
       : [{
           id: 'default',
           title: evtRow.title,
