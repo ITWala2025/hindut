@@ -257,10 +257,10 @@ export const handler: Handler = async (event) => {
     if (parsed.data.kind === 'ticket') {
       const t = parsed.data
 
-      // Verify event is valid, paid, and published.
+      // Verify event is valid, paid, published, and registration is not suspended.
       const { data: evtRow, error: evtErr } = await supabase
         .from('events')
-        .select('id, title, ticket_price_eur, is_paid, published, ticket_tiers')
+        .select('id, title, ticket_price_eur, is_paid, published, ticket_tiers, registration_suspended, registration_suspended_message')
         .eq('id', t.eventId)
         .single()
 
@@ -270,12 +270,23 @@ export const handler: Handler = async (event) => {
       const evt = evtRow as {
         id: string; title: string; ticket_price_eur: number; is_paid: boolean; published: boolean
         ticket_tiers: Array<{ id: string; label: string; price: number; quantity: number }> | null
+        registration_suspended?: boolean
+        registration_suspended_message?: string | null
       }
       if (!evt.is_paid) {
         return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Ticket booking only available for paid events' }) }
       }
       if (!evt.published) {
         return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
+      }
+      if (evt.registration_suspended) {
+        return {
+          statusCode: 403,
+          headers: jsonHeaders,
+          body: JSON.stringify({
+            error: evt.registration_suspended_message || 'Registration is no longer allowed for this event.',
+          }),
+        }
       }
 
       const reference = generateTicketReference(t.eventId)
@@ -398,10 +409,10 @@ export const handler: Handler = async (event) => {
         return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'RSVP is not confirmed' }) }
       }
 
-      // Verify event is free and published, and server-side validate service amounts
+      // Verify event is free, published, registration is not suspended, and server-side validate service amounts
       const { data: evtRow, error: evtErr } = await supabase
         .from('events')
-        .select('id, title, is_paid, published, event_services')
+        .select('id, title, is_paid, published, event_services, registration_suspended, registration_suspended_message')
         .eq('id', s.eventId)
         .single()
 
@@ -411,12 +422,23 @@ export const handler: Handler = async (event) => {
       const evt = evtRow as {
         id: string; title: string; is_paid: boolean; published: boolean
         event_services: Array<{ id: string; serviceId: string; name: string; amountEur: number }> | null
+        registration_suspended?: boolean
+        registration_suspended_message?: string | null
       }
       if (evt.is_paid) {
         return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Service payments only available for free events' }) }
       }
       if (!evt.published) {
         return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
+      }
+      if (evt.registration_suspended) {
+        return {
+          statusCode: 403,
+          headers: jsonHeaders,
+          body: JSON.stringify({
+            error: evt.registration_suspended_message || 'Registration is no longer allowed for this event.',
+          }),
+        }
       }
 
       // Server-side price validation: amounts must match DB values exactly

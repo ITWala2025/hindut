@@ -107,7 +107,8 @@ HinduT/
 | `/events/:id` | `EventDetailPage` | RSVP + ticket booking |
 | `/services` | `ServicesPage` | Temple services by category |
 | `/services/:id` | `ServiceDetailPage` | Single service detail |
-| `/membership` | `MembershipPage` | Membership plans + Stripe checkout |
+| `/membership` | `MembershipPage` | Membership plans + Stripe checkout + QR code sharing card |
+| `/membership/join` / `/join` | `MembershipPage` | Direct membership modal access + auto-open signup dialog |
 | `/donate` | `DonatePage` | Direct donation access + Donation modal trigger + QR Code generator |
 | `/causes` | `CausesPage` | Special causes / fundraising |
 | `/causes/:id` | `CauseDetailPage` | Donation dialog |
@@ -289,6 +290,12 @@ netlify dev          # Starts frontend + functions together
   2. **Storing:** Persisted in Supabase PostgreSQL (`events.schedules`, `events.start_date`, `event_rsvps.selected_schedules`) strictly as normalized ISO strings `YYYY-MM-DD` via `normalizeDateToIso()`.
   3. **Rendering:** Uniformly displayed as `DD/MM/YYYY` in admin UI table badges (`RsvpsSection.tsx`), session breakdown banner, detail sheet, and CSV export (`Selected Day` column). Single dates (`18/10/2026`) and multiple dates (`17/10/2026; 18/10/2026`) match identically without conflicting formatting.
 - **Testing & Production Database Cleanup Policy:** Functional test suites are maintained in [`Test.md`](file:///Users/prashant/Documents/Application%20directory/HinduT/Test.md). Because the system relies on a single shared Production database, all test runs must immediately clean up and delete test records (RSVPs, ticket bookings, members, donations, test events) post-execution without altering original production data.
+- **Event Activation & Deactivation (Explicit Admin Control):** Migration `20261017000093_event_activation_and_registration_suspension.sql` drops the legacy automatic date-expiration trigger (`trg_auto_manage_event_published`) on `public.events`. Activation is now explicitly managed by admins via `public.events.published`. Deactivated events (`published = false`) immediately disappear from the public event calendar (`/events`), hero pills, upcoming celebration counters, and home page cards. Direct public visits to `/events/:slug` render "Event not found" (authenticated staff see a non-disruptive amber preview banner). In `/admin/events`, admins can activate/deactivate events with a single click via the table quick action button or via the "Visibility & Registration Controls" switch in the event edit sheet, with status filtering supported.
+- **Event Registration Suspension:** Migration `20261017000093_event_activation_and_registration_suspension.sql` adds `registration_suspended boolean NOT NULL DEFAULT false` and `registration_suspended_message text` to `public.events`. Admins can halt public registrations while keeping the event visible on public pages. In `/admin/events`, quick toggle buttons ("Suspend Reg" / "Resume Reg") and form sheet controls allow administrators to suspend registrations and specify an optional custom notice. When suspended:
+  1. **UI Badges & Banners:** Public event cards display a `Reg. Closed` badge.
+  2. **CTA Behavior:** Buttons display "Registration Closed" and clicking alerts the visitor: *"Registration is no longer allowed for this event."* (or the configured custom notice).
+  3. **Dialog Safeguards:** `RsvpDialog.tsx` and `TicketBookingDialog.tsx` render a prominent suspension banner and disable submission.
+  4. **Serverless Enforcement:** Netlify Functions (`rsvp-submit.ts`, `create-checkout-session.ts`, `ticket-submit.ts`, `create-payment-intent.ts`) reject incoming registrations with HTTP 403 and the explanatory notice.
 
 ---
 
@@ -311,4 +318,4 @@ The `Plan/` directory contains specification documents. They are useful for inte
 
 ---
 
-*Last updated: 2026-10-14*
+*Last updated: 2026-10-17*

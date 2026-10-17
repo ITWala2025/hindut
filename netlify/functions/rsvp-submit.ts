@@ -221,10 +221,10 @@ export const handler: Handler = async (event) => {
       realtime: { transport: ws as any },
     })
 
-    // -- Verify event exists, is free, and is published
+    // -- Verify event exists, is free, published, and registration is not suspended
     const { data: evtRow, error: evtErr } = await supabase
       .from('events')
-      .select('id, title, slug, start_date, location, is_paid, published, time_display, start_time, end_time')
+      .select('id, title, slug, start_date, location, is_paid, published, registration_suspended, registration_suspended_message, time_display, start_time, end_time')
       .eq('id', data.eventId)
       .single()
 
@@ -237,6 +237,15 @@ export const handler: Handler = async (event) => {
     }
     if (!evtRow.published) {
       return { statusCode: 404, headers, body: JSON.stringify({ error: 'Event not found' }) }
+    }
+    if (evtRow.registration_suspended) {
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          error: evtRow.registration_suspended_message || 'Registration is no longer allowed for this event.',
+        }),
+      }
     }
 
     const firstName = sanitiseText(data.firstName)

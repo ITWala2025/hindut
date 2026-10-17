@@ -53,7 +53,7 @@ export const handler: Handler = async (event) => {
     // Look up the canonical price so the client cannot tamper with amount.
     const { data: evtRow, error: evtErr } = await supabase
       .from('events')
-      .select('id, title, slug, is_paid, published, ticket_price_eur')
+      .select('id, title, slug, is_paid, published, ticket_price_eur, registration_suspended, registration_suspended_message')
       .eq('id', parsed.data.eventId)
       .single()
 
@@ -62,10 +62,20 @@ export const handler: Handler = async (event) => {
     }
     const evt = evtRow as {
       id: string; title: string; slug: string;
-      is_paid: boolean; published: boolean; ticket_price_eur: number
+      is_paid: boolean; published: boolean; ticket_price_eur: number;
+      registration_suspended?: boolean; registration_suspended_message?: string | null;
     }
     if (!evt.is_paid)    return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Event is not a paid event' }) }
     if (!evt.published)  return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Event not found' }) }
+    if (evt.registration_suspended) {
+      return {
+        statusCode: 403,
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          error: evt.registration_suspended_message || 'Registration is no longer allowed for this event.',
+        }),
+      }
+    }
 
     const adultPrice  = Number(evt.ticket_price_eur)
     const totalEur    = adultPrice * parsed.data.numAdults  // children free (matches client UI)

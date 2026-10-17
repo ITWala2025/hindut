@@ -34,6 +34,8 @@ interface EventRow {
   is_multi_day?: boolean | null
   schedules?: EventSchedule[] | null
   attendance_conditions?: EventAttendanceConditions | null
+  registration_suspended?: boolean | null
+  registration_suspended_message?: string | null
 }
 
 function toTempleEvent(row: EventRow): TempleEvent {
@@ -65,6 +67,8 @@ function toTempleEvent(row: EventRow): TempleEvent {
     ticketTiers: row.ticket_tiers ?? undefined,
     eventServices: row.event_services ?? undefined,
     published: row.published,
+    registrationSuspended: Boolean(row.registration_suspended),
+    registrationSuspendedMessage: row.registration_suspended_message ?? undefined,
   }
 }
 
@@ -122,7 +126,9 @@ export function useEvents() {
         ticket_tiers: event.ticketTiers ?? null,
         event_services: event.isPaid ? [] : (event.eventServices ?? []),
         image_url: event.image ?? null,
-        published: true,
+        published: event.published ?? true,
+        registration_suspended: event.registrationSuspended ?? false,
+        registration_suspended_message: event.registrationSuspendedMessage ?? null,
         slug: event.slug || toSlug(event.title),
       })
       .select('id')
@@ -161,6 +167,9 @@ export function useEvents() {
       if (patch.eventServices !== undefined) update.event_services   = patch.isPaid ? [] : patch.eventServices
       if ('image' in patch)                  update.image_url        = patch.image ?? null
       if (patch.slug !== undefined)          update.slug             = patch.slug || toSlug(patch.title ?? '')
+      if (patch.published !== undefined)     update.published        = patch.published
+      if (patch.registrationSuspended !== undefined) update.registration_suspended = patch.registrationSuspended
+      if (patch.registrationSuspendedMessage !== undefined) update.registration_suspended_message = patch.registrationSuspendedMessage ?? null
       const { error: err } = await supabase.from('events').update(update).eq('id', id)
       if (err) throw new Error(err.message)
       await fetchEvents()

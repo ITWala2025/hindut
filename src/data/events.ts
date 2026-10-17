@@ -57,6 +57,8 @@ export interface TempleEvent {
   ticketTiers?: TicketTier[]
   eventServices?: EventService[]
   published: boolean
+  registrationSuspended?: boolean
+  registrationSuspendedMessage?: string
 }
 
 export interface TicketTier {

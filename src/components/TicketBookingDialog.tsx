@@ -31,6 +31,7 @@ import {
   Warning,
   CalendarBlank,
   CheckCircle,
+  Prohibit,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { cn, formatDateDisplay, normalizeDateToIso } from '@/lib/utils'
@@ -197,6 +198,11 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
       }
     }
 
+    if (event.registrationSuspended) {
+      toast.warning(event.registrationSuspendedMessage || 'Registration is no longer allowed for this event.')
+      return
+    }
+
     if (requireConditionsAck && !conditionsAck) {
       toast.error('Please accept the event attendance conditions to proceed.')
       return
@@ -290,6 +296,17 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
 
             <form onSubmit={handleSubmit(onDetailsSubmit)} noValidate>
               <div className="px-6 py-5 space-y-4">
+                {event.registrationSuspended && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-center">
+                    <div className="flex items-center justify-center gap-2 text-amber-800 font-semibold mb-1">
+                      <Prohibit size={18} weight="bold" />
+                      <span>Registration Closed</span>
+                    </div>
+                    <p className="text-sm text-amber-900 leading-relaxed">
+                      {event.registrationSuspendedMessage || 'Registration is no longer allowed for this event.'}
+                    </p>
+                  </div>
+                )}
 
                 {/* Ticket selection */}
                 {hasTiers ? (
@@ -597,10 +614,12 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isProcessing}
+                  disabled={isProcessing || event.registrationSuspended}
                   className="flex-1 bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold disabled:opacity-60"
                 >
-                  {isProcessing ? (
+                  {event.registrationSuspended ? (
+                    'Registration Closed'
+                  ) : isProcessing ? (
                     <>
                       <Spinner size={16} className="mr-2 animate-spin" />
                       Redirecting…

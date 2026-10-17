@@ -138,10 +138,10 @@ export const handler: Handler = async (event) => {
       realtime: { transport: ws as any },
     })
 
-    // -- Verify event exists, is paid, and is published
+    // -- Verify event exists, is paid, published, and registration is not suspended
     const { data: evtRow, error: evtErr } = await supabase
       .from('events')
-      .select('id, title, slug, is_paid, published, ticket_price_eur')
+      .select('id, title, slug, is_paid, published, ticket_price_eur, registration_suspended, registration_suspended_message')
       .eq('id', data.eventId)
       .single()
 
@@ -154,6 +154,15 @@ export const handler: Handler = async (event) => {
     }
     if (!evtRow.published) {
       return { statusCode: 404, headers, body: JSON.stringify({ error: 'Event not found' }) }
+    }
+    if (evtRow.registration_suspended) {
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          error: evtRow.registration_suspended_message || 'Registration is no longer allowed for this event.',
+        }),
+      }
     }
 
     // -- Verify Stripe PaymentIntent BEFORE saving the booking ---------------

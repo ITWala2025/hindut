@@ -83,17 +83,20 @@ function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const openDonation = (amount?: number) => {
+  const openDonation = (amount?: unknown) => {
     if (!settings.featureOnlineDonations) {
       toast.error('Online donations are temporarily unavailable. Please contact us directly.')
       return
     }
-    if (amount && amount > 0) {
-      setDonationInitialAmount(amount)
+    const validAmount = typeof amount === 'number' && !isNaN(amount) && amount > 0 ? amount : undefined
+    if (validAmount) {
+      setDonationInitialAmount(validAmount)
+    } else {
+      setDonationInitialAmount(null)
     }
     setIsDonationOpen(true)
     if (location.pathname !== '/donate') {
-      navigate(amount ? `/donate?amount=${amount}` : '/donate')
+      navigate(validAmount ? `/donate?amount=${validAmount}` : '/donate')
     }
   }
   const hasActiveCauses = useHasActiveCauses()
@@ -130,8 +133,9 @@ function AppShell() {
           <Route path="/news" element={<Suspense fallback={<PageLoader />}><NewsPage /></Suspense>} />
           <Route path="/news/:slug" element={<Suspense fallback={<PageLoader />}><NewsDetailPage /></Suspense>} />
           <Route path="/causes" element={<Suspense fallback={<PageLoader />}><CausesPage /></Suspense>} />
-          <Route path="/causes/:slug" element={<Suspense fallback={<PageLoader />}><CauseDetailPage /></Suspense>} />
           <Route path="/membership" element={<MembershipPage />} />
+          <Route path="/membership/join" element={<MembershipPage autoOpenJoinModal={true} />} />
+          <Route path="/join" element={<MembershipPage autoOpenJoinModal={true} />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/privacy-policy" element={<Suspense fallback={<PageLoader />}><PrivacyPolicyPage /></Suspense>} />
           <Route path="/cookies-policy" element={<Suspense fallback={<PageLoader />}><CookiesPolicyPage /></Suspense>} />

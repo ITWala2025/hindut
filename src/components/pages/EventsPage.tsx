@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CalendarBlank, MapPin, Clock, Ticket, Heart, ArrowDown, ClipboardText } from '@phosphor-icons/react'
+import { CalendarBlank, MapPin, Clock, Ticket, Heart, ArrowDown, ClipboardText, Prohibit } from '@phosphor-icons/react'
+import { toast } from 'sonner'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { EventsGalleryStrip } from '@/components/EventsGalleryStrip'
 import { RsvpDialog } from '@/components/RsvpDialog'
@@ -51,7 +52,7 @@ export function EventsPage() {
     return sorted
   }, [events, filter])
 
-  const upcoming = useMemo(() => upcomingOnly(events), [events])
+  const upcoming = useMemo(() => upcomingOnly(events.filter((e) => e.published)), [events])
   /** Pills surface up to 4 nearest celebrations so the hero can jump
    *  visitors straight to a specific event card. */
   const heroPills = useMemo(() => upcoming.slice(0, 4), [upcoming])
@@ -280,7 +281,11 @@ function EventCard({
               <Badge variant="outline" className={CATEGORY_COLORS[event.category]}>
                 {CATEGORY_LABELS[event.category]}
               </Badge>
-              {event.isPaid ? (
+              {event.registrationSuspended ? (
+                <Badge variant="outline" className="border-amber-400 bg-amber-50 text-amber-800">
+                  Reg. Closed
+                </Badge>
+              ) : event.isPaid ? (
                 <Badge className="bg-amber-500 text-white">€{event.price ?? 0}</Badge>
               ) : (
                 <Badge className="bg-orange-600 text-white">Free</Badge>
@@ -316,7 +321,23 @@ function EventCard({
 
         {/* Action button — mt-auto pins it to the card bottom regardless of content height */}
         <div className="mt-auto">
-          {event.isPaid ? (
+          {event.registrationSuspended ? (
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                toast.warning(
+                  event.registrationSuspendedMessage ||
+                    'Registration is no longer allowed for this event.',
+                )
+              }}
+              variant="outline"
+              className="w-full border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 font-semibold"
+            >
+              <Prohibit className="mr-2 text-amber-600" weight="bold" />
+              Registration Closed
+            </Button>
+          ) : event.isPaid ? (
             <Button
               onClick={(e) => { e.stopPropagation(); onBookTicket() }}
               className="w-full bg-linear-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-semibold"

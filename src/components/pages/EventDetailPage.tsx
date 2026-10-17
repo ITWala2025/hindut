@@ -9,7 +9,11 @@ import {
   Ticket,
   ClipboardText,
   ArrowLeft,
+  Prohibit,
+  EyeSlash,
 } from '@phosphor-icons/react'
+import { toast } from 'sonner'
+import { useAuth } from '@/lib/auth'
 import { RsvpDialog } from '@/components/RsvpDialog'
 import { TicketBookingDialog } from '@/components/TicketBookingDialog'
 import { useEventBySlug } from '@/hooks/useEvents'
@@ -38,6 +42,9 @@ export function EventDetailPage() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { event, loading } = useEventBySlug(slug)
+  const { user, can } = useAuth()
+  const isStaff = Boolean(user && can('events:update'))
+
   const [rsvpOpen, setRsvpOpen]     = useState(false)
   const [ticketOpen, setTicketOpen] = useState(false)
   const [scrolled, setScrolled]     = useState(false)
@@ -50,7 +57,7 @@ export function EventDetailPage() {
 
   if (loading) return <EventDetailSkeleton />
 
-  if (!event) {
+  if (!event || (!event.published && !isStaff)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 px-6 text-center">
         <div className="w-16 h-16 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center">
@@ -60,7 +67,7 @@ export function EventDetailPage() {
           Event not found
         </h1>
         <p className="text-slate-500 max-w-sm">
-          This event may have been removed or the link may be incorrect.
+          This event may have been removed, deactivated, or the link may be incorrect.
         </p>
         <Button
           onClick={() => navigate('/events')}
@@ -81,6 +88,14 @@ export function EventDetailPage() {
         description={event.description.slice(0, 160)}
         canonical={`/events/${event.slug}`}
       />
+
+      {/* Staff Preview Banner for Deactivated Event */}
+      {!event.published && isStaff && (
+        <div className="bg-amber-500 text-slate-900 px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 border-b border-amber-600 shadow-sm sticky top-0 z-50">
+          <EyeSlash size={16} weight="bold" />
+          <span>Staff Preview: This event is currently Deactivated and hidden from public visitors.</span>
+        </div>
+      )}
 
       {/* ─── Floating back button — appears after scrolling past hero ─── */}
       <div
@@ -370,7 +385,37 @@ function EventCta({
         <div className="border-t border-orange-50" />
 
         {/* CTA */}
-        {event.isPaid ? (
+        {event.registrationSuspended ? (
+          <div className="space-y-3">
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-amber-800 font-semibold mb-1">
+                <Prohibit size={18} weight="bold" />
+                <span>Registration Closed</span>
+              </div>
+              <p className="text-xs text-amber-900 leading-relaxed">
+                {event.registrationSuspendedMessage || 'Registration is no longer allowed for this event.'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => {
+                toast.warning(
+                  event.registrationSuspendedMessage ||
+                    'Registration is no longer allowed for this event.',
+                )
+              }}
+              variant="outline"
+              size="lg"
+              className="w-full border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 font-semibold rounded-xl"
+            >
+              <Prohibit className="mr-2" size={16} weight="bold" />
+              Registration Closed
+            </Button>
+            <p className="text-center text-xs text-amber-700/80">
+              Registration is currently suspended for this event
+            </p>
+          </div>
+        ) : event.isPaid ? (
           <div className="space-y-2">
             <Button
               onClick={onBookTicket}

@@ -27,6 +27,8 @@
 7. [Suite 7: Role Activation & Permission Management](#suite-7-role-activation--permission-management)
 8. [Suite 8: Analytics Event Tracking & Aggregation](#suite-8-analytics-event-tracking--aggregation)
 9. [Suite 9: Dedicated /donate Route, Modal Trigger, & QR Code Generation](#suite-9-dedicated-donate-route-modal-trigger--qr-code-generation)
+10. [Suite 10: Media Library & Photo Album Featured Cover Image Management](#suite-10-media-library--photo-album-featured-cover-image-management)
+11. [Suite 11: Dedicated Membership Modal Route & QR Code Flow](#suite-11-dedicated-membership-modal-route--qr-code-flow)
 
 ---
 
@@ -236,11 +238,33 @@ Verify admin login, role-gated section rendering, event creation/editing (includ
   - **Date Format Consistency:** Both single-day entries (e.g. `18/10/2026`) and multi-day entries (e.g. `17/10/2026; 18/10/2026`) in the **`Selected Day`** column are formatted consistently in `DD/MM/YYYY` without mixing ISO strings (`YYYY-MM-DD`).
   - When filtered by session, the exported CSV contains only guests reserved for that selected session.
 
+#### 6.3 Explicit Event Activation and Deactivation
+- **Steps:**
+  1. In `/admin/events`, locate an active event.
+  2. Click the "Deactivate" action button (or open the edit sheet and toggle "Active" switch off).
+  3. Verify a success toast confirms: *"Deactivated '[Title]'. It is now hidden from public pages."*
+  4. Verify the event row displays a "Deactivated" badge and the table filter dropdown "Deactivated events" includes it.
+  5. In a separate incognito browser session, visit `/events` and `/`. Confirm the deactivated event is completely hidden from the public event calendar, hero pills, upcoming counts, and home page cards.
+  6. Attempt to navigate directly to `/events/:slug` for the deactivated event as a public visitor. Confirm the page displays "Event not found".
+  7. Return to `/admin/events` and click "Activate" (or toggle "Active" switch on).
+  8. Confirm the event immediately reappears on `/events` and public event detail pages.
+
+#### 6.4 Event Registration Suspension and Public Attempt Rejection
+- **Steps:**
+  1. In `/admin/events`, locate an active event and click "Suspend Reg" (or open edit sheet, toggle "Suspend Registration" on, and enter an optional custom notice message).
+  2. Verify a success toast confirms: *"Registration suspended for '[Title]'. Public registrations are now halted."*
+  3. Verify the event row displays a "Reg. Suspended" badge and the table filter dropdown "Registration suspended" includes it.
+  4. Visit the public `/events` page. Confirm the event card displays a "Reg. Closed" badge and the CTA button says "Registration Closed".
+  5. Click the "Registration Closed" button on the card or inside `/events/:slug`. Confirm a warning toast/notice displays: *"Registration is no longer allowed for this event."* (or the custom suspension message).
+  6. If the RSVP or Ticket Booking dialog is opened, confirm a prominent amber banner informs the user that registration is closed and the submit/checkout button is disabled.
+  7. Confirm Netlify functions `rsvp-submit` and `create-checkout-session` reject any attempted submissions with HTTP 403: *"Registration is no longer allowed for this event."*
+  8. In `/admin/events`, click "Resume Reg" (or toggle "Suspend Registration" off). Confirm public registrations resume immediately.
+
 ### Cleanup Commands (Database)
 ```sql
-DELETE FROM public.event_rsvps WHERE event_id IN (SELECT id FROM public.events WHERE title = 'Test Automated Festival 2026');
-DELETE FROM public.ticket_bookings WHERE event_id IN (SELECT id FROM public.events WHERE title = 'Test Automated Festival 2026');
-DELETE FROM public.events WHERE title = 'Test Automated Festival 2026';
+DELETE FROM public.event_rsvps WHERE event_id IN (SELECT id FROM public.events WHERE title LIKE 'Test Automated%');
+DELETE FROM public.ticket_bookings WHERE event_id IN (SELECT id FROM public.events WHERE title LIKE 'Test Automated%');
+DELETE FROM public.events WHERE title LIKE 'Test Automated%';
 ```
 
 ---
@@ -362,6 +386,35 @@ Verify that admins can add photo albums, set or update featured cover images (`t
 ```sql
 DELETE FROM public.media WHERE title = 'Test Album 2026' OR path = 'https://photos.app.goo.gl/testalbum123';
 ```
+
+---
+
+## Suite 11: Dedicated Membership Modal Route & QR Code Flow
+
+### Objective
+Verify that navigating to `/membership/join` or `/join` automatically opens the Membership Registration modal, that closing the modal cleanly returns the user to `/membership`, that clicking join buttons syncs the URL to `/membership/join`, and that the live QR code card generates and downloads clean QR images targeting the modal route.
+
+### Test Cases
+
+#### 11.1 Direct Route Navigation & Modal Auto-Open
+- **Steps:**
+  1. Navigate directly to `/membership/join` (or `/join`).
+  2. **Verify:** The Membership Checkout modal ("Annual Membership" / "Review & Pay") opens automatically on page load.
+  3. Click close button ('X') on the modal.
+  4. **Verify:** Modal dismisses cleanly and URL updates to `/membership`.
+
+#### 11.2 "Join Now" Button URL Sync
+- **Steps:**
+  1. Navigate to `/membership`.
+  2. Click "Join Now — €51/year" (or "Join Annual Membership").
+  3. **Verify:** Modal opens and URL updates to `/membership/join`.
+
+#### 11.3 Membership QR Code Generation & Download
+- **Steps:**
+  1. On `/membership`, scroll to the "Scan to Register for Membership" card.
+  2. **Verify:** QR image renders and points to `${currentOrigin}/membership/join`.
+  3. Click "Copy Modal Link" and verify toast notification.
+  4. Click "Download QR Code" and verify `HAI-Membership-Registration-QR.png` downloads.
 
 ---
 

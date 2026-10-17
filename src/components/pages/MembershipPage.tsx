@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import QRCode from 'qrcode'
 import { toast } from 'sonner'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { Card, CardContent } from '@/components/ui/card'
@@ -41,6 +43,10 @@ import {
   ArrowRight,
   Leaf,
   Flame,
+  QrCode,
+  Copy,
+  Check,
+  DownloadSimple,
 } from '@phosphor-icons/react'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { HeroCarousel } from '@/components/HeroCarousel'
@@ -199,9 +205,16 @@ const FAQ_ITEMS = [
   },
 ]
 
-export function MembershipPage() {
+interface MembershipPageProps {
+  autoOpenJoinModal?: boolean
+}
+
+export function MembershipPage({ autoOpenJoinModal = false }: MembershipPageProps) {
   const { plans } = useMembership()
   const settings = useSiteSettings()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   // ── Membership checkout state ─────────────────────────────────────────────
   const [selected, setSelected] = useState<MembershipPlan | null>(null)
@@ -228,6 +241,20 @@ export function MembershipPage() {
   const [givingConsent, setGivingConsent] = useState(false)
   const [givingProcessing, setGivingProcessing] = useState(false)
 
+  // ── QR Code Sharing State ──────────────────────────────────────────────────
+  const [copied, setCopied] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string>('')
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  const [useLiveDomain, setUseLiveDomain] = useState(true)
+
+  // In production, uses window.location.origin automatically.
+  // On localhost, defaults to 'https://www.hindutemple.ie' so downloaded QR codes are immediately valid for flyers and print!
+  const currentOrigin = (isLocal && useLiveDomain)
+    ? 'https://www.hindutemple.ie'
+    : (typeof window !== 'undefined' ? window.location.origin : 'https://www.hindutemple.ie')
+
+  const membershipJoinUrl = `${currentOrigin}/membership/join`
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   const annualPlan = useMemo(
     () =>
@@ -252,10 +279,63 @@ export function MembershipPage() {
     [plans],
   )
 
+  // ── Auto-open Membership Modal for direct routes ──────────────────────────
+  const isJoinRoute = autoOpenJoinModal ||
+    location.pathname === '/membership/join' ||
+    location.pathname === '/join' ||
+    searchParams.get('action') === 'join' ||
+    searchParams.get('join') === 'true'
+
+  useEffect(() => {
+    if (isJoinRoute && annualPlan && !dialogOpen) {
+      openFor(annualPlan)
+    }
+  }, [isJoinRoute, annualPlan])
+
+  // ── Generate QR Code pointing to the Membership Modal route ───────────────
+  useEffect(() => {
+    QRCode.toDataURL(membershipJoinUrl, {
+      width: 480,
+      margin: 2,
+      color: {
+        dark: '#7C2D12',
+        light: '#FFFFFF',
+      },
+      errorCorrectionLevel: 'H',
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((err) => console.error('Error generating membership QR code:', err))
+  }, [membershipJoinUrl])
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(membershipJoinUrl)
+      setCopied(true)
+      toast.success('Membership registration link copied to clipboard!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Could not copy link to clipboard')
+    }
+  }
+
+  const handleDownloadQr = () => {
+    if (!qrDataUrl) return
+    const link = document.createElement('a')
+    link.href = qrDataUrl
+    link.download = 'HAI-Membership-Registration-QR.png'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('Membership QR Code image downloaded!')
+  }
+
   const openDialog = (plan: MembershipPlan, withMonthly: boolean) => {
     if (!settings.featureMemberSignup) {
       toast.error('Membership sign-ups are temporarily closed. Please check back soon.')
       return
+    }
+    if (location.pathname === '/membership') {
+      navigate('/membership/join', { replace: true })
     }
     setSelected(plan)
     setStep('details')
@@ -286,6 +366,9 @@ export function MembershipPage() {
 
   const closeDialog = () => {
     setDialogOpen(false)
+    if (location.pathname === '/membership/join' || location.pathname === '/join') {
+      navigate('/membership', { replace: true })
+    }
     setTimeout(() => { setSelected(null); setStep('details') }, 250)
   }
 
@@ -382,11 +465,11 @@ export function MembershipPage() {
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRe.test(givingEmail)) { toast.error('Please enter a valid email.'); return }
     if (!givingConsent) { toast.error('Please accept the data consent to continue.'); return }
-    
+
     // For custom tier, validate the custom amount input
     const amount = (givingTier.amount && givingTier.amount > 0) ? givingTier.amount : parseFloat(givingCustom)
     if (!amount || amount < 1) { toast.error('Please enter a valid amount (min €1).'); return }
-    
+
     setGivingProcessing(true)
     try {
       // Fixed-amount tiers (from DB) use membership flow
@@ -394,23 +477,23 @@ export function MembershipPage() {
       const isCustom = givingTier.id === 'custom'
       const body = isCustom
         ? {
-            kind: 'donation' as const,
-            amountEur: amount,
-            donorName: givingName.trim(),
-            donorEmail: givingEmail.trim(),
-            recurring: true,
-            description: `Monthly giving – Custom amount`,
-            successUrl: `${window.location.origin}/membership-success`,
-            cancelUrl: `${window.location.origin}/membership?cancelled=1`,
-          }
+          kind: 'donation' as const,
+          amountEur: amount,
+          donorName: givingName.trim(),
+          donorEmail: givingEmail.trim(),
+          recurring: true,
+          description: `Monthly giving – Custom amount`,
+          successUrl: `${window.location.origin}/membership-success`,
+          cancelUrl: `${window.location.origin}/membership?cancelled=1`,
+        }
         : {
-            kind: 'membership' as const,
-            planId: givingTier.id,
-            fullName: givingName.trim(),
-            email: givingEmail.trim(),
-            successUrl: `${window.location.origin}/membership-success`,
-            cancelUrl: `${window.location.origin}/membership?cancelled=1`,
-          }
+          kind: 'membership' as const,
+          planId: givingTier.id,
+          fullName: givingName.trim(),
+          email: givingEmail.trim(),
+          successUrl: `${window.location.origin}/membership-success`,
+          cancelUrl: `${window.location.origin}/membership?cancelled=1`,
+        }
       const res = await fetch('/.netlify/functions/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -739,26 +822,142 @@ export function MembershipPage() {
         </div>
       </section>
 
-      {/* ── Trust Signals ────────────────────────────────────────────────── */}
-      <section className="py-12 bg-slate-50 border-y border-slate-200">
-        <div className="container mx-auto px-6 md:px-12 lg:px-24">
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16">
-            {([
-              { TIcon: Lock, text: 'Stripe secured payments', sub: 'PCI-DSS Level 1' },
-              { TIcon: ShieldCheck, text: 'GDPR compliant', sub: 'Your data protected' },
-              { TIcon: Users, text: 'Community focused', sub: '10+ years active' },
-              { TIcon: CheckCircle, text: 'Cancel any time', sub: 'No lock-in' },
-            ] as const).map(({ TIcon, text, sub }) => (
-              <div key={text} className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-sm shrink-0">
-                  <TIcon size={20} weight="duotone" className="text-orange-600" />
-                </div>
+      {/* ── Trust Signals & Membership Registration Modal QR Code (Side-by-Side) ── */}
+      <section className="py-14 bg-linear-to-b from-orange-50/50 via-slate-50/70 to-white border-y border-orange-200/50">
+        <div className="container mx-auto px-6 md:px-12 lg:px-24 max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+
+            {/* Left Column: Trust Signals & Membership Assurance (7 cols) */}
+            <div className="lg:col-span-7 flex flex-col justify-between">
+              <Card className="border-orange-200/80 bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl p-6 sm:p-8 flex-1 flex flex-col justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-slate-800">{text}</div>
-                  <div className="text-xs text-slate-500">{sub}</div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-11 h-11 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 shadow-sm shrink-0">
+                      <ShieldCheck size={24} weight="duotone" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'var(--font-heading)' }}>
+                        Trusted Community Membership
+                      </h2>
+                      <p className="text-xs text-orange-700/80 mt-0.5">
+                        Transparent, secure, and dedicated to Ireland's Hindu community
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                    Every membership directly funds daily prayers, weekly satsangs, major festivals, and the realization of our permanent temple in Limerick.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    {([
+                      { TIcon: Lock, text: 'Stripe secured payments', sub: 'PCI-DSS Level 1 Encryption' },
+                      { TIcon: ShieldCheck, text: 'GDPR compliant', sub: 'Your personal data protected' },
+                      { TIcon: Users, text: 'Community focused', sub: '10+ years active in Limerick' },
+                      { TIcon: CheckCircle, text: 'Cancel any time', sub: 'No lock-in or hidden fees' },
+                    ] as const).map(({ TIcon, text, sub }) => (
+                      <div key={text} className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+                        <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-xs shrink-0 text-orange-600 mt-0.5">
+                          <TIcon size={18} weight="duotone" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-slate-800 leading-snug">{text}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{sub}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+
+                {/* Instant Action CTA */}
+                {annualPlan && (
+                  <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs text-slate-500">Annual Membership</div>
+                      <div className="text-lg font-bold text-orange-900">€{annualPlan.price} / year</div>
+                    </div>
+                    <Button
+                      onClick={() => openFor(annualPlan)}
+                      size="lg"
+                      className="w-full sm:w-auto h-12 px-6 rounded-xl font-bold bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-md transition-all"
+                    >
+                      <Crown size={18} weight="fill" className="mr-2 text-amber-200" />
+                      Join Now
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {/* Right Column: Scan to Join / Membership QR Code (5 cols) */}
+            <div className="lg:col-span-5 flex flex-col">
+              <Card className="border-orange-200/80 bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl p-6 sm:p-8 text-center flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="inline-flex items-center justify-center p-3.5 rounded-full bg-orange-100 text-orange-700 mb-3 shadow-inner">
+                    <QrCode size={28} weight="duotone" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-orange-950" style={{ fontFamily: 'var(--font-heading)' }}>
+                    Scan to Join
+                  </h2>
+                  <p className="text-xs text-orange-800/80 mt-1 max-w-sm mx-auto">
+                    Scan with any phone camera to jump straight into the <strong>Membership Registration Form</strong>.
+                  </p>
+
+                  {/* QR Image Frame */}
+                  <div className="my-5 mx-auto w-52 h-52 p-3 bg-white rounded-2xl shadow-inner border border-orange-200 flex items-center justify-center relative group">
+                    {qrDataUrl ? (
+                      <img
+                        src={qrDataUrl}
+                        alt="Scan to open Hindu Association of Ireland Membership form"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full border-4 border-orange-200 border-t-orange-600 animate-spin" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons: Copy & Download */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleCopyLink}
+                      variant="outline"
+                      className="flex-1 border-orange-300 text-orange-800 hover:bg-orange-100/60 text-xs font-semibold h-10 rounded-xl"
+                    >
+                      {copied ? <Check size={16} className="text-emerald-600 mr-1.5" /> : <Copy size={16} className="mr-1.5" />}
+                      {copied ? 'Link Copied' : 'Copy Modal Link'}
+                    </Button>
+
+                    <Button
+                      onClick={handleDownloadQr}
+                      className="flex-1 bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white text-xs font-semibold h-10 rounded-xl shadow-sm"
+                    >
+                      <DownloadSimple size={16} weight="bold" className="mr-1.5" />
+                      Download QR
+                    </Button>
+                  </div>
+
+                  {isLocal && (
+                    <div className="flex items-center justify-between text-[11px] text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/60 text-left">
+                      <span>Target: <strong>{useLiveDomain ? 'Live' : 'Local'}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => setUseLiveDomain(!useLiveDomain)}
+                        className="text-orange-700 underline font-semibold hover:text-orange-900"
+                      >
+                        Switch to {useLiveDomain ? 'Local' : 'Live'}
+                      </button>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-slate-500 font-mono truncate px-2.5 py-1 bg-slate-50 rounded-lg border border-slate-100">
+                    {membershipJoinUrl}
+                  </p>
+                </div>
+              </Card>
+            </div>
+
           </div>
         </div>
       </section>
@@ -851,309 +1050,309 @@ export function MembershipPage() {
             <div className="relative p-8">
               <DivineBg />
 
-            {/* Step 1: Details */}
-            {step === 'details' && selected && (
-              <>
-                {/* Temple image band */}
-                <div className="-mx-8 -mt-8 mb-6 overflow-hidden bg-orange-50" style={{ height: '260px' }}>
-                  <img
-                    src="https://gsqfaguqsmnuoeuhpxro.supabase.co/storage/v1/object/public/public-gallery/branding/Hindu_T.png"
-                    alt="Hindu Temple"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-
-                <OrnateDivider />
-
-                <form onSubmit={submitDetails} className="space-y-4 mt-2">
-                  <div>
-                    <Label htmlFor="mem-name" className="text-sm font-semibold text-orange-800 mb-1.5 block">
-                      🌸 Full Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="mem-name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Your full name"
-                      required
-                      className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="mem-email" className="text-sm font-semibold text-orange-800 mb-1.5 block">
-                      🪷 Email Address <span className="text-red-500">*</span>
-                    </Label>
-                    <EmailInput
-                      id="mem-email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      required
-                      className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="mem-phone" className="text-sm font-semibold text-orange-800 mb-1.5 block">
-                      🪔 Phone Number <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="mem-phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+353 87 000 0000"
-                      required
-                      className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
+              {/* Step 1: Details */}
+              {step === 'details' && selected && (
+                <>
+                  {/* Temple image band */}
+                  <div className="-mx-8 -mt-8 mb-6 overflow-hidden bg-orange-50" style={{ height: '260px' }}>
+                    <img
+                      src="https://gsqfaguqsmnuoeuhpxro.supabase.co/storage/v1/object/public/public-gallery/branding/Hindu_T.png"
+                      alt="Hindu Temple"
+                      className="w-full h-full object-cover"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <OrnateDivider />
+
+                  <form onSubmit={submitDetails} className="space-y-4 mt-2">
                     <div>
-                      <Label htmlFor="mem-family" className="text-sm font-semibold text-orange-800 mb-1.5 block">
-                        👨‍👩‍👧 Family Size <span className="text-red-500">*</span>
+                      <Label htmlFor="mem-name" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                        🌸 Full Name <span className="text-red-500">*</span>
                       </Label>
-                      <select
-                        id="mem-family"
-                        value={familySize}
-                        onChange={(e) => setFamilySize(e.target.value)}
+                      <Input
+                        id="mem-name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Your full name"
                         required
-                        className="w-full h-11 rounded-xl border border-orange-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                      >
-                        <option value="">Select…</option>
-                        {FAMILY_SIZES.map((s) => (
-                          <option key={s} value={s}>{s} {s === '1' ? 'person' : 'people'}</option>
-                        ))}
-                      </select>
+                        className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
+                      />
                     </div>
                     <div>
-                      <Label htmlFor="mem-area" className="text-sm font-semibold text-orange-800 mb-1.5 block">
-                        📍 Area <span className="text-red-500">*</span>
+                      <Label htmlFor="mem-email" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                        🪷 Email Address <span className="text-red-500">*</span>
                       </Label>
-                      <select
-                        id="mem-area"
-                        value={area}
-                        onChange={(e) => setArea(e.target.value)}
+                      <EmailInput
+                        id="mem-email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
                         required
-                        className="w-full h-11 rounded-xl border border-orange-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                      >
-                        <option value="">Select…</option>
-                        {LIMERICK_AREAS.map((a) => (
-                          <option key={a} value={a}>{a}</option>
-                        ))}
-                      </select>
+                        className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
+                      />
                     </div>
-                  </div>
+                    <div>
+                      <Label htmlFor="mem-phone" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                        🪔 Phone Number <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="mem-phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+353 87 000 0000"
+                        required
+                        className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
+                      />
+                    </div>
 
-                  {/* Optional monthly contribution (annual plan only) */}
-                  {selected.id === 'annual' && (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <HandCoins size={18} weight="duotone" className="text-amber-600" />
-                          <span className="text-sm font-semibold text-slate-800">
-                            Support the Temple Through Monthly Seva
-                          </span>
-                        </div>
-                        <Switch
-                          checked={addMonthly}
-                          onCheckedChange={setAddMonthly}
-                          className="data-[state=checked]:bg-gray-400 h-3 w-5 [&>span]:h-2 [&>span]:w-2 [&>span]:data-[state=checked]:translate-x-[10px]"
-                        />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="mem-family" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                          👨‍👩‍👧 Family Size <span className="text-red-500">*</span>
+                        </Label>
+                        <select
+                          id="mem-family"
+                          value={familySize}
+                          onChange={(e) => setFamilySize(e.target.value)}
+                          required
+                          className="w-full h-11 rounded-xl border border-orange-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                        >
+                          <option value="">Select…</option>
+                          {FAMILY_SIZES.map((s) => (
+                            <option key={s} value={s}>{s} {s === '1' ? 'person' : 'people'}</option>
+                          ))}
+                        </select>
                       </div>
-                      <p className="text-xs text-slate-500 mb-3">Optional — billed monthly from next month until cancelled. Not charged today.</p>
-                      {addMonthly && (
-                        <div className="grid grid-cols-4 gap-2 mt-2">
-                          {monthlyGivingAmounts.map((amt) => (
+                      <div>
+                        <Label htmlFor="mem-area" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                          📍 Area <span className="text-red-500">*</span>
+                        </Label>
+                        <select
+                          id="mem-area"
+                          value={area}
+                          onChange={(e) => setArea(e.target.value)}
+                          required
+                          className="w-full h-11 rounded-xl border border-orange-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                        >
+                          <option value="">Select…</option>
+                          {LIMERICK_AREAS.map((a) => (
+                            <option key={a} value={a}>{a}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Optional monthly contribution (annual plan only) */}
+                    {selected.id === 'annual' && (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <HandCoins size={18} weight="duotone" className="text-amber-600" />
+                            <span className="text-sm font-semibold text-slate-800">
+                              Support the Temple Through Monthly Seva
+                            </span>
+                          </div>
+                          <Switch
+                            checked={addMonthly}
+                            onCheckedChange={setAddMonthly}
+                            className="data-[state=checked]:bg-gray-400 h-3 w-5 [&>span]:h-2 [&>span]:w-2 [&>span]:data-[state=checked]:translate-x-[10px]"
+                          />
+                        </div>
+                        <p className="text-xs text-slate-500 mb-3">Optional — billed monthly from next month until cancelled. Not charged today.</p>
+                        {addMonthly && (
+                          <div className="grid grid-cols-4 gap-2 mt-2">
+                            {monthlyGivingAmounts.map((amt) => (
+                              <button
+                                key={amt}
+                                type="button"
+                                onClick={() => setMonthlyAmount(amt)}
+                                className={cn(
+                                  'rounded-xl border-2 py-2 text-sm font-semibold transition-all',
+                                  monthlyAmount === amt
+                                    ? 'border-amber-500 bg-amber-100 text-amber-700'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:border-amber-300',
+                                )}
+                              >
+                                €{amt}
+                              </button>
+                            ))}
                             <button
-                              key={amt}
                               type="button"
-                              onClick={() => setMonthlyAmount(amt)}
+                              onClick={() => { setMonthlyAmount(0); setMonthlyCustom('') }}
                               className={cn(
-                                'rounded-xl border-2 py-2 text-sm font-semibold transition-all',
-                                monthlyAmount === amt
+                                'rounded-xl border-2 py-2 text-xs font-semibold transition-all',
+                                monthlyAmount === 0
                                   ? 'border-amber-500 bg-amber-100 text-amber-700'
                                   : 'border-slate-200 bg-white text-slate-600 hover:border-amber-300',
                               )}
                             >
-                              €{amt}
+                              Custom
                             </button>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => { setMonthlyAmount(0); setMonthlyCustom('') }}
-                            className={cn(
-                              'rounded-xl border-2 py-2 text-xs font-semibold transition-all',
-                              monthlyAmount === 0
-                                ? 'border-amber-500 bg-amber-100 text-amber-700'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-amber-300',
-                            )}
-                          >
-                            Custom
-                          </button>
-                        </div>
-                      )}
-                      {addMonthly && monthlyAmount === 0 && (
-                        <div className="mt-2">
-                          <Input
-                            type="number"
-                            value={monthlyCustom}
-                            onChange={(e) => setMonthlyCustom(e.target.value)}
-                            placeholder="Enter custom amount (€)"
-                            min="1"
-                            step="1"
-                            autoFocus
-                            className="h-9 rounded-xl border-amber-300 text-sm"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* GDPR consent */}
-                  <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
-                    <Checkbox
-                      id="mem-gdpr"
-                      checked={gdprConsent}
-                      onCheckedChange={(v) => setGdprConsent(!!v)}
-                      className="mt-0.5 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
-                    />
-                    <Label htmlFor="mem-gdpr" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
-                      I consent to the Hindu Association of Ireland processing my personal data for
-                      membership administration, in accordance with the{' '}
-                      <a
-                        href="/privacy-policy"
-                        className="text-orange-600 underline hover:text-orange-700"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Privacy Policy
-                      </a>{' '}
-                      and{' '}
-                      <a
-                        href="/terms-and-conditions"
-                        className="text-orange-600 underline hover:text-orange-700"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Terms &amp; Conditions
-                      </a>
-                      . <span className="text-red-500">*</span>
-                    </Label>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full h-12 text-base font-bold bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-2xl shadow-lg"
-                  >
-                    Continue to payment
-                    <ArrowRight className="ml-2" size={18} />
-                  </Button>
-                </form>
-                <BlessingText />
-              </>
-            )}
-
-            {/* Step 2: Payment summary */}
-            {step === 'payment' && selected && (
-              <>
-                {/* Order summary */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 mb-4 space-y-3">
-                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">
-                    Order Summary
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-700">{selected.name} membership</span>
-                    <span className="font-semibold text-slate-900">€{selected.price}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>Duration</span>
-                    <span>{selected.durationLabel}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>Member</span>
-                    <span>{fullName}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>Email</span>
-                    <span className="truncate max-w-[180px]">{email}</span>
-                  </div>
-                  {familySize && (
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>Family size</span>
-                      <span>{familySize} {familySize === '1' ? 'person' : 'people'}</span>
-                    </div>
-                  )}
-                  {area && (
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>Area</span>
-                      <span>{area}</span>
-                    </div>
-                  )}
-                  {addMonthly && (monthlyAmount > 0 || (monthlyAmount === 0 && !!monthlyCustom)) && (
-                    <div className="pt-2 border-t border-amber-200 space-y-1">
-                      <div className="flex justify-between text-xs text-amber-700">
-                        <span>Monthly contribution</span>
-                        <span>€{monthlyAmount > 0 ? monthlyAmount : monthlyCustom}/mo</span>
+                          </div>
+                        )}
+                        {addMonthly && monthlyAmount === 0 && (
+                          <div className="mt-2">
+                            <Input
+                              type="number"
+                              value={monthlyCustom}
+                              onChange={(e) => setMonthlyCustom(e.target.value)}
+                              placeholder="Enter custom amount (€)"
+                              min="1"
+                              step="1"
+                              autoFocus
+                              className="h-9 rounded-xl border-amber-300 text-sm"
+                            />
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xs text-slate-400">Starts next month · charged monthly until cancelled · not charged today</p>
+                    )}
+
+                    {/* GDPR consent */}
+                    <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                      <Checkbox
+                        id="mem-gdpr"
+                        checked={gdprConsent}
+                        onCheckedChange={(v) => setGdprConsent(!!v)}
+                        className="mt-0.5 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
+                      />
+                      <Label htmlFor="mem-gdpr" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
+                        I consent to the Hindu Association of Ireland processing my personal data for
+                        membership administration, in accordance with the{' '}
+                        <a
+                          href="/privacy-policy"
+                          className="text-orange-600 underline hover:text-orange-700"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Privacy Policy
+                        </a>{' '}
+                        and{' '}
+                        <a
+                          href="/terms-and-conditions"
+                          className="text-orange-600 underline hover:text-orange-700"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Terms &amp; Conditions
+                        </a>
+                        . <span className="text-red-500">*</span>
+                      </Label>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full h-12 text-base font-bold bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-2xl shadow-lg"
+                    >
+                      Continue to payment
+                      <ArrowRight className="ml-2" size={18} />
+                    </Button>
+                  </form>
+                  <BlessingText />
+                </>
+              )}
+
+              {/* Step 2: Payment summary */}
+              {step === 'payment' && selected && (
+                <>
+                  {/* Order summary */}
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 mb-4 space-y-3">
+                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">
+                      Order Summary
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-700">{selected.name} membership</span>
+                      <span className="font-semibold text-slate-900">€{selected.price}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Duration</span>
+                      <span>{selected.durationLabel}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Member</span>
+                      <span>{fullName}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Email</span>
+                      <span className="truncate max-w-[180px]">{email}</span>
+                    </div>
+                    {familySize && (
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Family size</span>
+                        <span>{familySize} {familySize === '1' ? 'person' : 'people'}</span>
+                      </div>
+                    )}
+                    {area && (
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Area</span>
+                        <span>{area}</span>
+                      </div>
+                    )}
+                    {addMonthly && (monthlyAmount > 0 || (monthlyAmount === 0 && !!monthlyCustom)) && (
+                      <div className="pt-2 border-t border-amber-200 space-y-1">
+                        <div className="flex justify-between text-xs text-amber-700">
+                          <span>Monthly contribution</span>
+                          <span>€{monthlyAmount > 0 ? monthlyAmount : monthlyCustom}/mo</span>
+                        </div>
+                        <p className="text-xs text-slate-400">Starts next month · charged monthly until cancelled · not charged today</p>
+                      </div>
+                    )}
+                    <Separator className="bg-slate-200" />
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-slate-800">Total today</span>
+                      <span className="font-black text-xl text-orange-700">€{selected.price}</span>
+                    </div>
+                  </div>
+
+                  {/* Security notice */}
+                  <div className="flex items-start gap-2 rounded-xl bg-green-50 border border-green-200 p-3 mb-4">
+                    <ShieldCheck size={15} weight="fill" className="text-green-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-green-700">
+                      You'll be redirected to Stripe's PCI-DSS certified checkout. Your card details are never stored on our servers.
+                    </p>
+                  </div>
+
+                  {/* Inline error (persists until next attempt) */}
+                  {payError && (
+                    <div className="rounded-xl bg-red-50 border border-red-200 p-3 mb-3 text-xs text-red-700">
+                      {payError}
                     </div>
                   )}
-                  <Separator className="bg-slate-200" />
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-800">Total today</span>
-                    <span className="font-black text-xl text-orange-700">€{selected.price}</span>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => { setStep('details'); setPayError(null) }}
+                      className="h-12 rounded-xl border-slate-300"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={pay}
+                      disabled={processing}
+                      size="lg"
+                      className="flex-1 h-12 font-bold bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-2xl"
+                    >
+                      {processing ? (
+                        <>
+                          <Spinner className="mr-2 animate-spin" />
+                          Redirecting to Stripe…
+                        </>
+                      ) : (
+                        <>
+                          <Heart weight="fill" className="mr-2" />
+                          Pay €{selected.price} with Stripe
+                        </>
+                      )}
+                    </Button>
                   </div>
-                </div>
+                  <BlessingText />
+                </>
+              )}
 
-                {/* Security notice */}
-                <div className="flex items-start gap-2 rounded-xl bg-green-50 border border-green-200 p-3 mb-4">
-                  <ShieldCheck size={15} weight="fill" className="text-green-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-green-700">
-                    You'll be redirected to Stripe's PCI-DSS certified checkout. Your card details are never stored on our servers.
-                  </p>
-                </div>
-
-                {/* Inline error (persists until next attempt) */}
-                {payError && (
-                  <div className="rounded-xl bg-red-50 border border-red-200 p-3 mb-3 text-xs text-red-700">
-                    {payError}
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => { setStep('details'); setPayError(null) }}
-                    className="h-12 rounded-xl border-slate-300"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    onClick={pay}
-                    disabled={processing}
-                    size="lg"
-                    className="flex-1 h-12 font-bold bg-linear-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-2xl"
-                  >
-                    {processing ? (
-                      <>
-                        <Spinner className="mr-2 animate-spin" />
-                        Redirecting to Stripe…
-                      </>
-                    ) : (
-                      <>
-                        <Heart weight="fill" className="mr-2" />
-                        Pay €{selected.price} with Stripe
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <BlessingText />
-              </>
-            )}
-
-          </div>
+            </div>
           </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
@@ -1182,139 +1381,139 @@ export function MembershipPage() {
             >
               <X size={16} weight="bold" />
             </DialogPrimitive.Close>
-          {givingTier && (() => {
-            const { Icon } = givingTier
-            return (
-              <>
-                <div className={cn('h-2 bg-linear-to-r', givingTier.gradient)} />
-                <div className="relative p-8">
-                  <DivineBg />
-                  <DialogHeader className="mb-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          'w-12 h-12 rounded-2xl bg-linear-to-br flex items-center justify-center shadow-sm shrink-0',
-                          givingTier.gradient,
-                        )}
-                      >
-                        <Icon size={24} weight="duotone" className="text-white" />
+            {givingTier && (() => {
+              const { Icon } = givingTier
+              return (
+                <>
+                  <div className={cn('h-2 bg-linear-to-r', givingTier.gradient)} />
+                  <div className="relative p-8">
+                    <DivineBg />
+                    <DialogHeader className="mb-4">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            'w-12 h-12 rounded-2xl bg-linear-to-br flex items-center justify-center shadow-sm shrink-0',
+                            givingTier.gradient,
+                          )}
+                        >
+                          <Icon size={24} weight="duotone" className="text-white" />
+                        </div>
+                        <div>
+                          <DialogTitle className="text-xl font-bold text-orange-900">
+                            {givingTier.name} — Monthly Giving
+                          </DialogTitle>
+                          <DialogDescription className="text-amber-700">
+                            {givingTier.amount
+                              ? `€${givingTier.amount}/month recurring`
+                              : 'Custom monthly amount'}
+                          </DialogDescription>
+                        </div>
                       </div>
-                      <div>
-                        <DialogTitle className="text-xl font-bold text-orange-900">
-                          {givingTier.name} — Monthly Giving
-                        </DialogTitle>
-                        <DialogDescription className="text-amber-700">
-                          {givingTier.amount
-                            ? `€${givingTier.amount}/month recurring`
-                            : 'Custom monthly amount'}
-                        </DialogDescription>
-                      </div>
-                    </div>
-                  </DialogHeader>
+                    </DialogHeader>
 
-                  <OrnateDivider />
+                    <OrnateDivider />
 
-                  <form onSubmit={payGiving} className="space-y-4 mt-2">
-                    {!givingTier.amount && (
+                    <form onSubmit={payGiving} className="space-y-4 mt-2">
+                      {!givingTier.amount && (
+                        <div>
+                          <Label htmlFor="giving-custom" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                            🪔 Monthly amount (€) <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="giving-custom"
+                            type="number"
+                            value={givingCustom}
+                            onChange={(e) => setGivingCustom(e.target.value)}
+                            placeholder="Enter amount (min €1)"
+                            min="1"
+                            step="0.01"
+                            required
+                            className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
+                          />
+                        </div>
+                      )}
                       <div>
-                        <Label htmlFor="giving-custom" className="text-sm font-semibold text-orange-800 mb-1.5 block">
-                          🪔 Monthly amount (€) <span className="text-red-500">*</span>
+                        <Label htmlFor="giving-name" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                          🌸 Your Name <span className="text-red-500">*</span>
                         </Label>
                         <Input
-                          id="giving-custom"
-                          type="number"
-                          value={givingCustom}
-                          onChange={(e) => setGivingCustom(e.target.value)}
-                          placeholder="Enter amount (min €1)"
-                          min="1"
-                          step="0.01"
+                          id="giving-name"
+                          value={givingName}
+                          onChange={(e) => setGivingName(e.target.value)}
+                          placeholder="Your full name"
                           required
                           className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
                         />
                       </div>
-                    )}
-                    <div>
-                      <Label htmlFor="giving-name" className="text-sm font-semibold text-orange-800 mb-1.5 block">
-                        🌸 Your Name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="giving-name"
-                        value={givingName}
-                        onChange={(e) => setGivingName(e.target.value)}
-                        placeholder="Your full name"
-                        required
-                        className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="giving-email" className="text-sm font-semibold text-orange-800 mb-1.5 block">
-                        🪷 Email <span className="text-red-500">*</span>
-                      </Label>
-                      <EmailInput
-                        id="giving-email"
-                        value={givingEmail}
-                        onChange={(e) => setGivingEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        required
-                        className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
-                      />
-                    </div>
-                    <div className="flex items-start gap-3 rounded-xl bg-orange-50 border border-orange-200 p-4">
-                      <Checkbox
-                        id="giving-gdpr"
-                        checked={givingConsent}
-                        onCheckedChange={(v) => setGivingConsent(!!v)}
-                        className="mt-0.5 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
-                      />
-                      <Label
-                        htmlFor="giving-gdpr"
-                        className="text-xs text-slate-600 leading-relaxed cursor-pointer"
-                      >
-                        I consent to my data being processed for donation management per the{' '}
-                        <a
-                          href="/privacy-policy"
-                          className="text-orange-600 underline"
-                          target="_blank"
-                          rel="noreferrer"
+                      <div>
+                        <Label htmlFor="giving-email" className="text-sm font-semibold text-orange-800 mb-1.5 block">
+                          🪷 Email <span className="text-red-500">*</span>
+                        </Label>
+                        <EmailInput
+                          id="giving-email"
+                          value={givingEmail}
+                          onChange={(e) => setGivingEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          required
+                          className="h-11 rounded-xl border-orange-300 focus:border-orange-500"
+                        />
+                      </div>
+                      <div className="flex items-start gap-3 rounded-xl bg-orange-50 border border-orange-200 p-4">
+                        <Checkbox
+                          id="giving-gdpr"
+                          checked={givingConsent}
+                          onCheckedChange={(v) => setGivingConsent(!!v)}
+                          className="mt-0.5 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
+                        />
+                        <Label
+                          htmlFor="giving-gdpr"
+                          className="text-xs text-slate-600 leading-relaxed cursor-pointer"
                         >
-                          Privacy Policy
-                        </a>
-                        . <span className="text-red-500">*</span>
-                      </Label>
-                    </div>
-                    <Button
-                      type="submit"
-                      size="lg"
-                      disabled={givingProcessing}
-                      className={cn(
-                        'w-full h-12 font-bold text-white rounded-2xl bg-linear-to-r',
-                        givingTier.gradient,
-                      )}
-                    >
-                      {givingProcessing ? (
-                        <>
-                          <Spinner className="mr-2 animate-spin" />
-                          Redirecting…
-                        </>
-                      ) : (
-                        <>
-                          <Heart weight="fill" className="mr-2" />
-                          Give{' '}
-                          {givingTier.amount
-                            ? `€${givingTier.amount}`
-                            : givingCustom
-                              ? `€${givingCustom}`
-                              : ''
-                          }/month
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                  <BlessingText />
-                </div>
-              </>
-            )
-          })()}
+                          I consent to my data being processed for donation management per the{' '}
+                          <a
+                            href="/privacy-policy"
+                            className="text-orange-600 underline"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Privacy Policy
+                          </a>
+                          . <span className="text-red-500">*</span>
+                        </Label>
+                      </div>
+                      <Button
+                        type="submit"
+                        size="lg"
+                        disabled={givingProcessing}
+                        className={cn(
+                          'w-full h-12 font-bold text-white rounded-2xl bg-linear-to-r',
+                          givingTier.gradient,
+                        )}
+                      >
+                        {givingProcessing ? (
+                          <>
+                            <Spinner className="mr-2 animate-spin" />
+                            Redirecting…
+                          </>
+                        ) : (
+                          <>
+                            <Heart weight="fill" className="mr-2" />
+                            Give{' '}
+                            {givingTier.amount
+                              ? `€${givingTier.amount}`
+                              : givingCustom
+                                ? `€${givingCustom}`
+                                : ''
+                            }/month
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                    <BlessingText />
+                  </div>
+                </>
+              )
+            })()}
           </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>

@@ -19,6 +19,11 @@ import {
   ShieldCheck,
   CheckSquare,
   ListPlus,
+  Eye,
+  EyeSlash,
+  Prohibit,
+  PauseCircle,
+  PlayCircle,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -242,6 +247,8 @@ const EMPTY_FORM: Omit<TempleEvent, 'id'> = {
   ticketTiers: [],
   eventServices: [],
   published: true,
+  registrationSuspended: false,
+  registrationSuspendedMessage: '',
 }
 
 const PRESET_ATTENDANCE_RULES = [
@@ -264,6 +271,7 @@ export function EventsSection() {
 
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState<EventCategory | 'all'>('all')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'deactivated' | 'suspended'>('all')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<TempleEvent | null>(null)
   const [form, setForm] = useState<Omit<TempleEvent, 'id'>>(EMPTY_FORM)
@@ -277,10 +285,41 @@ export function EventsSection() {
   const [imageSearch, setImageSearch] = useState('')
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
 
+  const handleTogglePublished = async (e: TempleEvent) => {
+    try {
+      const nextPublished = !e.published
+      await updateEvent(e.id, { published: nextPublished })
+      toast.success(
+        nextPublished
+          ? `Activated "${e.title}". It is now visible on public pages.`
+          : `Deactivated "${e.title}". It is now hidden from public pages.`,
+      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update event status.')
+    }
+  }
+
+  const handleToggleRegistration = async (e: TempleEvent) => {
+    try {
+      const nextSuspended = !e.registrationSuspended
+      await updateEvent(e.id, { registrationSuspended: nextSuspended })
+      toast.success(
+        nextSuspended
+          ? `Registration suspended for "${e.title}". Public registrations are now halted.`
+          : `Registration resumed for "${e.title}". Public registrations are now open.`,
+      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update registration status.')
+    }
+  }
+
   const filtered = useMemo(() => {
     const list = sortByDate(events)
     return list.filter((e) => {
       if (filterCategory !== 'all' && e.category !== filterCategory) return false
+      if (filterStatus === 'active' && !e.published) return false
+      if (filterStatus === 'deactivated' && e.published) return false
+      if (filterStatus === 'suspended' && !e.registrationSuspended) return false
       if (!search.trim()) return true
       const q = search.toLowerCase()
       return (
@@ -289,7 +328,7 @@ export function EventsSection() {
         e.description.toLowerCase().includes(q)
       )
     })
-  }, [events, search, filterCategory])
+  }, [events, search, filterCategory, filterStatus])
 
   const openCreate = () => {
     setEditing(null)
@@ -305,6 +344,9 @@ export function EventsSection() {
     setForm({
       ...EMPTY_FORM,
       ...rest,
+      published: rest.published ?? true,
+      registrationSuspended: rest.registrationSuspended ?? false,
+      registrationSuspendedMessage: rest.registrationSuspendedMessage ?? '',
       image: rest.image ?? undefined,
       stripeProductId: rest.stripeProductId ?? '',
       ticketTiers: rest.ticketTiers ?? [],
@@ -438,6 +480,9 @@ export function EventsSection() {
       stripeProductId: form.isPaid ? form.stripeProductId?.trim() || undefined : undefined,
       ticketTiers: form.isPaid ? form.ticketTiers : undefined,
       eventServices: form.isPaid ? [] : (form.eventServices ?? []),
+      published: Boolean(form.published),
+      registrationSuspended: Boolean(form.registrationSuspended),
+      registrationSuspendedMessage: form.registrationSuspendedMessage?.trim() || undefined,
     }
     try {
       if (editing) {
@@ -613,7 +658,7 @@ export function EventsSection() {
             value={filterCategory}
             onValueChange={(v) => setFilterCategory(v as EventCategory | 'all')}
           >
-            <SelectTrigger className="md:w-56">
+            <SelectTrigger className="md:w-48">
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
@@ -623,6 +668,21 @@ export function EventsSection() {
                   {label}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filterStatus}
+            onValueChange={(v) => setFilterStatus(v as 'all' | 'active' | 'deactivated' | 'suspended')}
+          >
+            <SelectTrigger className="md:w-52">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="active">Active events</SelectItem>
+              <SelectItem value="deactivated">Deactivated events</SelectItem>
+              <SelectItem value="suspended">Registration suspended</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -641,14 +701,16 @@ export function EventsSection() {
                 <Th>Location</Th>
                 <Th>Category</Th>
                 <Th>Ticketing</Th>
+                <Th>Status</Th>
                 <Th className="text-right">Actions</Th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((e) => {
-                const isPast = !e.published
+                const todayStr = new Date().toISOString().slice(0, 10)
+                const isPastDate = e.date < todayStr
                 return (
-                <tr key={e.id} className={cn('border-t border-slate-100 align-top', isPast && 'opacity-60 bg-slate-50')}>
+                <tr key={e.id} className={cn('border-t border-slate-100 align-top', !e.published && 'opacity-65 bg-slate-50/70')}>
                   <Td>
                     <div className="font-semibold text-slate-900">
                       {e.isMultiDay && e.endDate ? `${e.date} to ${e.endDate}` : e.date}
@@ -661,9 +723,9 @@ export function EventsSection() {
                         {e.schedules.length} Time Slots
                       </Badge>
                     )}
-                    {isPast && (
-                      <Badge className="mt-1 bg-slate-400 text-white text-[10px] px-1.5 py-0">
-                        Past
+                    {isPastDate && (
+                      <Badge variant="outline" className="mt-1 border-slate-300 bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0">
+                        Past Date
                       </Badge>
                     )}
                   </Td>
@@ -708,7 +770,83 @@ export function EventsSection() {
                       <Badge className="bg-emerald-600 text-white">Free</Badge>
                     )}
                   </Td>
+                  <Td>
+                    <div className="flex flex-col gap-1 items-start">
+                      {e.published ? (
+                        <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] px-2 py-0.5">
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-slate-300 bg-slate-100 text-slate-600 text-[11px] px-2 py-0.5">
+                          Deactivated
+                        </Badge>
+                      )}
+                      {e.registrationSuspended ? (
+                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 text-[10px] px-1.5 py-0">
+                          Reg. Suspended
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] px-1.5 py-0">
+                          Reg. Open
+                        </Badge>
+                      )}
+                    </div>
+                  </Td>
                   <Td className="text-right whitespace-nowrap">
+                    {/* Activate / Deactivate quick toggle */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTogglePublished(e)}
+                      disabled={!canUpdate}
+                      title={e.published ? 'Deactivate event (hide from public)' : 'Activate event (show on public website)'}
+                      className={cn(
+                        'text-xs',
+                        e.published
+                          ? 'text-slate-600 hover:text-red-700 hover:bg-red-50'
+                          : 'text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50',
+                      )}
+                    >
+                      {e.published ? (
+                        <>
+                          <EyeSlash size={15} className="mr-1 text-slate-500" />
+                          Deactivate
+                        </>
+                      ) : (
+                        <>
+                          <Eye size={15} className="mr-1 text-emerald-600" />
+                          Activate
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Suspend / Resume Registration quick toggle */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleRegistration(e)}
+                      disabled={!canUpdate}
+                      title={e.registrationSuspended ? 'Resume public registration' : 'Suspend public registration'}
+                      className={cn(
+                        'text-xs',
+                        e.registrationSuspended
+                          ? 'text-blue-700 hover:text-blue-800 hover:bg-blue-50'
+                          : 'text-amber-700 hover:text-amber-800 hover:bg-amber-50',
+                      )}
+                    >
+                      {e.registrationSuspended ? (
+                        <>
+                          <PlayCircle size={15} className="mr-1 text-blue-600" />
+                          Resume Reg
+                        </>
+                      ) : (
+                        <>
+                          <PauseCircle size={15} className="mr-1 text-amber-600" />
+                          Suspend Reg
+                        </>
+                      )}
+                    </Button>
+
                     {e.isPaid && (
                       <Button
                         variant="ghost"
@@ -770,10 +908,17 @@ export function EventsSection() {
                     ? 'Update the event details and save to sync with the public calendar.'
                     : 'Fill in the details to add a new event to the public calendar.'}
                 </SheetDescription>
-                {editing && !editing.published && (
-                  <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                    This event has expired (past date) and is hidden from the public. Change the date to a future date to reactivate it.
-                  </p>
+                {editing && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge className={cn('text-xs', editing.published ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700')}>
+                      {editing.published ? 'Active (Published)' : 'Deactivated (Hidden from Public)'}
+                    </Badge>
+                    {editing.registrationSuspended && (
+                      <Badge variant="outline" className="text-xs border-amber-400 bg-amber-50 text-amber-800">
+                        Registration Suspended
+                      </Badge>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -831,6 +976,82 @@ export function EventsSection() {
                   <span className="text-xs text-slate-400">Click to browse uploaded images</span>
                 </button>
               )}
+            </div>
+
+            <Separator />
+
+            {/* Event Visibility & Registration Settings */}
+            <div className="rounded-xl border border-orange-200 bg-orange-50/40 p-4 space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-orange-950 flex items-center gap-1.5">
+                <ShieldCheck size={16} className="text-orange-600" />
+                Visibility & Registration Controls
+              </p>
+
+              <div className="space-y-4">
+                {/* Active / Deactivated Switch */}
+                <div className="flex items-start justify-between gap-4 rounded-lg bg-white p-3 border border-orange-100">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="event-published" className="text-sm font-semibold text-slate-800 cursor-pointer">
+                      {form.published ? 'Active (Publicly Visible)' : 'Deactivated (Hidden from Public)'}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {form.published
+                        ? 'Event is published and visible on public calendar and home page.'
+                        : 'Event is deactivated and completely hidden from public pages and visitors.'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="event-published"
+                    checked={form.published}
+                    onCheckedChange={(checked) => setForm((f) => ({ ...f, published: checked }))}
+                  />
+                </div>
+
+                {/* Registration Suspended Switch */}
+                <div className="flex items-start justify-between gap-4 rounded-lg bg-white p-3 border border-orange-100">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="event-reg-suspended" className="text-sm font-semibold text-slate-800 cursor-pointer flex items-center gap-1.5">
+                      {form.registrationSuspended ? (
+                        <>
+                          <Prohibit size={15} className="text-amber-600" weight="bold" />
+                          Registration Suspended
+                        </>
+                      ) : (
+                        'Registration Open'
+                      )}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {form.registrationSuspended
+                        ? 'Public registrations are halted. Attendees attempting to RSVP or purchase tickets will be shown the suspension notice.'
+                        : 'Attendees can register (RSVP or book tickets) normally.'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="event-reg-suspended"
+                    checked={form.registrationSuspended ?? false}
+                    onCheckedChange={(checked) => setForm((f) => ({ ...f, registrationSuspended: checked }))}
+                  />
+                </div>
+
+                {/* Custom suspension notice if suspended */}
+                {form.registrationSuspended && (
+                  <div className="space-y-1.5 pt-1">
+                    <Label htmlFor="event-reg-msg" className="text-xs font-semibold text-slate-700">
+                      Suspension Notice Message
+                    </Label>
+                    <Input
+                      id="event-reg-msg"
+                      value={form.registrationSuspendedMessage ?? ''}
+                      onChange={(e) => setForm((f) => ({ ...f, registrationSuspendedMessage: e.target.value }))}
+                      placeholder="Registration is no longer allowed for this event."
+                      className="bg-white text-xs"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Displayed to visitors when they attempt to RSVP or book tickets for this event.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <Separator />

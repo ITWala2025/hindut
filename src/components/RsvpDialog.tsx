@@ -38,6 +38,7 @@ import {
   ClipboardText,
   Warning,
   CreditCard,
+  Prohibit,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { cn, formatDateDisplay, normalizeDateToIso } from '@/lib/utils'
@@ -207,6 +208,11 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
       return
     }
 
+    if (event.registrationSuspended) {
+      toast.warning(event.registrationSuspendedMessage || 'Registration is no longer allowed for this event.')
+      return
+    }
+
     if (requireConditionsAck && !conditionsAck) {
       toast.error('Please accept the event attendance conditions to proceed.')
       return
@@ -337,6 +343,17 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
             {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
               <div className="px-6 py-5 space-y-4">
+                {event.registrationSuspended && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-center">
+                    <div className="flex items-center justify-center gap-2 text-amber-800 font-semibold mb-1">
+                      <Prohibit size={18} weight="bold" />
+                      <span>Registration Closed</span>
+                    </div>
+                    <p className="text-sm text-amber-900 leading-relaxed">
+                      {event.registrationSuspendedMessage || 'Registration is no longer allowed for this event.'}
+                    </p>
+                  </div>
+                )}
 
                 {/* Name row */}
                 <div className="grid grid-cols-2 gap-3">
@@ -643,10 +660,12 @@ export function RsvpDialog({ open, onOpenChange, event }: RsvpDialogProps) {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold"
+                  disabled={isSubmitting || event.registrationSuspended}
+                  className="flex-1 bg-linear-to-r from-orange-600 to-amber-600 text-white hover:from-orange-700 hover:to-amber-700 font-semibold disabled:opacity-50"
                 >
-                  {isSubmitting ? (
+                  {event.registrationSuspended ? (
+                    'Registration Closed'
+                  ) : isSubmitting ? (
                     <>
                       <Spinner size={16} className="mr-2 animate-spin" />
                       {selectedServices.length > 0 ? 'Confirming & redirecting…' : 'Sending RSVP…'}
