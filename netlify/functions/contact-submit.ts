@@ -20,7 +20,6 @@
 import type { Handler } from '@netlify/functions'
 import { sendMail, isMailConfigured } from './lib/mailer.js'
 import { z } from 'zod'
-import { z } from 'zod'
 import {
   buildVisitorConfirmationHtml,
   buildVisitorConfirmationText,
@@ -98,23 +97,21 @@ export const handler: Handler = async (event) => {
     }
 
     // Validate schema
-    let data: ContactFormData
-    try {
-      data = ContactFormSchema.parse(body)
-    } catch (err) {
-      const zodError = err as z.ZodError
+    const parsed = ContactFormSchema.safeParse(body)
+    if (!parsed.success) {
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({
           error: 'Validation failed',
-          details: zodError.errors.map((e) => ({
+          details: parsed.error.issues.map((e) => ({
             field: e.path.join('.'),
             message: e.message,
           })),
         }),
       }
     }
+    const data = parsed.data
 
     // Sanitise inputs
     const sanitisedData: ContactFormData = {

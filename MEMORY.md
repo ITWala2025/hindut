@@ -316,6 +316,8 @@ The `Plan/` directory contains specification documents. They are useful for inte
 | `Plan/SECURITY.md` | Security hardening notes |
 | `Plan/PRODUCTION_DEPLOYMENT_CHECKLIST.md` | Go-live checklist |
 
+- **Dependency Security Audit & Upgrades (2026-10-24):** Resolved all 8 npm security vulnerabilities (0 vulnerabilities remaining). Upgraded `nodemailer` to `10.2.1`, `sharp` to `0.35.5`, `zod` to `4.6.7`, `vite` to `7.3.7`, `source-map-js` to `1.2.2`. Updated Zod schemas in `RsvpDialog.tsx` and `TicketBookingDialog.tsx` to use Zod 4 `{ message: '...' }` error parameter syntax. Verified zero type errors via `npx tsc --noEmit` and successful production build via `npm run build`.
+
 ---
 
-*Last updated: 2026-10-17*
+*Last updated: 2026-10-24*

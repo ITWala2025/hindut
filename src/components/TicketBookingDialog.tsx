@@ -61,19 +61,19 @@ const detailsSchema = z.object({
     .max(254)
     .email('Enter a valid email address'),
   numAdults: z.coerce
-    .number({ invalid_type_error: 'Enter a number' })
+    .number({ message: 'Enter a number' })
     .int()
     .min(1, 'At least 1 adult required')
     .max(20, 'Maximum 20 adults per booking'),
   numChildren: z.coerce
-    .number({ invalid_type_error: 'Enter a number' })
+    .number({ message: 'Enter a number' })
     .int()
     .min(0)
     .max(20, 'Maximum 20 children per booking')
     .optional()
     .default(0),
   consentGdpr: z.literal(true, {
-    errorMap: () => ({ message: 'You must accept the data processing terms' }),
+    message: 'You must accept the data processing terms',
   }),
 })
 

@@ -71,19 +71,19 @@ const rsvpSchema = z.object({
     .max(254, 'Email address is too long')
     .email('Enter a valid email address'),
   numAdults: z.coerce
-    .number({ invalid_type_error: 'Enter a number' })
+    .number({ message: 'Enter a number' })
     .int('Must be a whole number')
     .min(1, 'At least 1 adult required')
     .max(20, 'Maximum 20 adults per RSVP'),
   numChildren: z.coerce
-    .number({ invalid_type_error: 'Enter a number' })
+    .number({ message: 'Enter a number' })
     .int('Must be a whole number')
     .min(0, 'Cannot be negative')
     .max(20, 'Maximum 20 children per RSVP')
     .optional()
     .default(0),
   consentGdpr: z.literal(true, {
-    errorMap: () => ({ message: 'You must accept the data processing terms to RSVP' }),
+    message: 'You must accept the data processing terms to RSVP',
   }),
 })
 
