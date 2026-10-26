@@ -53,8 +53,13 @@ const detailsSchema = z.object({
     .regex(/^[a-zA-ZÀ-ÿ\s\-']+$/, 'Last name contains invalid characters'),
   phone: z
     .string()
-    .min(1, 'Phone number is required')
-    .regex(/^\+[1-9]\d{1,14}$/, 'Enter in E.164 format, e.g. +353851234567'),
+    .trim()
+    .max(30, 'Phone number must be at most 30 characters')
+    .refine((val) => !val || /^[\d\s\-+().]{6,30}$/.test(val), {
+      message: 'Enter a valid phone number',
+    })
+    .optional()
+    .default(''),
   email: z
     .string()
     .min(1, 'Email address is required')
@@ -502,18 +507,17 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
                 <div>
                   <Label htmlFor="tb-phone" className="flex items-center gap-1.5 mb-1.5">
                     <Phone size={13} className="text-amber-600" />
-                    Phone Number <span className="text-red-500">*</span>
+                    Phone Number <span className="text-xs text-muted-foreground font-normal">(optional)</span>
                   </Label>
                   <Input
                     id="tb-phone"
                     type="tel"
                     autoComplete="tel"
-                    placeholder="+353851234567"
+                    placeholder="e.g. 085 123 4567"
                     aria-invalid={!!errors.phone}
                     className={cn(errors.phone && 'border-red-400 focus-visible:ring-red-300')}
                     {...register('phone')}
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">International format with country code</p>
                   <FieldError message={errors.phone?.message} />
                 </div>
 

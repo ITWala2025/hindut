@@ -562,7 +562,12 @@ export const handler: Handler = async (event) => {
                 return `${masked}@${domain}`
               })()
             : '***@***'
-          const phoneMasked = phone.length < 5 ? '***' : phone.slice(0, 3) + ' *** *** ' + phone.slice(-4)
+          const phoneTrimmed = phone.trim()
+          const phoneMasked = !phoneTrimmed
+            ? ''
+            : phoneTrimmed.length < 5
+              ? '***'
+              : phoneTrimmed.slice(0, 3) + ' *** *** ' + phoneTrimmed.slice(-4)
 
           // Get payment reference (PaymentIntent ID)
           const paymentRef =
@@ -598,13 +603,15 @@ export const handler: Handler = async (event) => {
             break
           }
 
-          // Ensure payment_reference on the booking row for reconciliation.
-          if (paymentRef) {
-            await supabase
-              .from('ticket_bookings')
-              .update({ payment_reference: paymentRef })
-              .eq('id', bookingId)
-          }
+          // Ensure payment_reference and unmasked contact on the booking row for reconciliation & admin display.
+          await supabase
+            .from('ticket_bookings')
+            .update({
+              ...(paymentRef ? { payment_reference: paymentRef } : {}),
+              ...(email ? { email } : {}),
+              phone: phone ?? '',
+            })
+            .eq('id', bookingId)
 
           // Ensure receipt row has the real payment_reference and email_status = 'sent'
           await supabase
@@ -658,6 +665,10 @@ export const handler: Handler = async (event) => {
                   html:    buildTicketEmailHtml(emailParams),
                   text:    buildTicketEmailText(emailParams),
                 })
+                await supabase
+                  .from('ticket_bookings')
+                  .update({ confirmation_sent_at: new Date().toISOString() })
+                  .eq('id', bookingId)
                 console.log('[stripe-webhook] ticket email sent to', email, 'ref:', reference)
               }
             } catch (emailErr) {

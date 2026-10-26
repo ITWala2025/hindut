@@ -8,6 +8,8 @@ export interface TicketBookingRow {
   reference_number: string
   first_name: string
   last_name: string
+  email?: string | null
+  phone?: string | null
   phone_masked: string
   email_masked: string
   num_adults: number
@@ -52,7 +54,7 @@ export function useTicketBookings(filters?: TicketBookingFilters) {
       .from('ticket_bookings')
       .select(
         `id, event_id, reference_number, first_name, last_name,
-         phone_masked, email_masked, num_adults, num_children, num_children_0_4,
+         email, phone, phone_masked, email_masked, num_adults, num_children, num_children_0_4,
          amount_eur, payment_gateway, payment_reference,
          status, confirmation_sent_at, created_at,
          events!inner(title)`,
@@ -68,8 +70,12 @@ export function useTicketBookings(filters?: TicketBookingFilters) {
     let queryErr = err
     let rawRows: Record<string, unknown>[] | null = (data as unknown as Record<string, unknown>[]) ?? null
 
-    // Graceful fallback if num_children_0_4 is not yet migrated in PostgreSQL
-    if (queryErr && queryErr.message?.includes('num_children_0_4')) {
+    // Graceful fallback if email, phone, or num_children_0_4 is not yet migrated in PostgreSQL
+    if (queryErr && (
+      queryErr.message?.includes('email') ||
+      queryErr.message?.includes('phone') ||
+      queryErr.message?.includes('num_children_0_4')
+    )) {
       let fb = supabase
         .from('ticket_bookings')
         .select(
@@ -94,7 +100,9 @@ export function useTicketBookings(filters?: TicketBookingFilters) {
     } else {
       setBookings(
         (rawRows ?? []).map((row: Record<string, unknown>) => ({
-          ...(row as Omit<TicketBookingRow, 'event_title' | 'num_children_0_4'>),
+          ...(row as Omit<TicketBookingRow, 'event_title' | 'num_children_0_4' | 'email' | 'phone'>),
+          email: ((row.email as string | null) || (row.email_masked as string) || '').trim(),
+          phone: ((row.phone as string | null) || (row.phone_masked as string) || '').trim(),
           num_children_0_4: Number(row.num_children_0_4 ?? 0),
           event_title: (row.events as { title: string } | null)?.title ?? '',
         })),

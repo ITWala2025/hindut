@@ -32,7 +32,7 @@ const TicketSchema = z.object({
   eventId:        z.string().uuid('Invalid event ID'),
   firstName:      z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
   lastName:       z.string().min(1).max(100).regex(/^[a-zA-ZÀ-ÿ\s\-']+$/),
-  phone:          z.string().regex(/^\+[1-9]\d{1,14}$/, 'Phone must be E.164 format'),
+  phone:          z.string().trim().max(30).optional().default(''),
   email:          z.string().email().max(254),
   numAdults:      z.number().int().min(1).max(50),
   numChildren:    z.number().int().min(0).max(50).optional().default(0),
@@ -59,8 +59,10 @@ function maskEmail(email: string): string {
   return `${masked}@${domain}`
 }
 
-function maskPhone(phone: string): string {
-  return phone.length < 5 ? '***' : phone.slice(0, 3) + ' *** *** ' + phone.slice(-4)
+function maskPhone(phone?: string | null): string {
+  if (!phone) return ''
+  const trimmed = phone.trim()
+  return trimmed.length < 5 ? '***' : trimmed.slice(0, 3) + ' *** *** ' + trimmed.slice(-4)
 }
 
 function generateReference(eventSlug?: string | null, eventId?: string): string {
@@ -232,10 +234,14 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // Persist the Stripe PaymentIntent ID on the booking row for reconciliation.
+    // Persist the Stripe PaymentIntent ID and unmasked contact on the booking row for reconciliation & admin access.
     await supabase
       .from('ticket_bookings')
-      .update({ payment_reference: paymentReference })
+      .update({
+        payment_reference: paymentReference,
+        email:             data.email,
+        phone:             data.phone ?? '',
+      })
       .eq('id', bookingId)
 
     // Ensure receipt row has the real payment_reference and email_status = 'sent'
@@ -292,6 +298,11 @@ export const handler: Handler = async (event) => {
           html: buildTicketEmailHtml(emailParams),
           text: buildTicketEmailText(emailParams),
         })
+
+        await supabase
+          .from('ticket_bookings')
+          .update({ confirmation_sent_at: new Date().toISOString() })
+          .eq('id', bookingId)
 
         console.log('[ticket-submit] ✅ Ticket email sent to', data.email)
       }

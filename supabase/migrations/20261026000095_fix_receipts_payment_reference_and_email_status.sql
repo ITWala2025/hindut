@@ -20,7 +20,14 @@ drop function if exists public.insert_ticket_booking_encrypted(uuid, text, text,
 drop function if exists public.insert_ticket_booking_encrypted(uuid, text, text, text, text, text, text, text, integer, integer, numeric, text, boolean, text, integer, text);
 
 -- ---------------------------------------------------------------------------
--- 2. Create updated insert_ticket_booking_encrypted with p_payment_reference
+-- 2. Make phone columns optional in ticket_bookings
+-- ---------------------------------------------------------------------------
+alter table public.ticket_bookings alter column phone_encrypted drop not null;
+alter table public.ticket_bookings alter column phone_masked drop not null;
+alter table public.ticket_bookings alter column phone_masked set default '';
+
+-- ---------------------------------------------------------------------------
+-- 3. Create updated insert_ticket_booking_encrypted with p_payment_reference
 -- ---------------------------------------------------------------------------
 create or replace function public.insert_ticket_booking_encrypted(
   p_event_id          uuid,
@@ -62,9 +69,9 @@ begin
   ) values (
     p_event_id, p_reference,
     p_first_name, p_last_name,
-    pgp_sym_encrypt(p_phone, p_enc_key),
+    case when p_phone is not null and length(trim(p_phone)) > 0 then pgp_sym_encrypt(trim(p_phone), p_enc_key) else pgp_sym_encrypt('', p_enc_key) end,
     pgp_sym_encrypt(p_email, p_enc_key),
-    p_phone_masked, p_email_masked,
+    coalesce(p_phone_masked, ''), p_email_masked,
     p_num_adults, p_num_children, coalesce(p_num_children_0_4, 0),
     p_amount_eur, p_payment_gateway, p_payment_reference,
     p_consent_gdpr, 'confirmed'

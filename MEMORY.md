@@ -336,7 +336,26 @@ The `Plan/` directory contains specification documents. They are useful for inte
      - Backfilled event receipts where `payment_reference = 'stripe'` with their true `payment_reference` (`pi_...`) from `ticket_bookings`.
      - Backfilled all pending receipts to `'sent'` (or `'skipped'` for offline seed rows).
   3. **Webhook & Serverless Functions:** Updated `stripe-webhook.ts` and `ticket-submit.ts` to pass `p_payment_reference`, send ticket confirmation emails on Stripe checkout completion, and update `receipts.email_status = 'sent'`.
+- **Ticket Booking Modal Phone Optional & Relaxed Format (2026-10-26):**
+  1. Made the phone field in `TicketBookingDialog.tsx` optional (`(optional)` label) and removed the rigid E.164 country code requirement (`^\+[1-9]\d{1,14}$`), allowing Irish standard formats (e.g., `085 123 4567`) or leaving it blank.
+- **Admin Ticket Bookings Unmasked Contact & Confirmation Email Resend (2026-10-26):**
+  1. **Unmasked Contact for Authenticated Admin (`20261026000096_unmask_ticket_bookings_contact.sql`):** Added `email text` and `phone text` columns to `public.ticket_bookings`. Updated `insert_ticket_booking_encrypted` RPC to persist unmasked `email` and `phone` alongside encrypted and masked copies. Backfilled existing `email` from `public.receipts` table where available.
+  2. **Serverless Functions Sync:** Updated `ticket-submit.ts` and `stripe-webhook.ts` to persist `email` and `phone` directly on `ticket_bookings` rows upon booking creation.
+  3. **Admin Portal UI (`TicketBookingsSection.tsx` & `EventsSection.tsx`):**
+     - Table column header renamed from `Contact (masked)` to `Contact`.
+     - Displays unmasked email and phone directly in table rows and Detail Sheet, falling back gracefully to masked copies if older rows have not yet backfilled.
+     - Search filter searches both unmasked and masked email and phone.
+     - CSV export (`Export CSV`) exports unmasked `Email` and `Phone` columns.
+     - SectionCard description updated to reflect full attendee contact visibility.
+     - `EventsSection.tsx` attendee export updated to use unmasked email and phone.
+  4. **Confirmation Email Resend Functionality (`ticket-resend-confirmation.ts`):**
+     - Added Netlify serverless function `ticket-resend-confirmation.ts` requiring valid JWT and admin/editor permissions.
+     - Allows admin to resend ticket confirmation email to attendee with event date/time/location formatted in `Europe/Dublin` time.
+     - Supports optional recipient email address override in modal dialog if attendee made a typo during booking.
+     - Updates `confirmation_sent_at` timestamp on `ticket_bookings` and sets `email_status = 'sent'` in `public.receipts`.
+     - Added quick-action button in table rows and Detail Sheet footer with a dedicated modal dialog in `TicketBookingsSection.tsx`.
 
 ---
 
 *Last updated: 2026-10-26*
+

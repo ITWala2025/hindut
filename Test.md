@@ -124,6 +124,15 @@ Verify ticket tier selection, multi-slot total price calculation (`baseSingleSlo
   5. In `/admin/tickets`, verify the table displays separate `Adults`, `Children (5-11)`, and `Children (0-4)` columns showing `3`, `1`, and `1` (instead of concatenated `3A` or `4A`).
   6. Open the booking details sheet and verify `Adults (12+)`, `Children (5-11)`, `Children (0-4 / Free)`, and `Total Attendees` are rendered in separate rows.
 
+#### 2.4 Optional Phone & Local Format Validation
+- **Steps:**
+  1. Open the Ticket Booking modal on any paid event.
+  2. Leave the Phone Number field empty and fill in First Name, Last Name, Email, and accept GDPR terms.
+  3. Click "Proceed to Payment".
+  4. **Verify:** Form submits cleanly without validation error on phone.
+  5. Repeat test with local Irish format without country code (e.g. `085 123 4567` or `0871234567`).
+  6. **Verify:** Form accepts the phone number without requiring `+353` or international E.164 prefix.
+
 ### Cleanup Commands (Database)
 ```sql
 DELETE FROM public.ticket_bookings 
@@ -268,6 +277,17 @@ Verify admin login, role-gated section rendering, event creation/editing (includ
   6. If the RSVP or Ticket Booking dialog is opened, confirm a prominent amber banner informs the user that registration is closed and the submit/checkout button is disabled.
   7. Confirm Netlify functions `rsvp-submit` and `create-checkout-session` reject any attempted submissions with HTTP 403: *"Registration is no longer allowed for this event."*
   8. In `/admin/events`, click "Resume Reg" (or toggle "Suspend Registration" off). Confirm public registrations resume immediately.
+
+#### 6.5 Admin Ticket Bookings Contact Visibility & Confirmation Email Resend
+- **Steps:**
+  1. Log in to the Admin Portal and navigate to `/admin/tickets` ("Ticket Bookings").
+  2. **Verify Contact Header & Data:** Confirm the table header displays "Contact" (without "(masked)"). Verify attendee email addresses (e.g., `user@domain.com`) and phone numbers display in plain text for authenticated administrators.
+  3. **Verify Search Functionality:** Type an attendee's unmasked email address or phone into the search box. Confirm the table filters correctly to that record.
+  4. **Verify Booking Details Sheet:** Click the Eye icon on any booking. In the Details Sheet, verify "Email" and "Phone" display full contact details. Verify the "Confirmation sent" timestamp shows the exact date/time (or "Not recorded").
+  5. **Verify CSV Export:** Click "Export CSV". Open the downloaded CSV and verify headers include `Email` and `Phone` (unmasked) with attendee contact information.
+  6. **Resend Confirmation Email (Table Action):** On a confirmed or pending booking, click the Envelope quick action icon. Verify the modal opens displaying attendee name, reference number, event title, and an input prefilled with their email address.
+  7. **Resend Confirmation Email with Optional Email Override:** Optionally adjust the email address in the input, and click "Send Confirmation". Verify the loading state displays, success toast confirms dispatch (*"Ticket confirmation email resent to ..."*), and `confirmation_sent_at` timestamp is updated in the database and UI.
+  8. **Verify Role Permission Enforcement:** Log in as an unauthorized user or unauthenticated visitor; verify direct POST calls to `/.netlify/functions/ticket-resend-confirmation` reject with HTTP 401 or HTTP 403.
 
 ### Cleanup Commands (Database)
 ```sql

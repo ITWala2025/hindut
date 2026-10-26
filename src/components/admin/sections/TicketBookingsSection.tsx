@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
@@ -14,6 +14,7 @@ import {
   Trash,
   XCircle,
   ArrowCounterClockwise,
+  EnvelopeSimple,
 } from '@phosphor-icons/react'
 import { useAuth } from '@/lib/auth'
 import { useTicketBookings, type TicketBookingRow } from '@/hooks/useTicketBookings'
@@ -91,6 +92,11 @@ export function TicketBookingsSection() {
   const [cancelTarget, setCancelTarget]   = useState<TicketBookingRow | null>(null)
   const [refundTarget, setRefundTarget]   = useState<TicketBookingRow | null>(null)
   const [deleteTarget, setDeleteTarget]   = useState<TicketBookingRow | null>(null)
+  const [resendTarget, setResendTarget]   = useState<TicketBookingRow | null>(null)
+  const [customEmail, setCustomEmail]     = useState('')
+  const [resending, setResending]         = useState(false)
+  const [unmasking, setUnmasking]         = useState(false)
+  const [autoUnmaskAttempted, setAutoUnmaskAttempted] = useState(false)
 
   // Only pass a filter object when at least one filter is active; otherwise pass
   // undefined so the hook loads all bookings (passing an empty object triggers
@@ -130,7 +136,8 @@ export function TicketBookingsSection() {
         b.first_name.toLowerCase().includes(q)       ||
         b.last_name.toLowerCase().includes(q)        ||
         b.reference_number.toLowerCase().includes(q) ||
-        b.email_masked.toLowerCase().includes(q)     ||
+        (b.email || b.email_masked || '').toLowerCase().includes(q) ||
+        (b.phone || b.phone_masked || '').toLowerCase().includes(q) ||
         b.event_title.toLowerCase().includes(q),
     )
   }, [bookings, search])
@@ -183,9 +190,101 @@ export function TicketBookingsSection() {
     }
   }
 
+  const handleResendConfirmation = async () => {
+    if (!resendTarget) return
+    const targetEmail = customEmail.trim()
+    if (!targetEmail || !targetEmail.includes('@')) {
+      toast.error('Please enter a valid email address.')
+      return
+    }
+    setResending(true)
+    try {
+      const { data: { session } } = await (await import('@/lib/supabase')).supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast.error('Authentication session expired. Please log in again.')
+        return
+      }
+
+      const res = await fetch('/.netlify/functions/ticket-resend-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          bookingId: resendTarget.id,
+          recipientEmail: targetEmail,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to resend confirmation email')
+      }
+
+      toast.success(data.message || `Confirmation email sent to ${targetEmail}`)
+      setResendTarget(null)
+      await refetch()
+      if (detail && detail.id === resendTarget.id) {
+        setDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                confirmation_sent_at: data.confirmationSentAt || new Date().toISOString(),
+                email: targetEmail,
+              }
+            : null,
+        )
+      }
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to resend email.')
+    } finally {
+      setResending(false)
+    }
+  }
+
+  const handleUnmaskContacts = async (silent = false) => {
+    setUnmasking(true)
+    try {
+      const { data: { session } } = await (await import('@/lib/supabase')).supabase.auth.getSession()
+      if (!session?.access_token) return
+
+      const res = await fetch('/.netlify/functions/ticket-unmask-contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (!silent) toast.error(data.error || 'Failed to unmask contacts.')
+      } else {
+        if (!silent) toast.success(data.message || 'Contacts unmasked successfully.')
+        await refetch()
+      }
+    } catch (err) {
+      if (!silent) toast.error((err as Error).message ?? 'Failed to unmask contacts.')
+    } finally {
+      setUnmasking(false)
+    }
+  }
+
+  // Automatically trigger unmasking if any visible booking still displays masked data
+  useEffect(() => {
+    if (autoUnmaskAttempted || loading || bookings.length === 0) return
+    const hasMasked = bookings.some(
+      (b) => !b.email || b.email.includes('***') || !b.phone || b.phone.includes('***'),
+    )
+    if (hasMasked) {
+      setAutoUnmaskAttempted(true)
+      handleUnmaskContacts(true)
+    }
+  }, [bookings, loading, autoUnmaskAttempted])
+
   const handleExport = () => {
     const headers = [
-      'Reference', 'First Name', 'Last Name', 'Email (masked)', 'Phone (masked)',
+      'Reference', 'First Name', 'Last Name', 'Email', 'Phone',
       'Event', 'Adults', 'Children (5-11)', 'Children (0-4)', 'Amount (€)', 'Gateway', 'Payment Ref',
       'Status', 'Submitted',
     ]
@@ -215,8 +314,8 @@ export function TicketBookingsSection() {
       b.reference_number,
       b.first_name,
       b.last_name,
-      b.email_masked,
-      b.phone_masked,
+      b.email || b.email_masked || '',
+      b.phone || b.phone_masked || '',
       b.event_title,
       String(b.num_adults),
       String(b.num_children),
@@ -287,7 +386,7 @@ export function TicketBookingsSection() {
       {/* Main table section */}
       <SectionCard
         title="Ticket Bookings"
-        description="View and manage paid event ticket bookings. Phone and email are masked for privacy; download CSV for full details."
+        description="View and manage paid event ticket bookings. Contact details and payment references for all attendee reservations."
         actions={
           <>
             <Button
@@ -299,6 +398,19 @@ export function TicketBookingsSection() {
               <ArrowsClockwise size={15} className="mr-1.5" />
               Refresh
             </Button>
+            {canWrite && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleUnmaskContacts(false)}
+                disabled={unmasking}
+                className="border-sky-200 text-sky-700 hover:bg-sky-50"
+                title="Decrypt and unmask attendee contact information"
+              >
+                <ArrowsClockwise size={15} className={cn("mr-1.5", unmasking && "animate-spin")} />
+                {unmasking ? 'Unmasking…' : 'Unmask Contacts'}
+              </Button>
+            )}
             {canWrite && (
               <Button
                 size="sm"
@@ -405,7 +517,7 @@ export function TicketBookingsSection() {
                   <Th className="text-center">Children (5-11)</Th>
                   <Th className="text-center">Children (0-4)</Th>
                   <Th>Amount</Th>
-                  <Th>Contact (masked)</Th>
+                  <Th>Contact</Th>
                   <Th>Status</Th>
                   <Th>Receipt</Th>
                   <Th>Submitted</Th>
@@ -451,9 +563,9 @@ export function TicketBookingsSection() {
                       </span>
                     </Td>
                     <Td>
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        <div>{b.email_masked}</div>
-                        <div>{b.phone_masked}</div>
+                      <div className="text-xs space-y-0.5">
+                        <div className="font-medium text-slate-800 break-all">{b.email || b.email_masked}</div>
+                        <div className="text-slate-500">{b.phone || (b.phone_masked ? b.phone_masked : '—')}</div>
                       </div>
                     </Td>
                     <Td><StatusBadge status={b.status} /></Td>
@@ -490,6 +602,20 @@ export function TicketBookingsSection() {
                           title="Download receipt PDF"
                         >
                           <DownloadSimple size={15} />
+                        </Button>
+                      )}
+                      {canWrite && (b.status === 'confirmed' || b.status === 'pending') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setResendTarget(b)
+                            setCustomEmail(b.email || b.email_masked || '')
+                          }}
+                          className="text-sky-600 hover:text-sky-800 hover:bg-sky-50"
+                          title="Resend confirmation email"
+                        >
+                          <EnvelopeSimple size={15} />
                         </Button>
                       )}
                       {canWrite && b.status === 'confirmed' && (
@@ -587,12 +713,12 @@ export function TicketBookingsSection() {
                 <span className="font-semibold">{detail.first_name} {detail.last_name}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Email (masked)</span>
-                <span className="text-xs text-muted-foreground">{detail.email_masked}</span>
+                <span className="text-muted-foreground">Email</span>
+                <span className="text-sm font-medium text-slate-900 break-all">{detail.email || detail.email_masked}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Phone (masked)</span>
-                <span className="text-xs text-muted-foreground">{detail.phone_masked}</span>
+                <span className="text-muted-foreground">Phone</span>
+                <span className="text-sm font-medium text-slate-900">{detail.phone || detail.phone_masked || '—'}</span>
               </div>
               <hr className="border-slate-100" />
               <div className="flex items-center justify-between">
@@ -643,12 +769,12 @@ export function TicketBookingsSection() {
                 <span className="text-muted-foreground">Submitted</span>
                 <span className="text-xs text-muted-foreground">{formatDate(detail.created_at)}</span>
               </div>
-              {detail.confirmation_sent_at && (
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Confirmation sent</span>
-                  <span className="text-xs text-muted-foreground">{formatDate(detail.confirmation_sent_at)}</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Confirmation sent</span>
+                <span className="text-xs text-muted-foreground">
+                  {detail.confirmation_sent_at ? formatDate(detail.confirmation_sent_at) : 'Not recorded'}
+                </span>
+              </div>
 
             </div>
           )}
@@ -657,6 +783,20 @@ export function TicketBookingsSection() {
             <Button variant="outline" size="sm" onClick={() => setDetail(null)}>Close</Button>
             {canWrite && detail && (
               <div className="flex flex-wrap gap-2">
+                {(detail.status === 'confirmed' || detail.status === 'pending') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-sky-600 border-sky-200 hover:bg-sky-50"
+                    onClick={() => {
+                      setResendTarget(detail)
+                      setCustomEmail(detail.email || detail.email_masked || '')
+                    }}
+                  >
+                    <EnvelopeSimple size={14} className="mr-1.5" />
+                    Resend Email
+                  </Button>
+                )}
                 {detail.status === 'confirmed' && (
                   <Button
                     variant="outline"
@@ -760,6 +900,95 @@ export function TicketBookingsSection() {
             >
               Delete
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resend Confirmation Email Dialog */}
+      <AlertDialog
+        open={!!resendTarget}
+        onOpenChange={(o) => { if (!o && !resending) setResendTarget(null) }}
+      >
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <EnvelopeSimple size={20} className="text-sky-600" />
+              Resend Confirmation Email
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Resend the official ticket confirmation email with booking reference and event details.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {resendTarget && (
+            <div className="space-y-3 py-2 text-sm">
+              <div className="rounded-lg bg-slate-50 p-3 space-y-1.5 border border-slate-200">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Attendee</span>
+                  <span className="font-semibold text-slate-900">
+                    {resendTarget.first_name} {resendTarget.last_name}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Reference</span>
+                  <span className="font-mono text-xs font-semibold text-slate-900">
+                    {resendTarget.reference_number}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Event</span>
+                  <span className="text-slate-900 truncate max-w-[200px]">
+                    {resendTarget.event_title}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Previous email status</span>
+                  <span className="text-xs text-slate-600">
+                    {resendTarget.confirmation_sent_at
+                      ? `Sent on ${formatDate(resendTarget.confirmation_sent_at)}`
+                      : 'Never sent'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Recipient Email Address
+                </label>
+                <Input
+                  type="email"
+                  value={customEmail}
+                  onChange={(e) => setCustomEmail(e.target.value)}
+                  placeholder="attendee@example.com"
+                  disabled={resending}
+                  className="w-full"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  You can update this address if the attendee made a typo during booking.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resending}>Cancel</AlertDialogCancel>
+            <Button
+              className="bg-sky-600 hover:bg-sky-700 text-white"
+              disabled={resending || !customEmail.trim()}
+              onClick={handleResendConfirmation}
+            >
+              {resending ? (
+                <>
+                  <ArrowsClockwise size={15} className="mr-1.5 animate-spin" />
+                  Sending…
+                </>
+              ) : (
+                <>
+                  <EnvelopeSimple size={15} className="mr-1.5" />
+                  Send Confirmation
+                </>
+              )}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
