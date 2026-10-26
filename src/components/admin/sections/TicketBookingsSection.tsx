@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import {
   ArrowsClockwise,
   CalendarBlank,
@@ -185,7 +186,7 @@ export function TicketBookingsSection() {
   const handleExport = () => {
     const headers = [
       'Reference', 'First Name', 'Last Name', 'Email (masked)', 'Phone (masked)',
-      'Event', 'Adults', 'Children', 'Amount (€)', 'Gateway', 'Payment Ref',
+      'Event', 'Adults', 'Children (5-11)', 'Children (0-4)', 'Amount (€)', 'Gateway', 'Payment Ref',
       'Status', 'Submitted',
     ]
     
@@ -219,6 +220,7 @@ export function TicketBookingsSection() {
       b.event_title,
       String(b.num_adults),
       String(b.num_children),
+      String(b.num_children_0_4 ?? 0),
       b.amount_eur.toFixed(2),
       b.payment_gateway ?? '',
       b.payment_reference ?? '',
@@ -399,7 +401,9 @@ export function TicketBookingsSection() {
                   <Th>Ref #</Th>
                   <Th>Name</Th>
                   <Th>Event</Th>
-                  <Th>Tickets</Th>
+                  <Th className="text-center">Adults</Th>
+                  <Th className="text-center">Children (5-11)</Th>
+                  <Th className="text-center">Children (0-4)</Th>
                   <Th>Amount</Th>
                   <Th>Contact (masked)</Th>
                   <Th>Status</Th>
@@ -426,9 +430,19 @@ export function TicketBookingsSection() {
                         {b.event_title}
                       </span>
                     </Td>
-                    <Td>
-                      <span className="text-sm">
-                        {b.num_adults}A{b.num_children > 0 ? ` / ${b.num_children}C` : ''}
+                    <Td className="text-center">
+                      <span className="font-semibold text-slate-900">
+                        {b.num_adults}
+                      </span>
+                    </Td>
+                    <Td className="text-center">
+                      <span className={cn('text-sm', b.num_children > 0 ? 'font-semibold text-slate-900' : 'text-slate-400')}>
+                        {b.num_children}
+                      </span>
+                    </Td>
+                    <Td className="text-center">
+                      <span className={cn('text-sm', (b.num_children_0_4 ?? 0) > 0 ? 'font-semibold text-slate-900' : 'text-slate-400')}>
+                        {b.num_children_0_4 ?? 0}
                       </span>
                     </Td>
                     <Td>
@@ -586,10 +600,25 @@ export function TicketBookingsSection() {
                 <span className="font-medium text-right max-w-[200px]">{detail.event_title}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Tickets</span>
-                <span>
-                  {detail.num_adults} Adult{detail.num_adults !== 1 ? 's' : ''}
-                  {detail.num_children > 0 ? ` + ${detail.num_children} Child${detail.num_children !== 1 ? 'ren' : ''}` : ''}
+                <span className="text-muted-foreground">Adults (12+)</span>
+                <span className="font-semibold text-slate-900">{detail.num_adults}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Children (5-11)</span>
+                <span className={cn('font-semibold', detail.num_children > 0 ? 'text-slate-900' : 'text-slate-500')}>
+                  {detail.num_children}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Children (0-4 / Free)</span>
+                <span className={cn('font-semibold', (detail.num_children_0_4 ?? 0) > 0 ? 'text-slate-900' : 'text-slate-500')}>
+                  {detail.num_children_0_4 ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Total Attendees</span>
+                <span className="font-semibold text-slate-900">
+                  {detail.num_adults + detail.num_children + (detail.num_children_0_4 ?? 0)}
                 </span>
               </div>
               <div className="flex items-center justify-between">

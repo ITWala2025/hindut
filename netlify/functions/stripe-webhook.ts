@@ -57,6 +57,11 @@ import {
   buildRefundEmailText,
   type RefundEmailParams,
 } from './lib/refundEmailTemplate.js'
+import {
+  buildTicketEmailHtml,
+  buildTicketEmailText,
+  type TicketEmailParams,
+} from './lib/ticketEmailTemplate.js'
 
 // ---------------------------------------------------------------------------
 // Mail helpers (Graph API via lib/mailer.ts)
@@ -539,9 +544,10 @@ export const handler: Handler = async (event) => {
           const email       = meta.email       ?? ''
           const eventId     = meta.eventId     ?? ''
           const reference   = meta.reference   ?? ''
-          const numAdults   = parseInt(meta.numAdults   ?? '1', 10)
-          const numChildren = parseInt(meta.numChildren ?? '0', 10)
-          const amountEur   = parseFloat(meta.amountEur ?? '0')
+          const numAdults     = parseInt(meta.numAdults     ?? '1', 10)
+          const numChildren   = parseInt(meta.numChildren   ?? '0', 10)
+          const numChildren04 = parseInt(meta.numChildren04 ?? '0', 10)
+          const amountEur     = parseFloat(meta.amountEur ?? '0')
 
           if (!eventId || !reference || !firstName || !email) {
             console.error('[stripe-webhook] ticket metadata incomplete', meta)
@@ -568,20 +574,22 @@ export const handler: Handler = async (event) => {
           const { data: bookingId, error: insertErr } = await supabase.rpc(
             'insert_ticket_booking_encrypted',
             {
-              p_event_id:        eventId,
-              p_reference:       reference,
-              p_first_name:      firstName,
-              p_last_name:       lastName,
-              p_phone:           phone,
-              p_email:           email,
-              p_phone_masked:    phoneMasked,
-              p_email_masked:    emailMasked,
-              p_num_adults:      numAdults,
-              p_num_children:    numChildren,
-              p_amount_eur:      amountEur,
-              p_payment_gateway: 'stripe',
-              p_consent_gdpr:    true,
-              p_enc_key:         encKey,
+              p_event_id:          eventId,
+              p_reference:         reference,
+              p_first_name:        firstName,
+              p_last_name:         lastName,
+              p_phone:             phone,
+              p_email:             email,
+              p_phone_masked:      phoneMasked,
+              p_email_masked:      emailMasked,
+              p_num_adults:        numAdults,
+              p_num_children:      numChildren,
+              p_amount_eur:        amountEur,
+              p_payment_gateway:   'stripe',
+              p_consent_gdpr:      true,
+              p_enc_key:           encKey,
+              p_num_children_0_4:  numChildren04,
+              p_payment_reference: paymentRef,
             },
           )
 
@@ -590,12 +598,71 @@ export const handler: Handler = async (event) => {
             break
           }
 
-          // Set payment reference on the newly created row.
+          // Ensure payment_reference on the booking row for reconciliation.
           if (paymentRef) {
             await supabase
               .from('ticket_bookings')
               .update({ payment_reference: paymentRef })
               .eq('id', bookingId)
+          }
+
+          // Ensure receipt row has the real payment_reference and email_status = 'sent'
+          await supabase
+            .from('receipts')
+            .update({
+              payment_reference: paymentRef ?? undefined,
+              email_status:      'sent',
+              sent_at:           new Date().toISOString(),
+            })
+            .eq('type', 'event')
+            .eq('related_id', bookingId)
+
+          // Dispatch ticket confirmation email to attendee
+          if (email && isMailConfigured()) {
+            try {
+              const { data: eventDetails } = await supabase
+                .from('events')
+                .select('title, start_date, start_time, end_time, time_display, location')
+                .eq('id', eventId)
+                .single()
+
+              if (eventDetails) {
+                const datePart = (eventDetails.start_date ?? '').slice(0, 10)
+                const eventDateStr = datePart
+                  ? new Date(`${datePart}T12:00:00Z`).toLocaleDateString('en-IE', {
+                      timeZone: 'Europe/Dublin',
+                      weekday:  'long',
+                      day:      'numeric',
+                      month:    'long',
+                      year:     'numeric',
+                    })
+                  : ''
+
+                const emailParams: TicketEmailParams = {
+                  buyerName:       firstName,
+                  buyerEmail:      email,
+                  eventTitle:      eventDetails.title,
+                  eventDate:       eventDateStr,
+                  eventTime:       eventDetails.time_display || '',
+                  eventLocation:   eventDetails.location,
+                  ticketTier:      'General Admission',
+                  quantity:        numAdults + numChildren + numChildren04,
+                  totalPrice:      amountEur,
+                  referenceNumber: reference,
+                }
+
+                await sendMail({
+                  from:    '"Hindu Association of Ireland" <community@hindutemple.ie>',
+                  to:      email,
+                  subject: `Ticket Confirmed – ${eventDetails.title}`,
+                  html:    buildTicketEmailHtml(emailParams),
+                  text:    buildTicketEmailText(emailParams),
+                })
+                console.log('[stripe-webhook] ticket email sent to', email, 'ref:', reference)
+              }
+            } catch (emailErr) {
+              console.error('[stripe-webhook] ticket email error:', (emailErr as Error).message)
+            }
           }
 
           console.log('[stripe-webhook] ticket booking created:', reference, 'id:', bookingId, 'pi:', paymentRef)
@@ -688,7 +755,10 @@ export const handler: Handler = async (event) => {
 
       // ─── Recurring donation payment failed ─────────────────────────────
       case 'invoice.payment_failed': {
-        const invoice = stripeEvent.data.object as Stripe.Invoice
+        const invoice = stripeEvent.data.object as Stripe.Invoice & {
+          subscription?: string | Stripe.Subscription | null
+          last_payment_error?: { message?: string } | null
+        }
         const subscription = invoice.subscription
         if (!subscription || !stripe) break
 
@@ -786,7 +856,7 @@ export const handler: Handler = async (event) => {
                   itemType: 'donation',
                   itemDescription: 'Donation to Hindu Association of Ireland',
                   originalAmount: donation.amount_eur,
-                  refundAmount: charge.refunded ? (charge.refunded / 100) : donation.amount_eur,
+                  refundAmount: charge.amount_refunded ? (charge.amount_refunded / 100) : donation.amount_eur,
                   reason: 'Payment refunded',
                   estimatedDays: 3,
                 }

@@ -218,6 +218,23 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
       : []
 
     setIsProcessing(true)
+    let tierAdults = 0
+    let tierChildren511 = 0
+    let tierChildren04 = 0
+    if (hasTiers) {
+      for (const t of event.ticketTiers ?? []) {
+        const qty = tierQtys[t.id] ?? 0
+        if (qty > 0) {
+          if (/\b(under\s*[45]|0\s*[-–to]\s*[45]|infant|baby|toddler)\b/i.test(t.label)) {
+            tierChildren04 += qty
+          } else if (/\b(5\s*[-–to]\s*1[12]|child|children|kid|kids|junior|youth)\b/i.test(t.label)) {
+            tierChildren511 += qty
+          } else {
+            tierAdults += qty
+          }
+        }
+      }
+    }
     const tierQuantities = hasTiers
       ? (event.ticketTiers ?? [])
           .filter((t) => (tierQtys[t.id] ?? 0) > 0)
@@ -237,7 +254,7 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
           selectedSchedules: chosenSlots,
           totalAmountEur:    total,
           ...(hasTiers
-            ? { tierQuantities }
+            ? { tierQuantities, numAdults: tierAdults, numChildren: tierChildren511, numChildren04: tierChildren04 }
             : { numAdults: data.numAdults, numChildren: data.numChildren ?? 0 }),
           consentGdpr: true,
         }),
@@ -562,8 +579,26 @@ export function TicketBookingDialog({ open, onOpenChange, event }: TicketBooking
                   <span className="text-sm font-semibold opacity-90">
                     {hasTiers
                       ? (() => {
-                          const n = Object.values(tierQtys).reduce((s, q) => s + q, 0)
-                          return `Total · ${n} ticket${n !== 1 ? 's' : ''}`
+                          let a = 0
+                          let c511 = 0
+                          let c04 = 0
+                          for (const t of event.ticketTiers ?? []) {
+                            const q = tierQtys[t.id] ?? 0
+                            if (q > 0) {
+                              if (/\b(under\s*[45]|0\s*[-–to]\s*[45]|infant|baby|toddler)\b/i.test(t.label)) {
+                                c04 += q
+                              } else if (/\b(5\s*[-–to]\s*1[12]|child|children|kid|kids|junior|youth)\b/i.test(t.label)) {
+                                c511 += q
+                              } else {
+                                a += q
+                              }
+                            }
+                          }
+                          const parts: string[] = []
+                          if (a > 0) parts.push(`${a} adult${a !== 1 ? 's' : ''}`)
+                          if (c511 > 0) parts.push(`${c511} child (5-11)`)
+                          if (c04 > 0) parts.push(`${c04} child (0-4 / free)`)
+                          return `Total · ${parts.length > 0 ? parts.join(' + ') : '0 tickets'}`
                         })()
                       : `Total · ${numAdults} adult${Number(numAdults) !== 1 ? 's' : ''}${Number(numChildren) > 0 ? ` + ${numChildren} child${Number(numChildren) !== 1 ? 'ren' : ''}` : ''}`
                     }

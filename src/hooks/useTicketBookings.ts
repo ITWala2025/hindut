@@ -12,6 +12,7 @@ export interface TicketBookingRow {
   email_masked: string
   num_adults: number
   num_children: number
+  num_children_0_4: number
   amount_eur: number
   payment_gateway: string | null
   payment_reference: string | null
@@ -51,7 +52,7 @@ export function useTicketBookings(filters?: TicketBookingFilters) {
       .from('ticket_bookings')
       .select(
         `id, event_id, reference_number, first_name, last_name,
-         phone_masked, email_masked, num_adults, num_children,
+         phone_masked, email_masked, num_adults, num_children, num_children_0_4,
          amount_eur, payment_gateway, payment_reference,
          status, confirmation_sent_at, created_at,
          events!inner(title)`,
@@ -64,13 +65,37 @@ export function useTicketBookings(filters?: TicketBookingFilters) {
     if (f?.status)   query = query.eq('status', f.status)
 
     const { data, error: err } = await query
+    let queryErr = err
+    let rawRows: Record<string, unknown>[] | null = (data as unknown as Record<string, unknown>[]) ?? null
 
-    if (err) {
-      setError(err.message)
+    // Graceful fallback if num_children_0_4 is not yet migrated in PostgreSQL
+    if (queryErr && queryErr.message?.includes('num_children_0_4')) {
+      let fb = supabase
+        .from('ticket_bookings')
+        .select(
+          `id, event_id, reference_number, first_name, last_name,
+           phone_masked, email_masked, num_adults, num_children,
+           amount_eur, payment_gateway, payment_reference,
+           status, confirmation_sent_at, created_at,
+           events!inner(title)`,
+        )
+        .order('created_at', { ascending: false })
+      if (f?.eventId)  fb = fb.eq('event_id', f.eventId)
+      if (f?.fromDate) fb = fb.gte('created_at', f.fromDate)
+      if (f?.toDate)   fb = fb.lte('created_at', `${f.toDate}T23:59:59Z`)
+      if (f?.status)   fb = fb.eq('status', f.status)
+      const res = await fb
+      rawRows = (res.data as unknown as Record<string, unknown>[]) ?? null
+      queryErr = res.error
+    }
+
+    if (queryErr) {
+      setError(queryErr.message)
     } else {
       setBookings(
-        (data ?? []).map((row: Record<string, unknown>) => ({
-          ...(row as Omit<TicketBookingRow, 'event_title'>),
+        (rawRows ?? []).map((row: Record<string, unknown>) => ({
+          ...(row as Omit<TicketBookingRow, 'event_title' | 'num_children_0_4'>),
+          num_children_0_4: Number(row.num_children_0_4 ?? 0),
           event_title: (row.events as { title: string } | null)?.title ?? '',
         })),
       )

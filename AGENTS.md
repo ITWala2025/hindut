@@ -80,7 +80,7 @@ All engineers and AI coding agents working on this codebase must adhere strictly
 | **Free RSVP Dialog** | [`src/components/RsvpDialog.tsx`](file:///Users/prashant/Documents/Application%20directory/HinduT/src/components/RsvpDialog.tsx) |
 | **Paid Ticket Booking** | [`src/components/TicketBookingDialog.tsx`](file:///Users/prashant/Documents/Application%20directory/HinduT/src/components/TicketBookingDialog.tsx) |
 | **RSVP Netlify Function** | [`netlify/functions/rsvp-submit.ts`](file:///Users/prashant/Documents/Application%20directory/HinduT/netlify/functions/rsvp-submit.ts) |
-| **Latest SQL Migration** | [`supabase/migrations/20260907000091_add_multi_day_events_and_rsvp_slots.sql`](file:///Users/prashant/Documents/Application%20directory/HinduT/supabase/migrations/20260907000091_add_multi_day_events_and_rsvp_slots.sql) |
+| **Latest SQL Migration** | [`supabase/migrations/20261026000094_fix_tier_ticket_bookings_counts.sql`](file:///Users/prashant/Documents/Application%20directory/HinduT/supabase/migrations/20261026000094_fix_tier_ticket_bookings_counts.sql) |
 
 ---
 

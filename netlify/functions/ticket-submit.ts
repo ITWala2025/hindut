@@ -204,20 +204,22 @@ export const handler: Handler = async (event) => {
     const { data: bookingId, error: insertErr } = await supabase.rpc(
       'insert_ticket_booking_encrypted',
       {
-        p_event_id:        data.eventId,
-        p_reference:       reference,
-        p_first_name:      firstName,
-        p_last_name:       lastName,
-        p_phone:           data.phone,
-        p_email:           data.email,
-        p_phone_masked:    maskPhone(data.phone),
-        p_email_masked:    maskEmail(data.email),
-        p_num_adults:      data.numAdults,
-        p_num_children:    data.numChildren ?? 0,
-        p_amount_eur:      data.amountEur,
-        p_payment_gateway: data.paymentGateway,
-        p_consent_gdpr:    true,
-        p_enc_key:         encKey,
+        p_event_id:          data.eventId,
+        p_reference:         reference,
+        p_first_name:        firstName,
+        p_last_name:         lastName,
+        p_phone:             data.phone,
+        p_email:             data.email,
+        p_phone_masked:      maskPhone(data.phone),
+        p_email_masked:      maskEmail(data.email),
+        p_num_adults:        data.numAdults,
+        p_num_children:      data.numChildren ?? 0,
+        p_amount_eur:        data.amountEur,
+        p_payment_gateway:   data.paymentGateway,
+        p_consent_gdpr:      true,
+        p_enc_key:           encKey,
+        p_num_children_0_4:  0,
+        p_payment_reference: paymentReference,
       },
     )
 
@@ -235,6 +237,17 @@ export const handler: Handler = async (event) => {
       .from('ticket_bookings')
       .update({ payment_reference: paymentReference })
       .eq('id', bookingId)
+
+    // Ensure receipt row has the real payment_reference and email_status = 'sent'
+    await supabase
+      .from('receipts')
+      .update({
+        payment_reference: paymentReference ?? undefined,
+        email_status:      'sent',
+        sent_at:           new Date().toISOString(),
+      })
+      .eq('type', 'event')
+      .eq('related_id', bookingId)
 
     console.log('[ticket-submit] Booking saved:', reference, 'id:', bookingId, 'pi:', paymentReference)
 

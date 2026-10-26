@@ -115,6 +115,15 @@ Verify ticket tier selection, multi-slot total price calculation (`baseSingleSlo
   - Record created in `public.ticket_bookings`.
   - Per-slot email confirmation and `.ics` files sent to buyer.
 
+#### 2.3 Tiered Ticket Breakdown & Admin Display Validation (Adults, Children 5-11, Children 0-4)
+- **Steps:**
+  1. Navigate to `/events/haidiwali26` (or any paid event with ticket tiers: Adults 12+, Child 5-11, Child 0-4).
+  2. Select 3 adult tickets, 1 child (5-11) ticket, and 1 child (0-4) ticket.
+  3. Verify live order total breakdown shows `Total · 3 adults + 1 child (5-11) + 1 child (0-4 / free)` and checkout payload includes `numAdults: 3, numChildren: 1, numChildren04: 1`.
+  4. Submit to `create-checkout-session` and verify session metadata contains `numAdults: "3"`, `numChildren: "1"`, and `numChildren04: "1"`.
+  5. In `/admin/tickets`, verify the table displays separate `Adults`, `Children (5-11)`, and `Children (0-4)` columns showing `3`, `1`, and `1` (instead of concatenated `3A` or `4A`).
+  6. Open the booking details sheet and verify `Adults (12+)`, `Children (5-11)`, `Children (0-4 / Free)`, and `Total Attendees` are rendered in separate rows.
+
 ### Cleanup Commands (Database)
 ```sql
 DELETE FROM public.ticket_bookings 
@@ -415,6 +424,30 @@ Verify that navigating to `/membership/join` or `/join` automatically opens the 
   2. **Verify:** QR image renders and points to `${currentOrigin}/membership/join`.
   3. Click "Copy Modal Link" and verify toast notification.
   4. Click "Download QR Code" and verify `HAI-Membership-Registration-QR.png` downloads.
+
+---
+
+## Suite 12: Receipts & Payment References Reconciliation
+
+### Objective
+Verify that receipts for donations, memberships, and event tickets are properly created with accurate payment references (`pi_...` for tickets/donations, `sub_...` for recurring memberships), that `email_status` is updated to `'sent'`, and that manual offline records default to `'skipped'`.
+
+### Test Cases
+
+#### 12.1 Event Ticket Booking Receipt Reconciliation
+- **Steps:**
+  1. Complete a ticket booking checkout via Stripe Checkout.
+  2. Inspect `public.ticket_bookings` and `public.receipts` in Supabase:
+     - `ticket_bookings.payment_reference` contains `pi_...`.
+     - `receipts.payment_reference` contains the exact same `pi_...` (not literal `'stripe'`).
+     - `receipts.email_status` is `'sent'`.
+     - `receipts.sent_at` has timestamp.
+
+#### 12.2 Admin Receipts Section Verification
+- **Steps:**
+  1. Log into `/admin` and navigate to the **Receipts** section.
+  2. Verify that event receipts show proper descriptions and valid amounts.
+  3. Click "Download PDF" on an event ticket receipt and confirm valid PDF generates with invoice/receipt details.
 
 ---
 

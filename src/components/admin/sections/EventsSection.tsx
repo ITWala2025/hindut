@@ -591,7 +591,7 @@ export function EventsSection() {
       return result
     }
     
-    const header = ['Reference', 'First name', 'Last name', 'Email', 'Phone', 'Adults', 'Children', 'Amount (EUR)', 'Status', 'Booked at']
+    const header = ['Reference', 'First name', 'Last name', 'Email', 'Phone', 'Adults', 'Children (5-11)', 'Children (0-4)', 'Amount (EUR)', 'Status', 'Booked at']
     // Force phone (index 4) to be treated as text
     const textForceFields = new Set([4])
     
@@ -604,6 +604,7 @@ export function EventsSection() {
         b.phone_masked,
         b.num_adults,
         b.num_children,
+        b.num_children_0_4 ?? 0,
         b.amount_eur.toFixed(2),
         b.status,
         new Date(b.created_at).toLocaleDateString('en-IE'),
@@ -1684,10 +1685,11 @@ export function EventsSection() {
             <div className="mt-4 space-y-4">
               {/* Summary bar */}
               {!attendeesLoading && attendees.length > 0 && (
-                <div className="flex gap-4 text-sm">
+                <div className="flex flex-wrap gap-4 text-sm">
                   <span className="text-slate-500">Bookings: <span className="font-semibold text-slate-800">{attendees.length}</span></span>
                   <span className="text-slate-500">Adults: <span className="font-semibold text-slate-800">{attendees.reduce((s, b) => s + b.num_adults, 0)}</span></span>
-                  <span className="text-slate-500">Children: <span className="font-semibold text-slate-800">{attendees.reduce((s, b) => s + b.num_children, 0)}</span></span>
+                  <span className="text-slate-500">Children (5-11): <span className="font-semibold text-slate-800">{attendees.reduce((s, b) => s + b.num_children, 0)}</span></span>
+                  <span className="text-slate-500">Children (0-4): <span className="font-semibold text-slate-800">{attendees.reduce((s, b) => s + (b.num_children_0_4 ?? 0), 0)}</span></span>
                   <span className="text-slate-500">Revenue: <span className="font-semibold text-emerald-700">€{attendees.reduce((s, b) => s + b.amount_eur, 0).toFixed(2)}</span></span>
                 </div>
               )}
@@ -1717,8 +1719,9 @@ export function EventsSection() {
                     <tr>
                       <Th>Name</Th>
                       <Th>Ref</Th>
-                      <Th>Adults</Th>
-                      <Th>Children</Th>
+                      <Th className="text-center">Adults</Th>
+                      <Th className="text-center">Children (5-11)</Th>
+                      <Th className="text-center">Children (0-4)</Th>
                       <Th>Paid</Th>
                       <Th>Status</Th>
                     </tr>
@@ -1728,8 +1731,9 @@ export function EventsSection() {
                       <tr key={b.id} className="border-t border-slate-100 text-sm">
                         <Td>{b.first_name} {b.last_name}</Td>
                         <Td className="font-mono text-xs">{b.reference_number}</Td>
-                        <Td>{b.num_adults}</Td>
-                        <Td>{b.num_children}</Td>
+                        <Td className="text-center">{b.num_adults}</Td>
+                        <Td className="text-center">{b.num_children}</Td>
+                        <Td className="text-center">{b.num_children_0_4 ?? 0}</Td>
                         <Td>€{b.amount_eur.toFixed(2)}</Td>
                         <Td>
                           <span className={cn(

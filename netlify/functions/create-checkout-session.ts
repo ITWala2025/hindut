@@ -68,6 +68,7 @@ const TicketSchema = z.object({
   email:          z.string().email().max(254),
   numAdults:      z.number().int().min(1).max(20).optional(),
   numChildren:    z.number().int().min(0).max(20).optional().default(0),
+  numChildren04:  z.number().int().min(0).max(20).optional().default(0),
   tierQuantities: z.array(TicketTierQuantitySchema).max(20).optional(),
   consentGdpr:    z.literal(true),
 })
@@ -301,18 +302,35 @@ export const handler: Handler = async (event) => {
       let lineItems: { quantity: number; price_data: { currency: string; unit_amount: number; product_data: { name: string; description?: string } } }[]
       let numAdultsMeta: number
       let numChildrenMeta: number
+      let numChildren04Meta: number = 0
 
       if (useTiers) {
         const tierMap = new Map(dbTiers.map((tier) => [tier.id, tier]))
-        let total          = 0
-        let totalAttendees = 0
-        lineItems          = []
+        let total           = 0
+        let totalAttendees  = 0
+        let adultsCount     = 0
+        let children511Count = 0
+        let children04Count  = 0
+        lineItems           = []
         for (const tq of t.tierQuantities!) {
           if (tq.quantity <= 0) continue
           const tier = tierMap.get(tq.tierId)
           if (!tier) continue   // ignore unknown/tampered tier IDs
           total          += tier.price * tq.quantity
           totalAttendees += tq.quantity
+
+          // Distinguish tiers:
+          // 1. Children Age 0-4 (Under 5 / Free tier)
+          // 2. Children Age 5-11 (Paid child tier)
+          // 3. Adults (Age 12+ / Standard tier)
+          if (/\b(under\s*[45]|0\s*[-–to]\s*[45]|infant|baby|toddler)\b/i.test(tier.label)) {
+            children04Count += tq.quantity
+          } else if (/\b(5\s*[-–to]\s*1[12]|child|children|kid|kids|junior|youth)\b/i.test(tier.label)) {
+            children511Count += tq.quantity
+          } else {
+            adultsCount += tq.quantity
+          }
+
           lineItems.push({
             quantity:   tq.quantity,
             price_data: {
@@ -325,15 +343,17 @@ export const handler: Handler = async (event) => {
         if (lineItems.length === 0 || totalAttendees === 0) {
           return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'No valid tickets selected' }) }
         }
-        amountEur       = total
-        numAdultsMeta   = totalAttendees
-        numChildrenMeta = 0
+        amountEur         = total
+        numAdultsMeta     = adultsCount
+        numChildrenMeta   = children511Count
+        numChildren04Meta = children04Count
       } else {
-        const numAdults  = t.numAdults ?? 1
-        const adultPrice = Number(evt.ticket_price_eur) || 0
-        amountEur       = adultPrice * numAdults
-        numAdultsMeta   = numAdults
-        numChildrenMeta = t.numChildren ?? 0
+        const numAdults   = t.numAdults ?? 1
+        const adultPrice  = Number(evt.ticket_price_eur) || 0
+        amountEur         = adultPrice * numAdults
+        numAdultsMeta     = numAdults
+        numChildrenMeta   = t.numChildren ?? 0
+        numChildren04Meta = t.numChildren04 ?? 0
         lineItems = [{
           quantity:   numAdults,
           price_data: {
@@ -353,6 +373,7 @@ export const handler: Handler = async (event) => {
         `&event=${encodeURIComponent(evt.title)}` +
         `&adults=${numAdultsMeta}` +
         `&children=${numChildrenMeta}` +
+        `&children04=${numChildren04Meta}` +
         `&amount=${amountEur}` +
         `&session_id={CHECKOUT_SESSION_ID}`
 
@@ -363,16 +384,17 @@ export const handler: Handler = async (event) => {
         success_url: successUrl,
         cancel_url:  `${origin}/events?ticket_cancelled=1`,
         metadata: {
-          kind:        'ticket',
+          kind:          'ticket',
           reference,
-          eventId:     t.eventId,
-          firstName:   t.firstName,
-          lastName:    t.lastName,
-          phone:       t.phone,
-          email:       t.email,
-          numAdults:   String(numAdultsMeta),
-          numChildren: String(numChildrenMeta),
-          amountEur:   String(amountEur),
+          eventId:       t.eventId,
+          firstName:     t.firstName,
+          lastName:      t.lastName,
+          phone:         t.phone,
+          email:         t.email,
+          numAdults:     String(numAdultsMeta),
+          numChildren:   String(numChildrenMeta),
+          numChildren04: String(numChildren04Meta),
+          amountEur:     String(amountEur),
         },
         payment_intent_data: {
           metadata: {

@@ -317,7 +317,26 @@ The `Plan/` directory contains specification documents. They are useful for inte
 | `Plan/PRODUCTION_DEPLOYMENT_CHECKLIST.md` | Go-live checklist |
 
 - **Dependency Security Audit & Upgrades (2026-10-24):** Resolved all 8 npm security vulnerabilities (0 vulnerabilities remaining). Upgraded `nodemailer` to `10.2.1`, `sharp` to `0.35.5`, `zod` to `4.6.7`, `vite` to `7.3.7`, `source-map-js` to `1.2.2`. Updated Zod schemas in `RsvpDialog.tsx` and `TicketBookingDialog.tsx` to use Zod 4 `{ message: '...' }` error parameter syntax. Verified zero type errors via `npx tsc --noEmit` and successful production build via `npm run build`.
+- **Ticket Bookings Adults & Children (5-11 vs 0-4) Separation (2026-10-26):**
+  1. **Schema & Database RPC (`20261026000094_fix_tier_ticket_bookings_counts.sql`):** Added `num_children_0_4 integer NOT NULL DEFAULT 0` column to `public.ticket_bookings` to distinguish free infant/toddler tickets (under 5) from paid child tickets (age 5-11). Updated `insert_ticket_booking_encrypted` RPC to accept `p_num_children_0_4` (default 0).
+  2. **Admin Portal UI (`TicketBookingsSection.tsx` & `EventsSection.tsx`):** Added three distinct columns: `Adults`, `Children (5-11)`, and `Children (0-4)`. Updated Booking Details Sheet, summary metrics, and CSV exports to reflect all three attendee categories separately.
+  3. **Tier Categorization (`create-checkout-session.ts` & `TicketBookingDialog.tsx`):** Ticket tiers are categorized using label pattern matching:
+     - Under 5 / 0-4 (`under 4`, `under 5`, `0-4`, `infant`, `baby`, `toddler`) → `num_children_0_4`
+     - Child 5-11 (`5-11`, `child`, `kid`, `junior`, `youth`) → `num_children`
+     - Adult 12+ / Standard → `num_adults`
+     Both Stripe metadata and RPC calls persist these three counts accurately.
+- **Receipts payment_reference and email_status Reconciliation (2026-10-26):**
+  1. **Root Cause Analysis:**
+     - `payment_reference = 'stripe'`: The trigger `auto_create_receipt_for_ticket()` fired immediately on insert when `ticket_bookings.payment_reference` was null, falling back to `payment_gateway` (`'stripe'`). Subsequent updates of `payment_reference` were not observed by the trigger, leaving event receipts with `'stripe'`.
+     - `payment_reference = NULL`: Offline/seed memberships (`f2000001-...` and `66a57eb8-...`) created during project launch did not pay via Stripe; their `stripe_subscription_id` is genuinely null.
+     - `email_status = 'pending'`: PostgreSQL column defaulted to `'pending'`, but receipts are generated internally for accounting/admin downloads; transaction emails were sent directly by serverless functions without syncing back to `public.receipts.email_status`.
+  2. **Migration & Trigger Fix (`20261026000095_fix_receipts_payment_reference_and_email_status.sql`):**
+     - Updated `insert_ticket_booking_encrypted` to accept `p_payment_reference` directly upon creation.
+     - Updated `auto_create_receipt_for_ticket()`, `auto_create_receipt_for_donation()`, and `auto_create_receipt_for_membership()` with upsert logic, setting `email_status = 'sent'` and recording `sent_at = now()`.
+     - Backfilled event receipts where `payment_reference = 'stripe'` with their true `payment_reference` (`pi_...`) from `ticket_bookings`.
+     - Backfilled all pending receipts to `'sent'` (or `'skipped'` for offline seed rows).
+  3. **Webhook & Serverless Functions:** Updated `stripe-webhook.ts` and `ticket-submit.ts` to pass `p_payment_reference`, send ticket confirmation emails on Stripe checkout completion, and update `receipts.email_status = 'sent'`.
 
 ---
 
-*Last updated: 2026-10-24*
+*Last updated: 2026-10-26*
