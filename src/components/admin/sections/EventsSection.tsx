@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Plus,
   Pencil,
@@ -24,6 +25,7 @@ import {
   Prohibit,
   PauseCircle,
   PlayCircle,
+  ArrowSquareOut,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -262,7 +264,9 @@ const PRESET_ATTENDANCE_RULES = [
 
 export function EventsSection() {
   const { can } = useAuth()
-  const { events, addEvent, updateEvent, deleteEvent } = useEvents()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { events, loading: eventsLoading, addEvent, updateEvent, deleteEvent } = useEvents()
   const { services: allServices } = useServices()
   const canCreate = can('events:create')
   const canUpdate = can('events:update')
@@ -330,14 +334,11 @@ export function EventsSection() {
     })
   }, [events, search, filterCategory, filterStatus])
 
-  const openCreate = () => {
-    setEditing(null)
-    setForm(EMPTY_FORM)
-    setSlugManuallyEdited(false)
-    setOpen(true)
-  }
+  const isCreateRoute = location.pathname === '/admin/events/create'
+  const editMatch = location.pathname.match(/^\/admin\/events\/(?:edit\/([^/]+)|([^/]+)\/edit)$/)
+  const editEventId = editMatch ? (editMatch[1] || editMatch[2]) : null
 
-  const openEdit = (e: TempleEvent) => {
+  const populateEditForm = (e: TempleEvent) => {
     setEditing(e)
     const { id: _id, ...rest } = e
     void _id
@@ -356,6 +357,42 @@ export function EventsSection() {
     })
     setSlugManuallyEdited(true)
     setOpen(true)
+  }
+
+  // Synchronise route with modal state
+  useEffect(() => {
+    if (isCreateRoute) {
+      if (!open || editing !== null) {
+        setEditing(null)
+        setForm(EMPTY_FORM)
+        setSlugManuallyEdited(false)
+        setOpen(true)
+      }
+    } else if (editEventId) {
+      if (eventsLoading) return
+      const found = events.find((e) => e.id === editEventId)
+      if (found) {
+        if (!open || editing?.id !== found.id) {
+          populateEditForm(found)
+        }
+      } else {
+        toast.error('Event not found.')
+        navigate('/admin/events', { replace: true })
+      }
+    } else if (location.pathname === '/admin/events') {
+      if (open) {
+        setOpen(false)
+        setEditing(null)
+      }
+    }
+  }, [location.pathname, isCreateRoute, editEventId, events, eventsLoading])
+
+  const openCreate = () => {
+    navigate('/admin/events/create')
+  }
+
+  const openEdit = (e: TempleEvent) => {
+    navigate(`/admin/events/edit/${e.id}`)
   }
 
   const addScheduleSlot = () => {
@@ -493,6 +530,7 @@ export function EventsSection() {
         toast.success('Event created.')
       }
       setOpen(false)
+      navigate('/admin/events')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save event.')
     }
@@ -731,7 +769,20 @@ export function EventsSection() {
                     )}
                   </Td>
                   <Td>
-                    <div className="font-semibold text-slate-900">{e.title}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-900">{e.title}</span>
+                      {e.slug && (
+                        <a
+                          href={`/events/${e.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="View public event page"
+                          className="text-slate-400 hover:text-orange-600 transition-colors inline-flex items-center"
+                        >
+                          <ArrowSquareOut size={14} />
+                        </a>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground line-clamp-2 max-w-md">
                       {e.description}
                     </div>
@@ -889,7 +940,19 @@ export function EventsSection() {
       </SectionCard>
 
       {/* Create / edit slide-over */}
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet
+        open={open}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setOpen(false)
+            if (location.pathname !== '/admin/events') {
+              navigate('/admin/events')
+            }
+          } else {
+            setOpen(true)
+          }
+        }}
+      >
         <SheetContent
           side="right"
           className="w-full sm:max-w-2xl flex flex-col p-0 gap-0 overflow-hidden"
@@ -1089,8 +1152,21 @@ export function EventsSection() {
                     className="font-mono text-sm"
                     required
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Public URL: <span className="font-mono">/events/{form.slug || '…'}</span>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                    <span>Public URL:</span>
+                    {form.slug ? (
+                      <a
+                        href={`/events/${form.slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-orange-600 hover:text-orange-700 hover:underline inline-flex items-center gap-1"
+                      >
+                        /events/{form.slug}
+                        <ArrowSquareOut size={12} weight="bold" />
+                      </a>
+                    ) : (
+                      <span className="font-mono">/events/…</span>
+                    )}
                   </p>
                 </Field>
                 <Field label="Description">
@@ -1656,7 +1732,12 @@ export function EventsSection() {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false)
+                if (location.pathname !== '/admin/events') {
+                  navigate('/admin/events')
+                }
+              }}
               className="text-slate-600"
             >
               Cancel

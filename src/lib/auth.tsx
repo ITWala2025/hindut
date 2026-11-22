@@ -471,10 +471,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+const UNCONSUMED_AUTH: AuthContextValue = {
+  user: null,
+  loggedInAt: null,
+  method: null,
+  isAuthenticated: false,
+  isLoading: false,
+  permissions: blankMap(),
+  rolePermissions: {
+    super_admin: SUPER_ADMIN_PERMISSIONS,
+    admin: DEFAULT_PERMISSIONS.admin,
+    editor: DEFAULT_PERMISSIONS.editor,
+  },
+  login: async () => { throw new Error('AuthProvider is required to login') },
+  loginWithMagicLink: async () => { throw new Error('AuthProvider is required to login') },
+  logout: () => {},
+  can: () => false,
+  isSuperAdmin: false,
+  refreshPermissions: async () => {},
+}
+
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
+  return ctx ?? UNCONSUMED_AUTH
 }
 
 /** Convenience for the default editor permissions (used by the matrix UI). */

@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { AuthProvider, useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/auth'
 import { LoginScreen } from '@/components/admin/LoginScreen'
 import { AdminLayout, type AdminSectionId } from '@/components/admin/AdminLayout'
 import { DashboardSection } from '@/components/admin/sections/DashboardSection'
@@ -26,11 +26,7 @@ import { SettingsSection } from '@/components/admin/sections/SettingsSection'
  * active section. Sections align with Plan/ADMIN_PORTAL.md.
  */
 export function AdminPage() {
-  return (
-    <AuthProvider>
-      <AdminPortal />
-    </AuthProvider>
-  )
+  return <AdminPortal />
 }
 
 /**

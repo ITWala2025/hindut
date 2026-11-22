@@ -31,6 +31,7 @@ import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
 import { useHasActiveCauses } from '@/hooks/useSpecialCauses'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { AuthProvider } from '@/lib/auth'
 import { Warning } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
@@ -108,6 +109,7 @@ function AppShell() {
         <ScrollToTop />
         <Routes>
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/:section/*" element={<AdminPage />} />
           <Route path="/admin/:section" element={<AdminPage />} />
         </Routes>
         <Toaster />
@@ -165,7 +167,9 @@ function AppShell() {
 function App() {
   return (
     <BrowserRouter>
-      <AppShell />
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </BrowserRouter>
   )
 }

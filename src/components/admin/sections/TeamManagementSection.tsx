@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   PlusCircle,
   PencilSimple,
@@ -11,6 +12,7 @@ import {
   IdentificationBadge,
   Image as ImageIcon,
   X,
+  Eye,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +21,13 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetContent,
@@ -52,7 +61,17 @@ const EMPTY_FORM: TeamMemberInput = {
   image_url: null,
 }
 
-function MemberList({ table }: { table: 'team_members' | 'operational_committee_members' }) {
+function MemberList({
+  table,
+  tabKey,
+  activeTab,
+}: {
+  table: 'team_members' | 'operational_committee_members'
+  tabKey: 'board' | 'ops'
+  activeTab: 'board' | 'ops'
+}) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { can } = useAuth()
   const canCreate = can('team:create')
   const canUpdate = can('team:update')
@@ -65,17 +84,26 @@ function MemberList({ table }: { table: 'team_members' | 'operational_committee_
   const [form, setForm] = useState<TeamMemberInput>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberRow | null>(null)
+  const [viewTarget, setViewTarget] = useState<TeamMemberRow | null>(null)
   const [imagePickerOpen, setImagePickerOpen] = useState(false)
   const [imageSearch, setImageSearch] = useState('')
 
-  const openCreate = () => {
-    setEditingId(null)
-    setForm({ ...EMPTY_FORM, sort_order: members.length })
-    setImageSearch('')
-    setSheetOpen(true)
-  }
+  // Route matches for create, view, edit
+  const isCreateRoute =
+    location.pathname === `/admin/team/${tabKey}/create` ||
+    (activeTab === tabKey && location.pathname === '/admin/team/create')
 
-  const openEdit = (m: TeamMemberRow) => {
+  const viewMatch =
+    location.pathname.match(new RegExp(`^/admin/team/${tabKey}/view/([^/]+)$`)) ||
+    (activeTab === tabKey ? location.pathname.match(/^\/admin\/team\/view\/([^/]+)$/) : null)
+  const viewId = viewMatch ? viewMatch[1] : null
+
+  const editMatch =
+    location.pathname.match(new RegExp(`^/admin/team/${tabKey}/edit/([^/]+)$`)) ||
+    (activeTab === tabKey ? location.pathname.match(/^\/admin\/team\/edit\/([^/]+)$/) : null)
+  const editId = editMatch ? editMatch[1] : null
+
+  const populateEdit = (m: TeamMemberRow) => {
     setEditingId(m.id)
     setForm({
       name: m.name,
@@ -90,6 +118,58 @@ function MemberList({ table }: { table: 'team_members' | 'operational_committee_
     setSheetOpen(true)
   }
 
+  // Synchronise route state
+  useEffect(() => {
+    if (activeTab !== tabKey) return
+
+    if (isCreateRoute) {
+      if (!sheetOpen || editingId !== null) {
+        setEditingId(null)
+        setForm({ ...EMPTY_FORM, sort_order: members.length })
+        setImageSearch('')
+        setSheetOpen(true)
+        setViewTarget(null)
+      }
+    } else if (viewId) {
+      if (loading) return
+      const found = members.find((m) => m.id === viewId)
+      if (found) {
+        setViewTarget(found)
+        setSheetOpen(false)
+      } else {
+        toast.error('Member not found.')
+        navigate(`/admin/team/${tabKey}`, { replace: true })
+      }
+    } else if (editId) {
+      if (loading) return
+      const found = members.find((m) => m.id === editId)
+      if (found) {
+        if (!sheetOpen || editingId !== found.id) {
+          populateEdit(found)
+          setViewTarget(null)
+        }
+      } else {
+        toast.error('Member not found.')
+        navigate(`/admin/team/${tabKey}`, { replace: true })
+      }
+    } else if (location.pathname === `/admin/team/${tabKey}`) {
+      if (sheetOpen) setSheetOpen(false)
+      if (viewTarget) setViewTarget(null)
+    }
+  }, [location.pathname, activeTab, tabKey, isCreateRoute, viewId, editId, members, loading])
+
+  const openCreate = () => {
+    navigate(`/admin/team/${tabKey}/create`)
+  }
+
+  const openView = (m: TeamMemberRow) => {
+    navigate(`/admin/team/${tabKey}/view/${m.id}`)
+  }
+
+  const openEdit = (m: TeamMemberRow) => {
+    navigate(`/admin/team/${tabKey}/edit/${m.id}`)
+  }
+
   const handleSave = async () => {
     if (!form.name.trim()) return
     setSaving(true)
@@ -102,6 +182,7 @@ function MemberList({ table }: { table: 'team_members' | 'operational_committee_
         toast.success('Member added.')
       }
       setSheetOpen(false)
+      navigate(`/admin/team/${tabKey}`)
     } catch (err) {
       toast.error((err as Error).message)
     } finally {
@@ -220,20 +301,40 @@ function MemberList({ table }: { table: 'team_members' | 'operational_committee_
                 className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 hover:shadow-sm transition-shadow"
               >
                 {/* Avatar */}
-                <div className="h-10 w-10 shrink-0 rounded-full bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center text-orange-700 font-bold text-sm ring-1 ring-orange-200">
-                  {m.name
-                    .split(' ')
-                    .filter((p) => !p.endsWith('.'))
-                    .slice(0, 2)
-                    .map((p) => p[0])
-                    .join('')
-                    .toUpperCase()}
+                <div
+                  onClick={() => openView(m)}
+                  className="h-10 w-10 shrink-0 rounded-full bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center text-orange-700 font-bold text-sm ring-1 ring-orange-200 cursor-pointer overflow-hidden"
+                  title="View details"
+                >
+                  {m.image_url ? (
+                    <img
+                      src={m.image_url}
+                      alt={m.name}
+                      className="h-full w-full object-cover object-top"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  ) : (
+                    m.name
+                      .split(' ')
+                      .filter((p) => !p.endsWith('.'))
+                      .slice(0, 2)
+                      .map((p) => p[0])
+                      .join('')
+                      .toUpperCase()
+                  )}
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-900 text-sm truncate">{m.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => openView(m)}
+                      className="font-semibold text-slate-900 text-sm truncate hover:text-orange-600 hover:underline text-left transition-colors"
+                      title="View member details"
+                    >
+                      {m.name}
+                    </button>
                     <Badge
                       variant="outline"
                       className={
@@ -251,6 +352,15 @@ function MemberList({ table }: { table: 'team_members' | 'operational_committee_
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100"
+                    onClick={() => openView(m)}
+                    title="View details"
+                  >
+                    <Eye size={15} />
+                  </Button>
                   {canUpdate && (
                     <>
                       <Button
@@ -315,8 +425,139 @@ function MemberList({ table }: { table: 'team_members' | 'operational_committee_
         )}
       </SectionCard>
 
+      {/* View member details modal */}
+      <Dialog
+        open={!!viewTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewTarget(null)
+            if (location.pathname !== `/admin/team/${tabKey}`) {
+              navigate(`/admin/team/${tabKey}`)
+            }
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md w-full p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <DialogTitle className="text-lg font-bold text-slate-900">Member details</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  {table === 'team_members' ? 'Board of Directors' : 'Operational Committee'}
+                </DialogDescription>
+              </div>
+              <Badge
+                variant="outline"
+                className={
+                  viewTarget?.active
+                    ? 'bg-green-50 text-green-700 border-green-200 text-xs'
+                    : 'bg-slate-50 text-slate-500 border-slate-200 text-xs'
+                }
+              >
+                {viewTarget?.active ? 'Visible on site' : 'Hidden'}
+              </Badge>
+            </div>
+          </DialogHeader>
+
+          <div className="px-6 py-5 space-y-5">
+            {/* Avatar / Photo & Basic Info */}
+            <div className="flex items-center gap-4">
+              {viewTarget?.image_url ? (
+                <img
+                  src={viewTarget.image_url}
+                  alt={viewTarget.name}
+                  className="h-16 w-16 rounded-2xl object-cover border border-slate-200 ring-2 ring-orange-200 shrink-0"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                />
+              ) : (
+                <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center text-orange-700 font-bold text-xl ring-2 ring-orange-200 shrink-0">
+                  {viewTarget?.name
+                    .split(' ')
+                    .filter((p) => !p.endsWith('.'))
+                    .slice(0, 2)
+                    .map((p) => p[0])
+                    .join('')
+                    .toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-bold text-slate-900 truncate">{viewTarget?.name}</h3>
+                <p className="text-sm font-semibold text-orange-700 truncate">{viewTarget?.role || 'Member'}</p>
+                {viewTarget?.origin && (
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">{viewTarget.origin}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Bio */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Bio</span>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                {viewTarget?.bio || <span className="italic text-slate-400">No biography provided.</span>}
+              </div>
+            </div>
+
+            {/* Meta info */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                <span className="text-slate-400 block mb-0.5">Sort order</span>
+                <span className="font-semibold text-slate-700">{viewTarget?.sort_order ?? 0}</span>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                <span className="text-slate-400 block mb-0.5">Section</span>
+                <span className="font-semibold text-slate-700">
+                  {table === 'team_members' ? 'Board of Directors' : 'Operational Committee'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer buttons */}
+          <div className="px-6 py-4 border-t border-slate-100 shrink-0 bg-white flex items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setViewTarget(null)
+                if (location.pathname !== `/admin/team/${tabKey}`) {
+                  navigate(`/admin/team/${tabKey}`)
+                }
+              }}
+            >
+              Close
+            </Button>
+            {canUpdate && viewTarget && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  const targetId = viewTarget.id
+                  setViewTarget(null)
+                  navigate(`/admin/team/${tabKey}/edit/${targetId}`)
+                }}
+                className="bg-orange-600 hover:bg-orange-700 text-white font-semibold"
+              >
+                <PencilSimple size={14} className="mr-1.5" />
+                Edit member
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Add / Edit slide-over */}
-      <Sheet open={sheetOpen} onOpenChange={(open) => { if (!open) setSheetOpen(false) }}>
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSheetOpen(false)
+            if (location.pathname !== `/admin/team/${tabKey}`) {
+              navigate(`/admin/team/${tabKey}`)
+            }
+          } else {
+            setSheetOpen(true)
+          }
+        }}
+      >
         <SheetContent
           side="right"
           className="w-full sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col"
@@ -451,7 +692,15 @@ function MemberList({ table }: { table: 'team_members' | 'operational_committee_
           </div>
 
           <div className="px-6 py-4 border-t border-slate-100 shrink-0 bg-white flex items-center justify-between gap-3">
-            <Button variant="outline" onClick={() => setSheetOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSheetOpen(false)
+                if (location.pathname !== `/admin/team/${tabKey}`) {
+                  navigate(`/admin/team/${tabKey}`)
+                }
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -506,20 +755,59 @@ function MemberList({ table }: { table: 'team_members' | 'operational_committee_
 }
 
 export function TeamManagementSection() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Track both tables to intelligently handle shorthand /admin/team/view/:id or /admin/team/edit/:id
+  const { members: opsMembers } = useTeamCrud('operational_committee_members')
+
+  const isOps =
+    location.pathname.startsWith('/admin/team/ops') ||
+    location.pathname.startsWith('/admin/team/committee') ||
+    location.pathname.startsWith('/admin/team/operational-committee')
+
+  const activeTab: 'board' | 'ops' = isOps ? 'ops' : 'board'
+
+  useEffect(() => {
+    if (location.pathname === '/admin/team') {
+      navigate('/admin/team/board', { replace: true })
+      return
+    }
+
+    if (location.pathname === '/admin/team/create') {
+      navigate('/admin/team/board/create', { replace: true })
+      return
+    }
+
+    // Resolve shorthand routes without tab: /admin/team/view/:id or /admin/team/edit/:id
+    const shorthandMatch = location.pathname.match(/^\/admin\/team\/(view|edit)\/([^/]+)$/)
+    if (shorthandMatch) {
+      const action = shorthandMatch[1]
+      const id = shorthandMatch[2]
+      const inOps = opsMembers.some((m) => m.id === id)
+      const targetTab = inOps ? 'ops' : 'board'
+      navigate(`/admin/team/${targetTab}/${action}/${id}`, { replace: true })
+    }
+  }, [location.pathname, opsMembers, navigate])
+
+  const handleTabChange = (val: string) => {
+    navigate(`/admin/team/${val}`)
+  }
+
   return (
     <div className="space-y-2">
-      <Tabs defaultValue="board">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="bg-slate-100 rounded-lg p-1 mb-6">
           <TabsTrigger
             value="board"
-            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm cursor-pointer"
           >
             <Users size={15} weight="duotone" />
             Board of Directors
           </TabsTrigger>
           <TabsTrigger
             value="ops"
-            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm cursor-pointer"
           >
             <IdentificationBadge size={15} weight="duotone" />
             Operational Committee
@@ -527,11 +815,11 @@ export function TeamManagementSection() {
         </TabsList>
 
         <TabsContent value="board">
-          <MemberList table="team_members" />
+          <MemberList table="team_members" tabKey="board" activeTab={activeTab} />
         </TabsContent>
 
         <TabsContent value="ops">
-          <MemberList table="operational_committee_members" />
+          <MemberList table="operational_committee_members" tabKey="ops" activeTab={activeTab} />
         </TabsContent>
       </Tabs>
     </div>

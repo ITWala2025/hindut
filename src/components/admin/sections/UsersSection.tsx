@@ -122,18 +122,58 @@ export function UsersSection() {
       const token   = session.data.session?.access_token
       if (!token) { toast.error('Not authenticated.'); return }
 
-      const res  = await fetch('/.netlify/functions/admin-users', {
+      const res = await fetch('/.netlify/functions/admin-users', {
         headers: { Authorization: `Bearer ${token}` },
       })
+
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        console.warn('admin-users returned non-JSON response status:', res.status, contentType)
+        // Fallback: If dev server or proxy returned non-JSON, at least display current authenticated user
+        if (user) {
+          setUsers([
+            {
+              id: user.id,
+              email: user.email,
+              full_name: user.name,
+              role: user.role,
+              pending_role: null,
+              status: 'active',
+              invited_by: null,
+              created_at: new Date().toISOString(),
+              last_sign_in: new Date().toISOString(),
+            },
+          ])
+        }
+        toast.error('Functions service unavailable. Please check server connection.')
+        return
+      }
+
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Failed to load users.'); return }
       setUsers(data as AuthUser[])
-    } catch {
+    } catch (err) {
+      console.error('Failed to load users:', err)
+      if (user) {
+        setUsers((prev) => (prev.length > 0 ? prev : [
+          {
+            id: user.id,
+            email: user.email,
+            full_name: user.name,
+            role: user.role,
+            pending_role: null,
+            status: 'active',
+            invited_by: null,
+            created_at: new Date().toISOString(),
+            last_sign_in: new Date().toISOString(),
+          },
+        ]))
+      }
       toast.error('Failed to load users.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user])
 
   useEffect(() => { reload() }, [reload])
 
@@ -157,6 +197,11 @@ export function UsersSection() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ kind: 'invite', email: form.email.trim(), name: form.name.trim(), role: form.role }),
       })
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        toast.error('Unable to connect to user service.')
+        return
+      }
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Invite failed.'); return }
       toast.success(`Invite sent to ${form.email.trim()}. They'll receive an email to activate their account.`)
@@ -183,6 +228,11 @@ export function UsersSection() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ kind: 'assign-role', userId: u.id, email: u.email, role }),
       })
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        toast.error('Unable to connect to user service.')
+        return
+      }
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Role assignment failed.'); return }
       if (data.warning && data.activationUrl) {
@@ -209,6 +259,11 @@ export function UsersSection() {
         method:  'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        toast.error('Unable to connect to user service.')
+        return
+      }
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Delete failed.'); return }
       toast.success(`${u.full_name || u.email} has been removed.`)

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Plus,
   MagnifyingGlass,
@@ -89,6 +90,23 @@ const EMPTY_FORM: ReceiptFormState = {
 
 export function ReceiptsSection() {
   const { can } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const pathname = location.pathname
+
+  const isTemplates = pathname.startsWith('/admin/receipts/templates')
+  const activeTab = isTemplates ? 'templates' : 'list'
+
+  useEffect(() => {
+    if (pathname === '/admin/receipts') {
+      navigate('/admin/receipts/list', { replace: true })
+    }
+  }, [pathname, navigate])
+
+  const handleTabChange = (val: string) => {
+    navigate(`/admin/receipts/${val}`)
+  }
+
   const canCreate = can('receipts:create')
   const canUpdate = can('receipts:update')
   const canDelete = can('receipts:delete')
@@ -302,10 +320,10 @@ export function ReceiptsSection() {
         />
       </div>
 
-      <Tabs defaultValue="list">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
-          <TabsTrigger value="list">All receipts</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="list" className="cursor-pointer">All receipts</TabsTrigger>
+          <TabsTrigger value="templates" className="cursor-pointer">Templates</TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-4">

@@ -235,7 +235,7 @@ Components use shadcn/ui conventions — edit primitives in `src/components/ui/`
 | Variable | Purpose |
 |----------|---------|
 | `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `VITE_SUPABASE_ANON_KEY` / `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable public key |
 | `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |
 
 ### Netlify Functions (server-side only)
@@ -355,7 +355,46 @@ The `Plan/` directory contains specification documents. They are useful for inte
      - Updates `confirmation_sent_at` timestamp on `ticket_bookings` and sets `email_status = 'sent'` in `public.receipts`.
      - Added quick-action button in table rows and Detail Sheet footer with a dedicated modal dialog in `TicketBookingsSection.tsx`.
 
+- **AuthProvider Root Level Migration & Event Detail Page Fix (2026-11-22):**
+  1. **Root Cause:** `<AuthProvider>` was previously wrapped only inside `AdminPage.tsx`, leaving all public routes outside the authentication context. When staff preview capabilities were added to `EventDetailPage.tsx` (`useAuth()` to check `can('events:update')` for previewing deactivated/unpublished events), visiting `/events/:slug` threw `Error: useAuth must be used within AuthProvider`, crashing the event detail page.
+  2. **Fix & Architecture:**
+     - Lifted `<AuthProvider>` to the root level in `src/App.tsx`, wrapping `<AppShell />` inside `<BrowserRouter>`. This ensures both public pages and admin routes share the same authentication state.
+     - Removed redundant `<AuthProvider>` inside `AdminPage.tsx`.
+     - Hardened `useAuth()` in `src/lib/auth.tsx` with a safe `UNCONSUMED_AUTH` fallback so calling `useAuth()` outside an `AuthProvider` (e.g. in standalone tests or isolated components) never throws a fatal runtime exception.
+     - Added clickable external links (`ArrowSquareOut`) in `EventsSection.tsx` both in the event title column and the URL slug field in the editor Sheet to allow immediate previewing of `/events/:slug`.
+
+- **Admin Portal Dedicated Subroutes for Events, Services, and Team (2026-11-22):**
+  1. **Routing Architecture in `src/App.tsx`:** Added `<Route path="/admin/:section/*" element={<AdminPage />} />` so that multi-segment admin routes (create, edit, view, tabs) are captured and routed into `AdminPage` while preserving top navbar title and sidebar active state.
+  2. **Events Section (`/admin/events`):**
+     - Create event route: `/admin/events/create` (opens create sheet with clean form).
+     - Edit event route: `/admin/events/edit/:id` and `/admin/events/:id/edit` (loads event into editor sheet).
+     - Closing sheet or saving navigates back to `/admin/events`.
+  3. **Services Section (`/admin/services`):**
+     - Create service route: `/admin/services/create` (opens create sheet).
+     - View service route: `/admin/services/view/:id` and `/admin/services/:id/view` (opens read-only preview modal with link to edit).
+     - Edit service route: `/admin/services/edit/:id` and `/admin/services/:id/edit` (loads service into rich TinyMCE editor sheet).
+     - Closing modal/sheet or saving navigates back to `/admin/services`.
+  4. **Team Management Section (`/admin/team`):**
+     - Tab routes: Both tabs have dedicated routes: `/admin/team/board` (Board of Directors) and `/admin/team/ops` (Operational Committee). `/admin/team` redirects to `/admin/team/board`.
+     - Create member route: `/admin/team/board/create`, `/admin/team/ops/create`, and `/admin/team/create`.
+     - View member route: `/admin/team/board/view/:id`, `/admin/team/ops/view/:id`, and `/admin/team/view/:id`. Added View Member details dialog with member avatar/photo, name, role, origin, bio, status, and sort order.
+     - Edit member route: `/admin/team/board/edit/:id`, `/admin/team/ops/edit/:id`, and `/admin/team/edit/:id`.
+     - Closing modal/sheet or saving navigates back to `/admin/team/${tabKey}`.
+  5. **Membership Section Dedicated Tab Routes (`/admin/membership`):**
+     - Tab 1: `/admin/membership/memberships` (Active memberships management & overview).
+     - Tab 2: `/admin/membership/people` (Members directory & profiles).
+     - Tab 3: `/admin/membership/plans` (Membership tiers & Stripe pricing plans).
+     - `/admin/membership` automatically redirects to `/admin/membership/memberships`.
+  6. **Receipts Section Dedicated Tab Routes (`/admin/receipts`):**
+     - Tab 1: `/admin/receipts/list` (All receipts log, manual issuance, downloads).
+     - Tab 2: `/admin/receipts/templates` (Receipt email templates & customization).
+     - `/admin/receipts` automatically redirects to `/admin/receipts/list`.
+  7. **Local Vite Proxy & User Management Hardening (`/admin/users`):**
+     - **Root Cause of Local Error:** In production, Netlify serves both client bundle and `/.netlify/functions/admin-users`. In local dev (`vite`), calling `fetch('/.netlify/functions/admin-users')` hit Vite dev server, which served `index.html` (SPA fallback). Parsing HTML via `res.json()` threw `SyntaxError`, resulting in "Failed to load users".
+     - **Vite Proxy:** Added `server.proxy` to `vite.config.ts` mapping `/.netlify/functions` to `process.env.VITE_NETLIFY_URL || 'https://hindutemple.ie'`. Local development now transparently proxies Netlify Functions to production while using local Supabase auth tokens.
+     - **Defensive Error Handling:** Hardened `UsersSection.tsx` (`reload`, `invite`, `assignRole`, `removeUser`) with content-type checking and graceful fallback to current authenticated user when offline.
+
 ---
 
-*Last updated: 2026-10-26*
+*Last updated: 2026-11-22*
 

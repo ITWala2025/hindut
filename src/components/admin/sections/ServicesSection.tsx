@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Editor } from '@tinymce/tinymce-react'
 import type { Editor as TinyMCEEditor } from 'tinymce'
 // Bundle TinyMCE so it works in both dev and production without needing /tinymce/ static files
@@ -132,17 +133,16 @@ export function ServicesSection() {
   // Read-only preview
   const [viewItem, setViewItem] = useState<ServiceRecord | null>(null)
 
-  const openCreate = () => {
-    setEditingId(null)
-    setForm({ ...EMPTY_FORM, sortOrder: services.length })
-    editorInitialContentRef.current = ''
-    setSlugManuallyEdited(false)
-    setActiveTab('details')
-    setImageSearch('')
-    setDialogOpen(true)
-  }
+  const navigate = useNavigate()
+  const location = useLocation()
 
-  const openEdit = (s: ServiceRecord) => {
+  const isCreateRoute = location.pathname === '/admin/services/create'
+  const viewMatch = location.pathname.match(/^\/admin\/services\/(?:view\/([^/]+)|([^/]+)\/view)$/)
+  const viewServiceId = viewMatch ? (viewMatch[1] || viewMatch[2]) : null
+  const editMatch = location.pathname.match(/^\/admin\/services\/(?:edit\/([^/]+)|([^/]+)\/edit)$/)
+  const editServiceId = editMatch ? (editMatch[1] || editMatch[2]) : null
+
+  const populateEdit = (s: ServiceRecord) => {
     setEditingId(s.id)
     editorInitialContentRef.current = s.content ?? ''
     setForm({
@@ -159,6 +159,59 @@ export function ServicesSection() {
     setActiveTab('details')
     setImageSearch('')
     setDialogOpen(true)
+  }
+
+  // Synchronise route with modal / sheet state
+  useEffect(() => {
+    if (isCreateRoute) {
+      if (!dialogOpen || editingId !== null) {
+        setEditingId(null)
+        setForm({ ...EMPTY_FORM, sortOrder: services.length })
+        editorInitialContentRef.current = ''
+        setSlugManuallyEdited(false)
+        setActiveTab('details')
+        setImageSearch('')
+        setDialogOpen(true)
+        setViewItem(null)
+      }
+    } else if (viewServiceId) {
+      if (loading) return
+      const found = services.find((s) => s.id === viewServiceId)
+      if (found) {
+        setViewItem(found)
+        setDialogOpen(false)
+      } else {
+        toast.error('Service not found.')
+        navigate('/admin/services', { replace: true })
+      }
+    } else if (editServiceId) {
+      if (loading) return
+      const found = services.find((s) => s.id === editServiceId)
+      if (found) {
+        if (!dialogOpen || editingId !== found.id) {
+          populateEdit(found)
+          setViewItem(null)
+        }
+      } else {
+        toast.error('Service not found.')
+        navigate('/admin/services', { replace: true })
+      }
+    } else if (location.pathname === '/admin/services') {
+      if (dialogOpen) setDialogOpen(false)
+      if (viewItem) setViewItem(null)
+    }
+  }, [location.pathname, isCreateRoute, viewServiceId, editServiceId, services, loading])
+
+  const openCreate = () => {
+    navigate('/admin/services/create')
+  }
+
+  const openEdit = (s: ServiceRecord) => {
+    navigate(`/admin/services/edit/${s.id}`)
+  }
+
+  const openView = (s: ServiceRecord) => {
+    navigate(`/admin/services/view/${s.id}`)
   }
 
   const handleTitleChange = (title: string) => {
@@ -183,6 +236,7 @@ export function ServicesSection() {
         toast.success('Service created.')
       }
       setDialogOpen(false)
+      navigate('/admin/services')
     } catch (err) {
       toast.error((err as Error).message)
     } finally {
@@ -441,7 +495,7 @@ export function ServicesSection() {
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
                           <button
                             className="font-semibold text-slate-900 truncate hover:text-orange-600 hover:underline underline-offset-2 text-left transition-colors"
-                            onClick={() => setViewItem(s)}
+                            onClick={() => openView(s)}
                             title="Preview service"
                           >
                             {s.title}
@@ -523,7 +577,17 @@ export function ServicesSection() {
       </SectionCard>
 
       {/* Read-only preview modal */}
-      <Dialog open={!!viewItem} onOpenChange={(open) => { if (!open) setViewItem(null) }}>
+      <Dialog
+        open={!!viewItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewItem(null)
+            if (location.pathname !== '/admin/services') {
+              navigate('/admin/services')
+            }
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-2xl w-full max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
             <div className="flex items-start justify-between gap-3">
@@ -577,15 +641,30 @@ export function ServicesSection() {
           </div>
 
           <div className="px-6 py-4 border-t border-slate-100 shrink-0 flex justify-between">
-            <Button variant="outline" size="sm" onClick={() => setViewItem(null)}>Close</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setViewItem(null)
+                if (location.pathname !== '/admin/services') {
+                  navigate('/admin/services')
+                }
+              }}
+            >
+              Close
+            </Button>
             {canWrite && (
               <Button
                 size="sm"
-                className="bg-orange-600 text-white hover:bg-orange-700"
-                onClick={() => { if (viewItem) { openEdit(viewItem); setViewItem(null) } }}
+                className="bg-orange-600 text-white hover:bg-orange-700 font-semibold"
+                onClick={() => {
+                  if (viewItem) {
+                    navigate(`/admin/services/edit/${viewItem.id}`)
+                  }
+                }}
               >
                 <PencilSimple size={13} className="mr-1.5" />
-                Edit
+                Edit service
               </Button>
             )}
           </div>
@@ -593,7 +672,19 @@ export function ServicesSection() {
       </Dialog>
 
       {/* Create / Edit slide-over */}
-      <Sheet open={dialogOpen} onOpenChange={(open) => { if (!open) setDialogOpen(false) }}>
+      <Sheet
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDialogOpen(false)
+            if (location.pathname !== '/admin/services') {
+              navigate('/admin/services')
+            }
+          } else {
+            setDialogOpen(true)
+          }
+        }}
+      >
         <SheetContent
           side="right"
           className="w-full sm:max-w-4xl p-0 gap-0 overflow-hidden flex flex-col"
@@ -820,7 +911,17 @@ export function ServicesSection() {
           </Tabs>
 
           <div className="px-6 py-4 border-t border-slate-100 shrink-0 bg-white flex items-center justify-between gap-3">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogOpen(false)
+                if (location.pathname !== '/admin/services') {
+                  navigate('/admin/services')
+                }
+              }}
+            >
+              Cancel
+            </Button>
             <Button
               disabled={saving || !form.title.trim()}
               onClick={handleSave}

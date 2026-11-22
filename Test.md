@@ -29,6 +29,8 @@
 9. [Suite 9: Dedicated /donate Route, Modal Trigger, & QR Code Generation](#suite-9-dedicated-donate-route-modal-trigger--qr-code-generation)
 10. [Suite 10: Media Library & Photo Album Featured Cover Image Management](#suite-10-media-library--photo-album-featured-cover-image-management)
 11. [Suite 11: Dedicated Membership Modal Route & QR Code Flow](#suite-11-dedicated-membership-modal-route--qr-code-flow)
+12. [Suite 12: Receipts & Payment References Reconciliation](#suite-12-receipts--payment-references-reconciliation)
+13. [Suite 13: Admin Portal Dedicated Subroutes & Deep Linking](#suite-13-admin-portal-dedicated-subroutes--deep-linking)
 
 ---
 
@@ -289,6 +291,18 @@ Verify admin login, role-gated section rendering, event creation/editing (includ
   7. **Resend Confirmation Email with Optional Email Override:** Optionally adjust the email address in the input, and click "Send Confirmation". Verify the loading state displays, success toast confirms dispatch (*"Ticket confirmation email resent to ..."*), and `confirmation_sent_at` timestamp is updated in the database and UI.
   8. **Verify Role Permission Enforcement:** Log in as an unauthorized user or unauthenticated visitor; verify direct POST calls to `/.netlify/functions/ticket-resend-confirmation` reject with HTTP 401 or HTTP 403.
 
+#### 6.6 Event Creation, Slug Auto-Generation & Public Detail Page Access
+- **Steps:**
+  1. Navigate to `/admin/events` and click "Add Event".
+  2. Fill in the event title (e.g. `Test Diwali 2026`). Verify the URL slug automatically populates (e.g. `test-diwali-2026`).
+  3. Verify the "Public URL" indicator displays `/events/test-diwali-2026` as a clickable external link.
+  4. Save and publish the event.
+  5. Click the external link icon next to the event title in the table, or navigate directly to `/events/test-diwali-2026`.
+- **Expected Result:**
+  - Event detail page loads cleanly without throwing `Error: useAuth must be used within AuthProvider`.
+  - Authenticated admin visitors see the event with staff permissions intact; unauthenticated visitors view the published event correctly.
+  - If the event is deactivated (`published = false`), authenticated staff see the amber "Staff Preview" banner while public visitors see "Event not found".
+
 ### Cleanup Commands (Database)
 ```sql
 DELETE FROM public.event_rsvps WHERE event_id IN (SELECT id FROM public.events WHERE title LIKE 'Test Automated%');
@@ -468,6 +482,70 @@ Verify that receipts for donations, memberships, and event tickets are properly 
   1. Log into `/admin` and navigate to the **Receipts** section.
   2. Verify that event receipts show proper descriptions and valid amounts.
   3. Click "Download PDF" on an event ticket receipt and confirm valid PDF generates with invoice/receipt details.
+
+---
+
+## Suite 13: Admin Portal Dedicated Subroutes & Deep Linking
+
+### Objective
+Verify that create, view, edit operations and tabs in Events, Services, and Team sections have dedicated URL routes, support direct browser navigation / deep-linking, maintain sidebar active state, and return cleanly to parent lists on save or dismissal.
+
+### Test Cases
+
+#### 13.1 Events Dedicated Routes
+- **Steps:**
+  1. Log into `/admin/events`.
+  2. Click "New event" button. Verify URL updates to `/admin/events/create` and the create Sheet opens.
+  3. Click Cancel or backdrop. Verify URL returns to `/admin/events` and Sheet closes.
+  4. On an existing event, click "Edit". Verify URL updates to `/admin/events/edit/:id` and Sheet opens with pre-populated event details.
+  5. Deep-link test: Open a new tab and paste `/admin/events/create` directly into address bar. Verify create Sheet opens immediately.
+  6. Deep-link test: Open a new tab and paste `/admin/events/edit/:id` directly into address bar. Verify edit Sheet opens with the target event populated.
+
+#### 13.2 Services Dedicated Routes (Create, View, Edit)
+- **Steps:**
+  1. Log into `/admin/services`.
+  2. Click "New service" button. Verify URL updates to `/admin/services/create` and create Sheet opens.
+  3. Click Cancel. Verify URL returns to `/admin/services`.
+  4. Click on a service title or preview link. Verify URL updates to `/admin/services/view/:id` and read-only preview modal displays.
+  5. Click "Edit service" inside the preview modal. Verify URL updates to `/admin/services/edit/:id` and edit Sheet opens.
+  6. Deep-link test: Navigate directly to `/admin/services/view/:id`. Verify view modal opens.
+  7. Deep-link test: Navigate directly to `/admin/services/edit/:id`. Verify edit Sheet opens.
+
+#### 13.3 Team Management Dedicated Routes (Tabs, Create, View, Edit)
+- **Steps:**
+  1. Navigate to `/admin/team`. Verify automatic redirect to `/admin/team/board`.
+  2. Click "Operational Committee" tab. Verify URL updates to `/admin/team/ops`.
+  3. Click "Board of Directors" tab. Verify URL updates to `/admin/team/board`.
+  4. On Board tab, click "Add member". Verify URL updates to `/admin/team/board/create` and Sheet opens.
+  5. On an existing member row, click the View icon or member name. Verify URL updates to `/admin/team/board/view/:id` and Member Details Dialog displays avatar, name, role, origin, bio, status, and sort order.
+  6. Click "Edit member" inside the View Dialog. Verify URL updates to `/admin/team/board/edit/:id` and edit Sheet opens.
+  7. Deep-link test: Navigate directly to `/admin/team/ops/create`. Verify create Sheet opens on Operational Committee tab.
+  8. Deep-link test: Navigate directly to `/admin/team/ops/view/:id`. Verify view modal opens on Operational Committee tab.
+  9. Deep-link test: Navigate directly to `/admin/team/view/:id` or `/admin/team/edit/:id`. Verify automatic tab detection and proper modal/sheet opening.
+
+#### 13.4 Membership Dedicated Tab Routes
+- **Steps:**
+  1. Navigate to `/admin/membership`. Verify automatic redirect to `/admin/membership/memberships`.
+  2. Click "People" tab. Verify URL updates to `/admin/membership/people`.
+  3. Click "Plans" tab. Verify URL updates to `/admin/membership/plans`.
+  4. Click "Memberships" tab. Verify URL updates to `/admin/membership/memberships`.
+  5. Deep-link test: Open new tab directly to `/admin/membership/people`. Verify the People directory displays.
+  6. Deep-link test: Open new tab directly to `/admin/membership/plans`. Verify the Plans management tab displays.
+
+#### 13.5 Receipts Dedicated Tab Routes
+- **Steps:**
+  1. Navigate to `/admin/receipts`. Verify automatic redirect to `/admin/receipts/list`.
+  2. Click "Templates" tab. Verify URL updates to `/admin/receipts/templates`.
+  3. Click "All receipts" tab. Verify URL updates to `/admin/receipts/list`.
+  4. Deep-link test: Open new tab directly to `/admin/receipts/templates`. Verify templates management displays.
+  5. Deep-link test: Open new tab directly to `/admin/receipts/list`. Verify receipt list displays.
+
+#### 13.6 Admin Users Loading & Netlify Proxy Verification
+- **Steps:**
+  1. Log into `/admin/users` in local development (`npm run dev`).
+  2. Verify that `/.netlify/functions/admin-users` is transparently proxied by Vite to the backend.
+  3. Verify the user list loads without throwing "Failed to load users".
+  4. Verify that non-JSON / HTML responses are intercepted and do not crash with `SyntaxError`.
 
 ---
 

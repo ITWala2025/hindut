@@ -23,6 +23,15 @@ export default defineConfig({
       '@': resolve(projectRoot, 'src')
     }
   },
+  server: {
+    proxy: {
+      '/.netlify/functions': {
+        target: process.env.VITE_NETLIFY_URL || 'https://hindutemple.ie',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
   build: {
     // Target modern browsers for smaller output
     target: 'es2020',
