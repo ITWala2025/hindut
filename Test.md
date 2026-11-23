@@ -79,6 +79,14 @@ Verify free event RSVP submission, multi-day/multi-slot selection default state 
   - Submission is blocked with toast error: *"Please accept the event attendance conditions to proceed."*
   - Checking the box allows submission.
 
+#### 1.4 Real-time GDPR Consent & Field Validation
+- **Steps:**
+  1. Open RSVP modal (`RsvpDialog.tsx`) or Ticket Booking modal (`TicketBookingDialog.tsx`).
+  2. Click the GDPR consent checkbox to check it, then click it again to uncheck it.
+  3. Verify no `Uncaught (in promise) ZodError` is thrown in the browser console.
+  4. Verify the inline error message displays *"You must accept the data processing terms to RSVP"* cleanly.
+  5. Check the box again. Verify the error clears immediately.
+
 ### Cleanup Commands (Database)
 ```sql
 DELETE FROM public.event_rsvps 

@@ -394,7 +394,11 @@ The `Plan/` directory contains specification documents. They are useful for inte
      - **Vite Proxy:** Added `server.proxy` to `vite.config.ts` mapping `/.netlify/functions` to `process.env.VITE_NETLIFY_URL || 'https://hindutemple.ie'`. Local development now transparently proxies Netlify Functions to production while using local Supabase auth tokens.
      - **Defensive Error Handling:** Hardened `UsersSection.tsx` (`reload`, `invite`, `assignRole`, `removeUser`) with content-type checking and graceful fallback to current authenticated user when offline.
 
+- **Zod v4 Resolver Compatibility Fix (`RsvpDialog.tsx` & `TicketBookingDialog.tsx`) (2026-11-23):**
+  1. **Root Cause:** Zod v4 removed the deprecated `error.errors` array in favor of `error.issues`. `@hookform/resolvers/zod` explicitly checks `if (Array.isArray(r?.errors))`; because `r.errors` is `undefined` on Zod v4 validation failures, `@hookform/resolvers/zod` executed `throw r`, resulting in `Uncaught (in promise) ZodError` whenever `setValue(..., { shouldValidate: true })` ran (such as checking/unchecking GDPR consent checkboxes).
+  2. **Fix (`src/lib/zodResolver.ts`):** Created a universal `zodResolver` helper supporting both `error.issues` (Zod v4) and `error.errors` (Zod v3), correctly mapping issues via `toNestErrors`. Swapped `@hookform/resolvers/zod` with `@/lib/zodResolver` in both `RsvpDialog.tsx` and `TicketBookingDialog.tsx`.
+
 ---
 
-*Last updated: 2026-11-22*
+*Last updated: 2026-11-23*
 
