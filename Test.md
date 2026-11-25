@@ -311,6 +311,16 @@ Verify admin login, role-gated section rendering, event creation/editing (includ
   - Authenticated admin visitors see the event with staff permissions intact; unauthenticated visitors view the published event correctly.
   - If the event is deactivated (`published = false`), authenticated staff see the amber "Staff Preview" banner while public visitors see "Event not found".
 
+#### 6.7 Payment Settings Access, Table Grants & Stripe Mode Override
+- **Steps:**
+  1. Log in to the Admin Portal as a `super_admin` (e.g. `admin@hindutemple.com`) or `admin` user.
+  2. Navigate to `/admin/settings` -> "Stripe payments" card.
+  3. **Verify:** Settings load cleanly without PostgreSQL error `42501 permission denied for table payment_settings`. The current mode, Netlify environment variables status, and mode override options display properly.
+  4. Change mode override (e.g., from `auto` to `test` or `live`). Click save/toggle.
+  5. **Verify:** Success toast confirms update (*"Payment mode set to: ..."*). `payment_settings` row updates `mode_override`, `updated_at`, and `updated_by`.
+  6. In an unauthenticated session, query public payment configuration via `/.netlify/functions/payment-config` or direct Supabase `payment_settings` singleton read (`id = 1`). Confirm the mode resolves without database permission errors.
+  7. Confirm cross-project isolation: users authenticated under other projects (e.g., `app_metadata.project_id = 'sfportal'`) cannot query or update `public.payment_settings`.
+
 ### Cleanup Commands (Database)
 ```sql
 DELETE FROM public.event_rsvps WHERE event_id IN (SELECT id FROM public.events WHERE title LIKE 'Test Automated%');

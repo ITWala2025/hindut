@@ -56,6 +56,7 @@ interface AuthUser {
   invited_by:   string | null
   created_at:   string
   last_sign_in: string | null
+  project_id?:  string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +152,14 @@ export function UsersSection() {
 
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Failed to load users.'); return }
-      setUsers(data as AuthUser[])
+      const rawUsers = data as AuthUser[]
+      const templeUsers = rawUsers.filter((u) => {
+        if (u.project_id && u.project_id !== 'hindutemple') return false
+        const emailLower = (u.email || '').toLowerCase()
+        if (emailLower.endsWith('@seamusfoy.com') || emailLower.endsWith('@seamusfoyconstruction.com')) return false
+        return true
+      })
+      setUsers(templeUsers)
     } catch (err) {
       console.error('Failed to load users:', err)
       if (user) {

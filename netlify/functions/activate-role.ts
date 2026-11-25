@@ -182,9 +182,9 @@ export const handler: Handler = async (event) => {
     }
   }
 
-  // Sync role into app_metadata so JWT claims are up-to-date
+  // Sync role and project_id into app_metadata so JWT claims are up-to-date
   const { error: metaErr } = await supabase.auth.admin.updateUserById(userId, {
-    app_metadata: { role: invitation.role },
+    app_metadata: { role: invitation.role, project_id: 'hindutemple' },
   })
   if (metaErr) {
     // Non-fatal: log but continue — user_roles is the source of truth

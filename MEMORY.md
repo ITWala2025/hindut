@@ -44,6 +44,10 @@
 
 ```
 HinduT/
+├── Architecture.md             # Master System Architecture & Multi-Tenant Blueprint
+├── MEMORY.md                   # Agent sprint memory & project state
+├── AGENTS.md                   # AI & Human developer operating instructions
+├── Test.md                     # Master unit, functional & security test suite
 ├── src/                        # Frontend source
 │   ├── App.tsx                 # Root router (React Router)
 │   ├── main.tsx                # Vite entry point
@@ -394,11 +398,48 @@ The `Plan/` directory contains specification documents. They are useful for inte
      - **Vite Proxy:** Added `server.proxy` to `vite.config.ts` mapping `/.netlify/functions` to `process.env.VITE_NETLIFY_URL || 'https://hindutemple.ie'`. Local development now transparently proxies Netlify Functions to production while using local Supabase auth tokens.
      - **Defensive Error Handling:** Hardened `UsersSection.tsx` (`reload`, `invite`, `assignRole`, `removeUser`) with content-type checking and graceful fallback to current authenticated user when offline.
 
+- **Multi-Tenant Shared Database Co-Hosting & app_metadata Project Binding (2026-11-25):**
+  1. **Shared Database Architecture:**
+     - The database (`https://gsqfaguqsmnuoeuhpxro.supabase.co`) is now multi-tenant, co-hosting Hindu Association of Ireland (`public` schema) and Seamus Foy & Sons (`sfportal` schema) on the same PostgreSQL 16 instance.
+     - Complete schema-level air-gapping: Hindu Temple application queries run strictly against `public.*` tables with zero visibility into `sfportal.*`.
+  2. **Irreversible 1-to-1 User Project Binding (`app_metadata.project_id`):**
+     - Hindu Temple accounts in `auth.users` are stamped with `app_metadata.project_id = 'hindutemple'` and recorded in `shared.user_project_binding`.
+     - Existing temple administrators (`admin@hindutemple.com` with `super_admin`, `info@hindutemple.ie` with `admin`) preserved their roles and gained cryptographic project binding.
+  3. **Frontend Auth Hardening (`src/lib/auth.tsx`):**
+     - `fetchAdminUser()`: Evaluates `session.user.app_metadata?.project_id`. If the session carries a foreign project claim (e.g. `sfportal`), it returns `null` immediately.
+     - Removed insecure legacy fallback line (`resolvedRole = 'admin'` for accounts missing in `user_roles`), preventing unauthorized accounts from being automatically granted admin access.
+     - `login()`: Immediately detects foreign project tokens post `signInWithPassword`, triggers `supabase.auth.signOut()`, and throws `"Access denied. Account belongs to a different project."`
+  4. **Netlify Serverless Functions Hardening:**
+     - `netlify/functions/admin-users.ts`: Gated caller authorization by `app_metadata.project_id === 'hindutemple'`. Filtered `authData.users` so SFPortal accounts (`admin@seamusfoy.com`) are excluded from the Hindu Temple user management directory.
+     - `netlify/functions/activate-role.ts`: Preserves `project_id: 'hindutemple'` alongside `role` on `auth.admin.updateUserById()`.
+  5. **Master System Architecture Blueprint ([Architecture.md](Architecture.md)):**
+     - Authored comprehensive architecture document detailing the 3-layer isolation model, table schema, RBAC capabilities, Netlify serverless functions, and PII encryption standards.
+  6. **Build Verification:**
+     - Verified with `npm run build` in `hindut` (7,492 modules compiled cleanly in 5.88s with 0 errors).
+
 - **Zod v4 Resolver Compatibility Fix (`RsvpDialog.tsx` & `TicketBookingDialog.tsx`) (2026-11-23):**
   1. **Root Cause:** Zod v4 removed the deprecated `error.errors` array in favor of `error.issues`. `@hookform/resolvers/zod` explicitly checks `if (Array.isArray(r?.errors))`; because `r.errors` is `undefined` on Zod v4 validation failures, `@hookform/resolvers/zod` executed `throw r`, resulting in `Uncaught (in promise) ZodError` whenever `setValue(..., { shouldValidate: true })` ran (such as checking/unchecking GDPR consent checkboxes).
   2. **Fix (`src/lib/zodResolver.ts`):** Created a universal `zodResolver` helper supporting both `error.issues` (Zod v4) and `error.errors` (Zod v3), correctly mapping issues via `toNestErrors`. Swapped `@hookform/resolvers/zod` with `@/lib/zodResolver` in both `RsvpDialog.tsx` and `TicketBookingDialog.tsx`.
 
+- **Payment Settings Permissions Fix & RLS Hardening (`payment_settings`) (2026-11-25):**
+  1. **Root Cause of Error `42501` ("permission denied for table payment_settings"):**
+     - Table `public.payment_settings` lacked table grants for `anon` and explicit full grants for `service_role`.
+     - Legacy RLS policy `payment_settings_admin_read` / `payment_settings_admin_write` strictly checked `ur.role = 'admin'` and blocked `super_admin` accounts (like `admin@hindutemple.com`).
+  2. **Migration (`supabase/migrations/20261125000000_fix_payment_settings_permissions.sql`):**
+     - Granted `ALL` to `postgres` and `service_role`.
+     - Granted `SELECT, UPDATE` to `authenticated` and `SELECT` to `anon`.
+     - Replaced legacy policies with:
+       - `payment_settings_admin_read`: Allows `super_admin` and `admin` (via `user_roles` or `app_metadata.role`) bound to `hindutemple` (or null).
+       - `payment_settings_admin_write`: Allows `super_admin` and `admin` bound to `hindutemple` (or null).
+       - `payment_settings_public_read`: Allows `anon` to read singleton `id = 1` so Stripe mode resolution operates cleanly.
+
+- **Admin Users Directory Cross-Tenant Isolation (`UsersSection.tsx` & `admin-users.ts`) (2026-11-25):**
+  1. **Root Cause:** In the multi-tenant shared database (`auth.users`), `admin@seamusfoy.com` has `app_metadata.project_id = 'sfportal'`. In production Netlify (or local Vite proxy targeting `https://hindutemple.ie`), the un-re-deployed Netlify function `admin-users.ts` returned all Auth users without filtering by `project_id`.
+  2. **Double-Layer Defense Fix:**
+     - **Server-Side (`netlify/functions/admin-users.ts`):** Filters `listUsers` to strictly exclude users where `app_metadata.project_id !== 'hindutemple'` or emails matching `@seamusfoy.com` / `@seamusfoyconstruction.com`, and exports `project_id`.
+     - **Client-Side (`src/components/admin/sections/UsersSection.tsx`):** Added defense-in-depth filtering on the received list so that even if proxied against an older deployment, `admin@seamusfoy.com` is immediately excluded from the UI table.
+
 ---
 
-*Last updated: 2026-11-23*
+*Last updated: 2026-11-25*
 

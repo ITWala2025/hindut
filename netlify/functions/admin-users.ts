@@ -47,6 +47,11 @@ async function requirePermission(
     return { ok: false, status: 401, reason: userErr?.message ?? 'Token validation failed' }
   }
 
+  // Reject users belonging to other projects
+  if (userData.user.app_metadata?.project_id && userData.user.app_metadata.project_id !== 'hindutemple') {
+    return { ok: false, status: 403, reason: 'Unauthorized: Account belongs to a different project' }
+  }
+
   const { data: roleRow } = await supabase
     .from('user_roles')
     .select('role')
@@ -193,7 +198,16 @@ export const handler: Handler = async (event) => {
       if (inv.email)   pendingByEmail[inv.email.toLowerCase()] = inv
     }
 
-    const users = authData.users.map((u) => {
+    const templeUsers = authData.users.filter((u) => {
+      // Exclude foreign projects
+      if (u.app_metadata?.project_id && u.app_metadata.project_id !== 'hindutemple') return false
+      // Exclude known foreign domain accounts
+      const emailLower = (u.email || '').toLowerCase()
+      if (emailLower.endsWith('@seamusfoy.com') || emailLower.endsWith('@seamusfoyconstruction.com')) return false
+      return true
+    })
+
+    const users = templeUsers.map((u) => {
       const activeRole   = rolesMap[u.id] ?? null
       const pendingInvite = pendingByUserId[u.id] ?? pendingByEmail[u.email?.toLowerCase() ?? ''] ?? null
       return {
@@ -206,6 +220,7 @@ export const handler: Handler = async (event) => {
         invited_by:     pendingInvite?.invited_by ?? null,
         created_at:     u.created_at,
         last_sign_in:   u.last_sign_in_at ?? null,
+        project_id:     u.app_metadata?.project_id ?? null,
       }
     })
 

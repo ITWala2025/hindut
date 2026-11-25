@@ -247,6 +247,11 @@ export function normalisePermissions(input: unknown): RolePermissionMap {
 // Session bootstrap
 // ---------------------------------------------------------------------------
 async function fetchAdminUser(session: Session): Promise<AdminUser | null> {
+  // Reject foreign project users based on app_metadata project_id
+  if (session.user.app_metadata?.project_id && session.user.app_metadata.project_id !== 'hindutemple') {
+    return null
+  }
+
   // Prefer the role stored in public.user_roles (the source of truth);
   // fall back to app_metadata.role for legacy compatibility.
   let role: AdminRole | null = null
@@ -263,16 +268,18 @@ async function fetchAdminUser(session: Session): Promise<AdminUser | null> {
     /* fall through to metadata */
   }
 
-  let resolvedRole: AdminRole
+  let resolvedRole: AdminRole | null = null
   if (role) {
     resolvedRole = role
   } else {
     const meta = session.user.app_metadata?.role
     if (meta === 'super_admin' || meta === 'admin' || meta === 'editor') {
       resolvedRole = meta
-    } else {
-      resolvedRole = 'admin' // historical fallback for accounts pre-dating user_roles
     }
+  }
+
+  if (!resolvedRole) {
+    return null
   }
 
   return {
@@ -396,6 +403,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string): Promise<AdminUser> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw new Error(error.message)
+    if (data.user?.app_metadata?.project_id && data.user.app_metadata.project_id !== 'hindutemple') {
+      await supabase.auth.signOut()
+      throw new Error('Access denied. Account belongs to a different project.')
+    }
     const adminUser = await fetchAdminUser(data.session)
     if (!adminUser) {
       await supabase.auth.signOut()

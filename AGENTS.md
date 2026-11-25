@@ -1,7 +1,11 @@
 # AGENTS.md — Development Guidelines for AI & Human Engineers
 
+> **CORE ARCHITECTURE SPECIFICATION:**  
+> Before assuming any database, auth, or storage design, every agent **MUST read [Architecture.md](file:///Users/prashant/Documents/Application%20directory/hindut/Architecture.md)** for complete multi-tenant specifications.
+
 > **Project:** Hindu Association of Ireland (HAI) Website (`hindu-association-ireland-web`)  
 > **Tech Stack:** React 19, TypeScript, Vite, Supabase (PostgreSQL + Auth + RLS), Netlify Functions, Stripe, Tailwind CSS v4.
+> **Database Architecture:** Shared PostgreSQL 16 database co-hosted with SFPortal. Hindu Temple tables reside strictly in schema `public` with `app_metadata.project_id = 'hindutemple'` binding.
 
 ---
 
